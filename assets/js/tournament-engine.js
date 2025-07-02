@@ -443,15 +443,21 @@ class TournamentEngine {
      */
     async loadPlayersData(sheetId, sheetInfo) {
         try {
-            // Use custom URL if provided, otherwise construct from GID
+            // Construct appropriate URL based on how sheet was found
             let csvUrl;
             if (sheetInfo.url) {
                 csvUrl = sheetInfo.url;
+            } else if (sheetInfo.gid && sheetInfo.gid.startsWith('name:')) {
+                // Sheet found by name - use name-based URL
+                const actualSheetName = sheetInfo.gid.substring(5); // Remove 'name:' prefix
+                const encodedName = encodeURIComponent(actualSheetName);
+                csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodedName}`;
             } else {
+                // Sheet found by GID - use GID-based URL
                 csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${sheetInfo.gid || sheetInfo}`;
             }
             
-            console.log(`👥 Loading players data from: ${sheetInfo.gid || sheetInfo}`);
+            console.log(`👥 Loading players data from: ${sheetInfo.name || sheetInfo.gid || sheetInfo}`);
             
             const response = await fetch(csvUrl);
             if (!response.ok) {
@@ -493,15 +499,21 @@ class TournamentEngine {
      */
     async loadTournamentSheet(sheetId, sheetInfo, sheetName) {
         try {
-            // Use custom URL if provided, otherwise construct from GID
+            // Construct appropriate URL based on how sheet was found
             let csvUrl;
             if (sheetInfo.url) {
                 csvUrl = sheetInfo.url;
+            } else if (sheetInfo.gid && sheetInfo.gid.startsWith('name:')) {
+                // Sheet found by name - use name-based URL
+                const actualSheetName = sheetInfo.gid.substring(5); // Remove 'name:' prefix
+                const encodedName = encodeURIComponent(actualSheetName);
+                csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodedName}`;
             } else {
+                // Sheet found by GID - use GID-based URL
                 csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${sheetInfo.gid || sheetInfo}`;
             }
             
-            console.log(`🏆 Loading tournament data from ${sheetName} (${sheetInfo.gid || sheetInfo})`);
+            console.log(`🏆 Loading tournament data from ${sheetName} (${sheetInfo.name || sheetInfo.gid || sheetInfo})`);
             
             const response = await fetch(csvUrl);
             if (!response.ok) {
