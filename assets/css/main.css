@@ -5,31 +5,38 @@
 
 /* CSS Custom Properties */
 :root {
+    /* New Color Palette */
+    --deep-teal: #071E22;      /* Dark base */
+    --teal-primary: #1D7874;   /* Primary teal */
+    --teal-light: #679289;     /* Light teal */
+    --warm-cream: #F4C095;     /* Warm accent */
+    --coral-red: #EE2E31;      /* Bold accent */
+    
     /* Card Theme Colors */
-    --red-suit: #dc2626;
-    --black-suit: #1f2937;
-    --card-bg: #fefefe;
-    --card-border: #e5e7eb;
+    --red-suit: #EE2E31;
+    --black-suit: #071E22;
+    --card-bg: #ffffff;
+    --card-border: #679289;
     
     /* Championship Colors */
-    --gold: #f59e0b;
-    --silver: #9ca3af;
-    --bronze: #92400e;
-    --champion-crown: #fbbf24;
+    --gold: #F4C095;
+    --silver: #679289;
+    --bronze: #1D7874;
+    --champion-crown: #F4C095;
     
     /* Base Colors */
-    --primary: #1e40af;
-    --primary-dark: #1e3a8a;
-    --secondary: #059669;
-    --accent: #dc2626;
-    --text-primary: #111827;
-    --text-secondary: #6b7280;
-    --text-muted: #9ca3af;
+    --primary: #1D7874;
+    --primary-dark: #071E22;
+    --secondary: #679289;
+    --accent: #EE2E31;
+    --text-primary: #071E22;
+    --text-secondary: #1D7874;
+    --text-muted: #679289;
     --bg-primary: #ffffff;
-    --bg-secondary: #f9fafb;
-    --bg-accent: #f3f4f6;
-    --border: #e5e7eb;
-    --border-light: #f3f4f6;
+    --bg-secondary: #f8f9fa;
+    --bg-accent: rgba(103, 146, 137, 0.1);
+    --border: #679289;
+    --border-light: rgba(103, 146, 137, 0.2);
     
     /* Typography */
     --font-primary: 'Playfair Display', serif;

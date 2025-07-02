@@ -7,12 +7,15 @@ class TournamentCharts {
     constructor() {
         this.charts = new Map();
         this.colors = {
-            primary: '#1e40af',
-            secondary: '#059669',
-            accent: '#dc2626',
-            gold: '#f59e0b',
-            silver: '#9ca3af',
-            bronze: '#92400e'
+            primary: '#1D7874',
+            secondary: '#679289',
+            accent: '#EE2E31',
+            gold: '#F4C095',
+            silver: '#679289',
+            bronze: '#1D7874',
+            deepTeal: '#071E22',
+            warmCream: '#F4C095',
+            coralRed: '#EE2E31'
         };
         
         // Load Chart.js if not already loaded
@@ -49,9 +52,9 @@ class TournamentCharts {
         if (typeof Chart === 'undefined') return;
 
         Chart.defaults.font.family = 'Inter, sans-serif';
-        Chart.defaults.color = '#6b7280';
-        Chart.defaults.borderColor = '#e5e7eb';
-        Chart.defaults.backgroundColor = 'rgba(30, 64, 175, 0.1)';
+        Chart.defaults.color = '#1D7874';
+        Chart.defaults.borderColor = '#679289';
+        Chart.defaults.backgroundColor = 'rgba(29, 120, 116, 0.1)';
     }
 
     /**
@@ -545,16 +548,16 @@ class TournamentCharts {
      */
     getPlayerColor(index, alpha = 1) {
         const colors = [
-            this.colors.primary,
-            this.colors.secondary,
-            this.colors.accent,
-            this.colors.gold,
-            this.colors.silver,
-            '#8b5cf6', // purple
-            '#06b6d4', // cyan
-            '#84cc16', // lime
-            '#f97316', // orange
-            '#ec4899'  // pink
+            this.colors.primary,      // #1D7874
+            this.colors.secondary,    // #679289
+            this.colors.accent,       // #EE2E31
+            this.colors.gold,         // #F4C095
+            this.colors.deepTeal,     // #071E22
+            this.colors.warmCream,    // #F4C095 (lighter variant)
+            this.colors.coralRed,     // #EE2E31 (variant)
+            '#4A9B8E',               // medium teal
+            '#B8A082',               // muted cream
+            '#C42326'                // darker coral
         ];
         
         const color = colors[index % colors.length];
