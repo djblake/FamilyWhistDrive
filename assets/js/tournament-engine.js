@@ -348,7 +348,14 @@ class TournamentEngine {
             return 0;
         }
         
-        const headers = lines[0].split(',').map(h => h.trim());
+        const headers = lines[0].split(',').map(h => {
+            let trimmed = h.trim();
+            // Remove surrounding quotes if present
+            if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+                trimmed = trimmed.slice(1, -1);
+            }
+            return trimmed;
+        });
         
         console.log(`📋 Processing tournament CSV with headers: ${headers.join(', ')}`);
         
@@ -357,14 +364,26 @@ class TournamentEngine {
         let emptyRows = 0;
         
         for (let i = 1; i < lines.length; i++) {
-            const values = lines[i].split(',').map(v => v.trim());
+            const values = lines[i].split(',').map(v => {
+                let trimmed = v.trim();
+                // Remove surrounding quotes if present
+                if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+                    trimmed = trimmed.slice(1, -1);
+                }
+                return trimmed;
+            });
             const scorecard = {};
             
             headers.forEach((header, index) => {
-                scorecard[header] = values[index] || '';
+                let headerName = header;
+                // Remove quotes from header names too
+                if (headerName.startsWith('"') && headerName.endsWith('"')) {
+                    headerName = headerName.slice(1, -1);
+                }
+                scorecard[headerName] = values[index] || '';
             });
             
-            // Skip empty rows
+            // Skip empty rows (now that quotes are removed)
             if (!scorecard.Id || !scorecard.Tournament) {
                 emptyRows++;
                 console.log(`🔍 DEBUG: Skipping empty row ${i + 1}:`, scorecard);
