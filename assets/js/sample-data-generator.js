@@ -46,7 +46,7 @@ class SampleDataGenerator {
      */
     generateTournament(tournamentName, year, rounds = 8) {
         const csvData = [];
-        const header = 'Tournament,Year,Round,Trump_Suit,Player1,Player2,Tricks_Won,Opponent1,Opponent2,Opponent_Tricks';
+        const header = 'Tournament,Year,Round,Trump_Suit,Table,Player1,Player2,Tricks_Won,Opponent1,Opponent2,Opponent_Tricks';
         csvData.push(header);
         
         // Generate partnerships for each round
@@ -71,6 +71,7 @@ class SampleDataGenerator {
         
         // Create 5 tables with 4 players each
         for (let table = 0; table < 5; table++) {
+            const tableNum = table + 1; // Table numbers start from 1
             const tableStart = table * 4;
             const tablePlayers = players.slice(tableStart, tableStart + 4);
             
@@ -83,11 +84,11 @@ class SampleDataGenerator {
             
             // Create scorecard entries for both partnerships
             roundData.push(
-                `${tournamentName},${year},${round},${trumpSuit},${partnership1[0]},${partnership1[1]},${scores.partnership1},${partnership2[0]},${partnership2[1]},${scores.partnership2}`
+                `${tournamentName},${year},${round},${trumpSuit},${tableNum},${partnership1[0]},${partnership1[1]},${scores.partnership1},${partnership2[0]},${partnership2[1]},${scores.partnership2}`
             );
             
             roundData.push(
-                `${tournamentName},${year},${round},${trumpSuit},${partnership2[0]},${partnership2[1]},${scores.partnership2},${partnership1[0]},${partnership1[1]},${scores.partnership1}`
+                `${tournamentName},${year},${round},${trumpSuit},${tableNum},${partnership2[0]},${partnership2[1]},${scores.partnership2},${partnership1[0]},${partnership1[1]},${scores.partnership1}`
             );
         }
         

@@ -239,8 +239,6 @@
                             <div class="partnership-rating">⭐⭐⭐⭐⭐</div>
                         </div>
                         <div class="partnership-players">
-                            <span class="player-name">Margaret Wilson</span>
-                            <span class="partnership-symbol">&</span>
                             <span class="player-name">James Ruston</span>
                         </div>
                         <div class="partnership-stats">
@@ -266,8 +264,6 @@
                             <div class="partnership-rating">⭐⭐⭐</div>
                         </div>
                         <div class="partnership-players">
-                            <span class="player-name">Margaret Wilson</span>
-                            <span class="partnership-symbol">&</span>
                             <span class="player-name">Tom Wilson</span>
                         </div>
                         <div class="partnership-stats">
@@ -293,8 +289,6 @@
                             <div class="partnership-rating">⭐⭐⭐⭐</div>
                         </div>
                         <div class="partnership-players">
-                            <span class="player-name">Margaret Wilson</span>
-                            <span class="partnership-symbol">&</span>
                             <span class="player-name">Emma Jones</span>
                         </div>
                         <div class="partnership-stats">
@@ -750,6 +744,7 @@
         .style-name {
             font-size: 0.875rem;
             font-weight: 500;
+            color: var(--text-primary-dark);
         }
 
         .style-bar {
@@ -776,6 +771,12 @@
             margin-top: var(--spacing-lg);
             margin-bottom: var(--spacing-sm);
             color: var(--primary);
+        }
+
+        .playing-notes p,
+        .playing-notes li {
+            color: var(--text-primary-dark);
+            line-height: 1.6;
         }
 
         .playing-notes ul {
@@ -905,6 +906,21 @@
 
         .partnership-stat {
             text-align: center;
+        }
+
+        .partnership-stat .stat-label {
+            display: block;
+            color: var(--text-primary-dark);
+            font-weight: 500;
+            font-size: 0.875rem;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .partnership-stat .stat-value {
+            display: block;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
         }
 
         .partnership-note {

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets Integration Example</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
+                    <h1 class="site-title">Google Sheets Integration</h1>
+                    <p class="site-subtitle">Load Tournament Data from Google Sheets</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="integration-demo">
+            <div class="container">
+                <h2>Google Sheets Integration Example</h2>
+                
+                <div class="demo-controls">
+                    <h3>Expected Data Structure</h3>
+                    <p><strong>Players Sheet:</strong> <code>Id,FirstName,LastName</code></p>
+                    <p><strong>Tournament Sheets (WhistGame_*):</strong> <code>Id,Date,Tournament,Year,Round,Trump_Suit,Table,Player1,Player2,Tricks_Won,Opponent1,Opponent2,Opponent_Tricks</code></p>
+                    
+                    <h3>How to Set Up</h3>
+                    <ol>
+                        <li>Create a Google Sheet with tournament data</li>
+                        <li>Make it publicly viewable (Share → Anyone with the link can view)</li>
+                        <li>Get the Sheet ID from the URL: <code>https://docs.google.com/spreadsheets/d/<strong>SHEET_ID</strong>/edit</code></li>
+                        <li>Enter the Sheet ID below to load data</li>
+                    </ol>
+                    
+                    <div class="input-group">
+                        <label for="sheetId">Google Sheet ID:</label>
+                        <input type="text" id="sheetId" placeholder="Enter Google Sheets ID" value="1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k">
+                        <button onclick="loadFromSheets()">Load Data</button>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="gid">Sheet GID (optional):</label>
+                        <input type="text" id="gid" placeholder="0" value="0">
+                        <small>GID is found in the URL after #gid= when viewing a specific sheet tab</small>
+                    </div>
+                    
+                    <button onclick="loadSampleData()">Load Sample Data Instead</button>
+                </div>
+                
+                <div class="results-section">
+                    <h3>Results</h3>
+                    <div id="loading" style="display: none;">Loading data from Google Sheets...</div>
+                    <div id="error" style="display: none; color: red;"></div>
+                    <div id="success" style="display: none; color: green;"></div>
+                    
+                    <div id="tournament-data" style="display: none;">
+                        <h4>Data Validation Issues</h4>
+                        <div id="data-issues"></div>
+                        
+                        <h4>Shared Hands Detected</h4>
+                        <div id="shared-hands-data"></div>
+                        
+                        <h4>Tournament Overview</h4>
+                        <div id="tournament-summary"></div>
+                        
+                        <h4>Sample Round Data</h4>
+                        <div id="round-data"></div>
+                        
+                        <h4>Final Standings</h4>
+                        <div id="standings-data"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="assets/js/tournament-engine.js"></script>
+    <script src="assets/js/sample-data-generator.js"></script>
+    
+    <script>
+        let tournamentEngine = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            tournamentEngine = new TournamentEngine();
+        });
+
+        async function loadFromSheets() {
+            const sheetId = document.getElementById('sheetId').value;
+            
+            if (!sheetId) {
+                showError('Please enter a Google Sheet ID');
+                return;
+            }
+            
+            showLoading(true);
+            hideResults();
+            
+            try {
+                const count = await tournamentEngine.loadFromGoogleSheets(sheetId);
+                showSuccess(`Successfully loaded ${count} scorecards from Google Sheets!`);
+                displayDataIssues();
+                displaySharedHands();
+                displayTournamentData();
+            } catch (error) {
+                showError(`Error loading from Google Sheets: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function loadSampleData() {
+            showLoading(true);
+            hideResults();
+            
+            try {
+                const generator = new SampleDataGenerator();
+                const csvData = generator.generateTournament('Christmas Championship', 2023, 8);
+                
+                const count = await tournamentEngine.processScorecardCSV(csvData);
+                showSuccess(`Successfully loaded ${count} sample scorecards!`);
+                displayTournamentData();
+            } catch (error) {
+                showError(`Error loading sample data: ${error.message}`);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function displayDataIssues() {
+            const issuesData = tournamentEngine.getDataIssues();
+            
+            if (issuesData.total === 0) {
+                document.getElementById('data-issues').innerHTML = '<p style="color: green;">✅ No data validation issues found</p>';
+            } else {
+                const issuesByType = Object.entries(issuesData.summary).map(([type, count]) => 
+                    `<strong>${type.replace('_', ' ').toUpperCase()}:</strong> ${count} instance(s)`
+                ).join(', ');
+                
+                const detailedIssues = issuesData.issues.slice(0, 5).map(issue => {
+                    let location = '';
+                    if (issue.row && issue.sheet) {
+                        location = ` [${issue.sheet} Row ${issue.row}]`;
+                    } else if (issue.gameId) {
+                        location = ` [Game ID: ${issue.gameId}]`;
+                    }
+                    
+                    return `<div style="margin: 5px 0; padding: 5px; background: #fff3cd; border-radius: 3px; border-left: 4px solid #ffc107;">
+                        <strong>⚠️ ${issue.type.replace('_', ' ')}</strong>${location}<br>
+                        ${issue.message}
+                    </div>`;
+                }).join('');
+                
+                document.getElementById('data-issues').innerHTML = `
+                    <p style="color: orange;"><strong>⚠️ ${issuesData.total} historical data issue(s) found:</strong></p>
+                    <p>${issuesByType}</p>
+                    <div>${detailedIssues}</div>
+                    ${issuesData.total > 5 ? `<p>...and ${issuesData.total - 5} more issues</p>` : ''}
+                    <p style="font-style: italic; color: #666; font-size: 0.9em;">Note: Historical data issues are preserved for accuracy but flagged for reference.</p>
+                `;
+            }
+        }
+
+        function displaySharedHands() {
+            // Check for shared hands
+            const sharedHands = [];
+            if (tournamentEngine.rawScorecards) {
+                for (const scorecard of tournamentEngine.rawScorecards) {
+                    const fields = ['Player1Names', 'Player2Names', 'Opponent1Names', 'Opponent2Names'];
+                    for (const field of fields) {
+                        if (scorecard[field] && scorecard[field].isShared) {
+                            sharedHands.push({
+                                field: field.replace('Names', ''),
+                                names: scorecard[field].names,
+                                delimiter: scorecard[field].delimiter,
+                                tournament: scorecard.Tournament,
+                                round: scorecard.Round
+                            });
+                        }
+                    }
+                }
+            }
+            
+            if (sharedHands.length > 0) {
+                document.getElementById('shared-hands-data').innerHTML = `
+                    <p><strong>Shared Hands Found:</strong> ${sharedHands.length}</p>
+                    <div>${sharedHands.slice(0, 5).map(sh => 
+                        `<div style="margin: 5px 0; padding: 5px; background: #f0f8ff; border-radius: 3px;">
+                            <strong>${sh.tournament} Round ${sh.round}:</strong> ${sh.field} = "${sh.names.join(` ${sh.delimiter} `)}"
+                        </div>`
+                    ).join('')}</div>
+                    ${sharedHands.length > 5 ? `<p>...and ${sharedHands.length - 5} more</p>` : ''}
+                `;
+            } else {
+                document.getElementById('shared-hands-data').innerHTML = '<p>No shared hands detected</p>';
+            }
+        }
+
+        function displayTournamentData() {
+            const tournaments = Array.from(tournamentEngine.tournaments.values());
+            if (tournaments.length === 0) {
+                showError('No tournament data found');
+                return;
+            }
+            
+            const tournament = tournaments[0]; // Show first tournament
+            
+            // Tournament summary
+            document.getElementById('tournament-summary').innerHTML = `
+                <p><strong>Tournament:</strong> ${tournament.name} ${tournament.year}</p>
+                <p><strong>Total Players:</strong> ${tournament.total_players}</p>
+                <p><strong>Total Rounds:</strong> ${tournament.total_rounds}</p>
+                <p><strong>Winner:</strong> ${tournament.winner}</p>
+                <p><strong>Runner-up:</strong> ${tournament.runner_up}</p>
+            `;
+            
+            // Sample round data
+            if (tournament.rounds.length > 0) {
+                const round = tournament.rounds[0];
+                document.getElementById('round-data').innerHTML = `
+                    <p><strong>Round ${round.round}</strong> - Trump: ${round.trump_suit}</p>
+                    <p><strong>Tables:</strong> ${round.tables.length}</p>
+                    ${round.tables.map(table => `
+                        <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px;">
+                            <strong>Table ${table.table}:</strong><br>
+                            ${table.partnerships.map(p => 
+                                `${p.players.join(' & ')} - ${p.tricks} tricks`
+                            ).join('<br>')}
+                        </div>
+                    `).join('')}
+                `;
+            }
+            
+            // Final standings
+            document.getElementById('standings-data').innerHTML = `
+                <ol>
+                    ${tournament.final_standings.slice(0, 10).map(standing => 
+                        `<li>${standing.player} - ${standing.total_tricks} tricks (${standing.average_tricks} avg)</li>`
+                    ).join('')}
+                </ol>
+            `;
+            
+            document.getElementById('tournament-data').style.display = 'block';
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('success').style.display = 'none';
+        }
+        
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+        }
+        
+        function hideResults() {
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('success').style.display = 'none';
+            document.getElementById('tournament-data').style.display = 'none';
+        }
+    </script>
+    
+    <style>
+        .integration-demo {
+            padding: var(--spacing-3xl) 0;
+        }
+        
+        .demo-controls {
+            background: var(--card-bg);
+            padding: var(--spacing-xl);
+            border-radius: var(--border-radius-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .input-group {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+            color: var(--text-primary-dark);
+        }
+        
+        .input-group input {
+            width: 100%;
+            max-width: 400px;
+            padding: var(--spacing-sm);
+            border: 1px solid var(--border);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+        }
+        
+        .input-group button,
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: var(--spacing-sm);
+            margin-right: var(--spacing-sm);
+        }
+        
+        button:hover {
+            background: var(--primary-dark);
+        }
+        
+        .results-section {
+            background: var(--bg-secondary);
+            padding: var(--spacing-xl);
+            border-radius: var(--border-radius-lg);
+        }
+        
+        code {
+            background: var(--bg-secondary);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--border-radius);
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+        
+        ol, ul {
+            color: var(--text-primary-dark);
+        }
+        
+        small {
+            color: var(--text-secondary-dark);
+            font-size: 0.875rem;
+        }
+    </style>
+</body>
+</html>

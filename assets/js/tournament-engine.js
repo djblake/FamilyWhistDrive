@@ -9,12 +9,14 @@ class TournamentEngine {
         this.players = new Map();
         this.partnerships = new Map();
         this.rawScorecards = [];
-        
-        // Official 20-player tournament schedule (from devenezia.com)
-        this.officialSchedule = this.generateOfficialSchedule();
+        this.playersLookup = new Map(); // Maps player ID to player info
+        this.dataIssues = []; // Track data validation issues
         
         // Trump suit rotation
         this.trumpSuits = ['Hearts', 'Diamonds', 'Spades', 'Clubs'];
+        
+        // Official 20-player tournament schedule (from devenezia.com)
+        this.officialSchedule = this.generateOfficialSchedule();
     }
 
     /**
@@ -94,11 +96,259 @@ class TournamentEngine {
     }
 
     /**
-     * Process CSV scorecard data
+     * Load complete tournament data from Google Sheets
+     * @param {string} sheetId - The Google Sheets ID
+     */
+    async loadFromGoogleSheets(sheetId) {
+        try {
+            console.log(`📊 Loading complete tournament data from Google Sheets: ${sheetId}`);
+            
+            // First, get the sheet metadata to find all sheets
+            const sheets = await this.getSheetsList(sheetId);
+            console.log(`📋 Found ${sheets.length} sheets:`, sheets.map(s => s.name));
+            
+            // Try to load players data if available
+            const playersSheet = sheets.find(s => s.name === 'Players');
+            if (playersSheet) {
+                console.log('👥 Players sheet found, loading player data...');
+                await this.loadPlayersData(sheetId, playersSheet.gid);
+            } else {
+                console.log('⚠️  No Players sheet found. Will use player names directly from tournament data.');
+                this.playersLookup = new Map(); // Initialize empty lookup
+            }
+            
+            // Load all tournament sheets (those starting with "WhistGame_")
+            const tournamentSheets = sheets.filter(s => s.name.startsWith('WhistGame_'));
+            console.log(`🏆 Found ${tournamentSheets.length} tournament sheets`);
+            
+            let totalScorecards = 0;
+            for (const sheet of tournamentSheets) {
+                const count = await this.loadTournamentSheet(sheetId, sheet.gid, sheet.name);
+                totalScorecards += count;
+            }
+            
+            console.log(`✅ Successfully loaded ${totalScorecards} scorecards from ${tournamentSheets.length} tournaments`);
+            
+            // Process all the loaded data
+            this.processRawScorecards();
+            
+            // Report any data issues found
+            this.reportDataIssues();
+            
+            return totalScorecards;
+        } catch (error) {
+            console.error('❌ Error loading from Google Sheets:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get list of all sheets in the Google Sheets document
+     */
+    async getSheetsList(sheetId) {
+        try {
+            // Use the Sheets API feed to get sheet information
+            const feedUrl = `https://spreadsheets.google.com/feeds/worksheets/${sheetId}/public/basic?alt=json`;
+            const response = await fetch(feedUrl);
+            
+            if (!response.ok) {
+                // Fallback: try to detect sheets manually by attempting common GIDs
+                console.warn('Could not fetch sheet list, using fallback detection');
+                return await this.detectSheetsManually(sheetId);
+            }
+            
+            const data = await response.json();
+            const sheets = data.feed.entry.map(entry => {
+                const id = entry.id.$t;
+                const gid = id.substring(id.lastIndexOf('/') + 1);
+                return {
+                    name: entry.title.$t,
+                    gid: gid
+                };
+            });
+            
+            return sheets;
+        } catch (error) {
+            console.warn('Error getting sheets list, using manual detection:', error);
+            return await this.detectSheetsManually(sheetId);
+        }
+    }
+
+    /**
+     * Fallback method to detect sheets manually
+     */
+    async detectSheetsManually(sheetId) {
+        const sheets = [];
+        
+        // Try common patterns for tournament sheets (including GID 0)
+        const commonGids = ['0', '1', '2', '3', '4', '5'];
+        for (const gid of commonGids) {
+            try {
+                const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+                const response = await fetch(csvUrl);
+                if (response.ok) {
+                    const csvData = await response.text();
+                    const lines = csvData.trim().split('\n');
+                    if (lines.length > 1) {
+                        const headers = lines[0].toLowerCase();
+                        
+                        // Check if it's a Players sheet
+                        if (headers.includes('firstname') && headers.includes('lastname')) {
+                            sheets.push({ name: 'Players', gid: gid });
+                        }
+                        // Check if it's tournament data
+                        else if (headers.includes('tournament') || headers.includes('round') || headers.includes('trump')) {
+                            sheets.push({ name: `WhistGame_${gid}`, gid: gid });
+                        }
+                    }
+                }
+            } catch (e) {
+                // Ignore errors, sheet probably doesn't exist
+            }
+        }
+        
+        return sheets;
+    }
+
+    /**
+     * Load players data from Players sheet
+     */
+    async loadPlayersData(sheetId, gid) {
+        try {
+            const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+            console.log(`👥 Loading players data from GID: ${gid}`);
+            
+            const response = await fetch(csvUrl);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch players data: ${response.statusText}`);
+            }
+            
+            const csvData = await response.text();
+            const lines = csvData.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            
+            console.log(`📋 Players sheet headers: ${headers.join(', ')}`);
+            
+            // Clear existing players data
+            this.playersLookup = new Map();
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.trim());
+                if (values.length < 3 || !values[0]) continue;
+                
+                const player = {
+                    id: values[0],
+                    firstName: values[1] || '',
+                    lastName: values[2] || '',
+                    fullName: `${values[1] || ''} ${values[2] || ''}`.trim()
+                };
+                
+                this.playersLookup.set(player.id, player);
+            }
+            
+            console.log(`✅ Loaded ${this.playersLookup.size} players`);
+        } catch (error) {
+            console.error('❌ Error loading players data:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Load a specific tournament sheet
+     */
+    async loadTournamentSheet(sheetId, gid, sheetName) {
+        try {
+            const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+            console.log(`🏆 Loading tournament data from ${sheetName} (GID: ${gid})`);
+            
+            const response = await fetch(csvUrl);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch tournament data: ${response.statusText}`);
+            }
+            
+            const csvData = await response.text();
+            return await this.processTournamentCSV(csvData, sheetName);
+        } catch (error) {
+            console.error(`❌ Error loading tournament sheet ${sheetName}:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Process tournament CSV data with new structure
+     */
+    async processTournamentCSV(csvData, sheetName) {
+        const lines = csvData.trim().split('\n');
+        const headers = lines[0].split(',').map(h => h.trim());
+        
+        console.log(`📋 Processing tournament CSV with headers: ${headers.join(', ')}`);
+        
+        let validScorecards = 0;
+        let errors = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',').map(v => v.trim());
+            const scorecard = {};
+            
+            headers.forEach((header, index) => {
+                scorecard[header] = values[index] || '';
+            });
+            
+            // Skip empty rows
+            if (!scorecard.Id || !scorecard.Tournament) {
+                continue;
+            }
+            
+            try {
+                // Handle date parsing - if blank, use Jan 2 of following year
+                if (!scorecard.Date) {
+                    const year = parseInt(scorecard.Year) || new Date().getFullYear();
+                    scorecard.Date = `${year + 1}-01-02`;
+                    scorecard.DateKnown = false;
+                } else {
+                    scorecard.DateKnown = true;
+                }
+                
+                // Process shared hands and convert player IDs to names
+                scorecard.Player1Names = this.parseSharedPlayers(scorecard.Player1);
+                scorecard.Player2Names = this.parseSharedPlayers(scorecard.Player2);
+                scorecard.Opponent1Names = this.parseSharedPlayers(scorecard.Opponent1);
+                scorecard.Opponent2Names = this.parseSharedPlayers(scorecard.Opponent2);
+                
+                // Create display names (primary name for compatibility)
+                scorecard.Player1Name = scorecard.Player1Names.names[0];
+                scorecard.Player2Name = scorecard.Player2Names.names[0];
+                scorecard.Opponent1Name = scorecard.Opponent1Names.names[0];
+                scorecard.Opponent2Name = scorecard.Opponent2Names.names[0];
+                
+                // Validate scorecard data
+                if (this.validateTournamentScorecard(scorecard, i + 1, sheetName)) {
+                    this.rawScorecards.push(scorecard);
+                    validScorecards++;
+                }
+            } catch (error) {
+                errors.push(`Row ${i + 1}: ${error.message}`);
+            }
+        }
+        
+        if (errors.length > 0) {
+            const errorMessage = `Errors found in ${sheetName}:\n${errors.join('\n')}`;
+            console.error(`❌ ${errorMessage}`);
+            throw new Error(errorMessage);
+        }
+        
+        console.log(`✅ Processed ${validScorecards} valid scorecards from ${sheetName}`);
+        return validScorecards;
+    }
+
+    /**
+     * Process CSV scorecard data (legacy method for backwards compatibility)
      */
     async processScorecardCSV(csvData) {
         const lines = csvData.trim().split('\n');
         const headers = lines[0].split(',');
+        
+        console.log(`📋 Processing CSV with headers: ${headers.join(', ')}`);
         
         this.rawScorecards = [];
         
@@ -110,11 +360,30 @@ class TournamentEngine {
                 scorecard[header.trim()] = values[index]?.trim();
             });
             
+            // Skip empty rows
+            if (!scorecard.Tournament || !scorecard.Year) {
+                continue;
+            }
+            
+            // For legacy data, parse shared players from names directly
+            scorecard.Player1Names = this.parseSharedPlayersLegacy(scorecard.Player1);
+            scorecard.Player2Names = this.parseSharedPlayersLegacy(scorecard.Player2);
+            scorecard.Opponent1Names = this.parseSharedPlayersLegacy(scorecard.Opponent1);
+            scorecard.Opponent2Names = this.parseSharedPlayersLegacy(scorecard.Opponent2);
+            
+            // Use primary names for compatibility
+            scorecard.Player1Name = scorecard.Player1Names.names[0];
+            scorecard.Player2Name = scorecard.Player2Names.names[0];
+            scorecard.Opponent1Name = scorecard.Opponent1Names.names[0];
+            scorecard.Opponent2Name = scorecard.Opponent2Names.names[0];
+            
             // Validate scorecard data
             if (this.validateScorecard(scorecard)) {
                 this.rawScorecards.push(scorecard);
             }
         }
+        
+        console.log(`✅ Processed ${this.rawScorecards.length} valid scorecards`);
         
         // Process the scorecards into tournament structure
         this.processRawScorecards();
@@ -123,10 +392,186 @@ class TournamentEngine {
     }
 
     /**
-     * Validate individual scorecard entry
+     * Parse shared players from a field that may contain multiple player IDs
+     * Supports "+", "/", and "&" delimiters
+     */
+    parseSharedPlayers(playerField) {
+        if (!playerField) {
+            return { names: [''], isShared: false, playerIds: [''] };
+        }
+        
+        // Check for shared hand delimiters
+        const delimiters = ['+', '/', '&'];
+        let foundDelimiter = null;
+        
+        for (const delimiter of delimiters) {
+            if (playerField.includes(delimiter)) {
+                foundDelimiter = delimiter;
+                break;
+            }
+        }
+        
+        if (foundDelimiter) {
+            // Split by the found delimiter and trim whitespace
+            const playerIds = playerField.split(foundDelimiter).map(id => id.trim()).filter(id => id);
+            const names = playerIds.map(id => this.getPlayerName(id));
+            
+            return {
+                names: names,
+                isShared: true,
+                playerIds: playerIds,
+                delimiter: foundDelimiter
+            };
+        } else {
+            // Single player - still trim whitespace
+            const playerId = playerField.trim();
+            return {
+                names: [this.getPlayerName(playerId)],
+                isShared: false,
+                playerIds: [playerId]
+            };
+        }
+    }
+
+    /**
+     * Parse shared players for legacy data (names instead of IDs)
+     */
+    parseSharedPlayersLegacy(playerField) {
+        if (!playerField) {
+            return { names: [''], isShared: false, playerIds: [''] };
+        }
+        
+        // Check for shared hand delimiters
+        const delimiters = ['+', '/', '&'];
+        let foundDelimiter = null;
+        
+        for (const delimiter of delimiters) {
+            if (playerField.includes(delimiter)) {
+                foundDelimiter = delimiter;
+                break;
+            }
+        }
+        
+        if (foundDelimiter) {
+            // Split by the found delimiter and trim whitespace
+            const names = playerField.split(foundDelimiter).map(name => name.trim()).filter(name => name);
+            
+            return {
+                names: names,
+                isShared: true,
+                playerIds: names, // For legacy, names are the IDs
+                delimiter: foundDelimiter
+            };
+        } else {
+            // Single player - still trim whitespace
+            const name = playerField.trim();
+            return {
+                names: [name],
+                isShared: false,
+                playerIds: [name]
+            };
+        }
+    }
+
+    /**
+     * Get player name from ID using lookup table
+     */
+    getPlayerName(playerId) {
+        if (!playerId) return '';
+        
+        const trimmedId = playerId.trim();
+        
+        // If we have a players lookup table, use it
+        if (this.playersLookup && this.playersLookup.size > 0) {
+            const player = this.playersLookup.get(trimmedId);
+            return player ? player.fullName : trimmedId; // Fallback to ID if not found
+        }
+        
+        // If no players lookup, treat the ID as the name directly
+        return trimmedId;
+    }
+
+    /**
+     * Validate tournament scorecard entry (new format)
+     */
+    validateTournamentScorecard(scorecard, rowNumber = null, sheetName = null) {
+        const required = ['Id', 'Tournament', 'Year', 'Round', 'Trump_Suit', 'Table', 'Player1', 'Player2', 'Tricks_Won', 'Opponent1', 'Opponent2', 'Opponent_Tricks'];
+        
+        const rowInfo = rowNumber ? ` (Row ${rowNumber}${sheetName ? ` in ${sheetName}` : ''})` : '';
+        
+        // Check all required fields exist
+        for (const field of required) {
+            if (!scorecard[field]) {
+                throw new Error(`Missing required field '${field}'${rowInfo}`);
+            }
+        }
+        
+        // Validate trick counts
+        const tricks = parseInt(scorecard.Tricks_Won);
+        const opponentTricks = parseInt(scorecard.Opponent_Tricks);
+        
+        if (isNaN(tricks) || isNaN(opponentTricks)) {
+            throw new Error(`Invalid trick counts - Tricks_Won: '${scorecard.Tricks_Won}', Opponent_Tricks: '${scorecard.Opponent_Tricks}'${rowInfo}`);
+        }
+        
+        if (tricks < 0 || tricks > 13 || opponentTricks < 0 || opponentTricks > 13) {
+            throw new Error(`Trick counts out of range (0-13) - Tricks_Won: ${tricks}, Opponent_Tricks: ${opponentTricks}${rowInfo}`);
+        }
+        
+        // HISTORICAL DATA VALIDATION: Warn about trick count issues but don't block
+        if (tricks + opponentTricks !== 13) {
+            const issueMessage = `Tricks don't add to 13! Tricks_Won (${tricks}) + Opponent_Tricks (${opponentTricks}) = ${tricks + opponentTricks}${rowInfo}`;
+            console.warn(`⚠️  HISTORICAL DATA ISSUE: ${issueMessage}. This is preserved for historical accuracy.`);
+            
+            // Track this issue
+            this.dataIssues.push({
+                type: 'trick_count_mismatch',
+                severity: 'warning',
+                message: issueMessage,
+                row: rowNumber,
+                sheet: sheetName,
+                expected: 13,
+                actual: tricks + opponentTricks,
+                gameId: scorecard.Id
+            });
+            
+            // Mark this scorecard as having a data issue for tracking
+            scorecard.hasDataIssue = true;
+            scorecard.dataIssue = `Tricks total ${tricks + opponentTricks} instead of 13`;
+        }
+        
+        // Validate trump suit
+        if (!this.trumpSuits.includes(scorecard.Trump_Suit)) {
+            throw new Error(`Invalid trump suit '${scorecard.Trump_Suit}'. Must be one of: ${this.trumpSuits.join(', ')}${rowInfo}`);
+        }
+        
+        // Validate table number
+        const tableNum = parseInt(scorecard.Table);
+        if (isNaN(tableNum) || tableNum < 1) {
+            throw new Error(`Invalid table number '${scorecard.Table}'. Must be a positive integer${rowInfo}`);
+        }
+        
+        // Validate player IDs exist in lookup
+        const playerFields = ['Player1', 'Player2', 'Opponent1', 'Opponent2'];
+        for (const field of playerFields) {
+            const playerInfo = scorecard[`${field}Names`];
+            if (playerInfo && playerInfo.playerIds) {
+                for (const playerId of playerInfo.playerIds) {
+                    if (playerId && !this.playersLookup.has(playerId.trim())) {
+                        console.warn(`⚠️  Player ID '${playerId}' not found in Players sheet${rowInfo}. Using ID as display name.`);
+                    }
+                }
+            }
+        }
+        
+        return true;
+    }
+
+    /**
+     * Validate individual scorecard entry (legacy format)
      */
     validateScorecard(scorecard) {
-        const required = ['Tournament', 'Year', 'Round', 'Trump_Suit', 'Player1', 'Player2', 'Tricks_Won', 'Opponent1', 'Opponent2', 'Opponent_Tricks'];
+        const required = ['Tournament', 'Year', 'Round', 'Trump_Suit', 'Table', 'Player1', 'Player2', 'Tricks_Won', 'Opponent1', 'Opponent2', 'Opponent_Tricks'];
         
         // Check all required fields exist
         for (const field of required) {
@@ -140,9 +585,34 @@ class TournamentEngine {
         const tricks = parseInt(scorecard.Tricks_Won);
         const opponentTricks = parseInt(scorecard.Opponent_Tricks);
         
-        if (tricks + opponentTricks !== 13) {
-            console.warn(`Trick count doesn't add to 13:`, scorecard);
+        if (isNaN(tricks) || isNaN(opponentTricks)) {
+            console.warn(`Invalid trick counts - Tricks_Won: '${scorecard.Tricks_Won}', Opponent_Tricks: '${scorecard.Opponent_Tricks}'`, scorecard);
             return false;
+        }
+        
+        if (tricks < 0 || tricks > 13 || opponentTricks < 0 || opponentTricks > 13) {
+            console.warn(`Trick counts out of range (0-13) - Tricks_Won: ${tricks}, Opponent_Tricks: ${opponentTricks}`, scorecard);
+            return false;
+        }
+        
+        // HISTORICAL DATA VALIDATION: Warn about trick count issues but don't block
+        if (tricks + opponentTricks !== 13) {
+            const issueMessage = `Tricks don't add to 13! Tricks_Won (${tricks}) + Opponent_Tricks (${opponentTricks}) = ${tricks + opponentTricks}`;
+            console.warn(`⚠️  HISTORICAL DATA ISSUE: ${issueMessage}. This is preserved for historical accuracy.`, scorecard);
+            
+            // Track this issue (legacy data doesn't have row/sheet info)
+            this.dataIssues.push({
+                type: 'trick_count_mismatch',
+                severity: 'warning',
+                message: issueMessage,
+                expected: 13,
+                actual: tricks + opponentTricks,
+                scorecard: scorecard
+            });
+            
+            // Mark this scorecard as having a data issue for tracking
+            scorecard.hasDataIssue = true;
+            scorecard.dataIssue = `Tricks total ${tricks + opponentTricks} instead of 13`;
         }
         
         // Validate trump suit
@@ -151,7 +621,68 @@ class TournamentEngine {
             return false;
         }
         
+        // Validate table number
+        const tableNum = parseInt(scorecard.Table);
+        if (isNaN(tableNum) || tableNum < 1) {
+            console.warn(`Invalid table number:`, scorecard.Table);
+            return false;
+        }
+        
         return true;
+    }
+
+    /**
+     * Report summary of data issues found during processing
+     */
+    reportDataIssues() {
+        if (this.dataIssues.length === 0) {
+            console.log('✅ No data validation issues found');
+            return;
+        }
+
+        console.log(`\n📊 DATA VALIDATION SUMMARY`);
+        console.log(`Found ${this.dataIssues.length} data issue(s):\n`);
+
+        // Group issues by type
+        const issuesByType = {};
+        this.dataIssues.forEach(issue => {
+            if (!issuesByType[issue.type]) {
+                issuesByType[issue.type] = [];
+            }
+            issuesByType[issue.type].push(issue);
+        });
+
+        // Report each type
+        Object.entries(issuesByType).forEach(([type, issues]) => {
+            console.log(`${type.toUpperCase().replace('_', ' ')} (${issues.length} instances):`);
+            issues.forEach((issue, index) => {
+                let location = '';
+                if (issue.row && issue.sheet) {
+                    location = ` [${issue.sheet} Row ${issue.row}]`;
+                } else if (issue.gameId) {
+                    location = ` [Game ID: ${issue.gameId}]`;
+                }
+                
+                console.log(`  ${index + 1}. ${issue.message}${location}`);
+            });
+            console.log('');
+        });
+
+        console.log(`⚠️  Note: Historical data issues are preserved for accuracy but flagged for reference.\n`);
+    }
+
+    /**
+     * Get data issues summary for external use
+     */
+    getDataIssues() {
+        return {
+            total: this.dataIssues.length,
+            issues: this.dataIssues,
+            summary: this.dataIssues.reduce((acc, issue) => {
+                acc[issue.type] = (acc[issue.type] || 0) + 1;
+                return acc;
+            }, {})
+        };
     }
 
     /**
@@ -249,30 +780,30 @@ class TournamentEngine {
         const trumpSuit = scorecards[0]?.Trump_Suit;
         const tables = new Map();
         
-        // Group scorecards by table (derived from partnerships)
+        // Group scorecards by table number (from Table field)
         for (const scorecard of scorecards) {
-            const partnership = [scorecard.Player1, scorecard.Player2].sort().join('_');
-            const opposition = [scorecard.Opponent1, scorecard.Opponent2].sort().join('_');
-            const tableKey = [partnership, opposition].sort().join('_vs_');
+            const tableNum = parseInt(scorecard.Table);
             
-            if (!tables.has(tableKey)) {
-                tables.set(tableKey, []);
+            if (!tables.has(tableNum)) {
+                tables.set(tableNum, []);
             }
             
-            tables.get(tableKey).push(scorecard);
+            tables.get(tableNum).push(scorecard);
         }
         
         // Process each table
         const processedTables = [];
-        let tableNum = 1;
         
-        for (const [tableKey, tableCards] of tables) {
+        // Sort tables by table number
+        const sortedTables = Array.from(tables.entries()).sort((a, b) => a[0] - b[0]);
+        
+        for (const [tableNum, tableCards] of sortedTables) {
             const tableData = {
-                table: tableNum++,
+                table: tableNum,
                 partnerships: tableCards.map(card => ({
-                    players: [card.Player1, card.Player2],
+                    players: [card.Player1Name || card.Player1, card.Player2Name || card.Player2],
                     tricks: parseInt(card.Tricks_Won),
-                    opponents: [card.Opponent1, card.Opponent2]
+                    opponents: [card.Opponent1Name || card.Opponent1, card.Opponent2Name || card.Opponent2]
                 }))
             };
             
