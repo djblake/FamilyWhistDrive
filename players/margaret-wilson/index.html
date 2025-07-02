@@ -44,63 +44,63 @@
                     
                     <div class="player-info">
                         <div class="player-header">
-                            <h1 class="player-name">Margaret Wilson</h1>
-                            <div class="player-nickname">"The Ace"</div>
-                            <div class="player-title">Three-Time Consecutive Champion</div>
+                            <h1 class="player-name" id="player-name">Loading...</h1>
+                            <div class="player-nickname" id="player-nickname" style="display: none;"></div>
+                            <div class="player-title" id="player-title">Loading...</div>
                         </div>
                         
-                        <div class="player-meta">
-                            <div class="meta-item">
-                                <span class="meta-label">Age</span>
-                                <span class="meta-value">56</span>
-                            </div>
+                        <div class="player-meta" id="player-meta">
                             <div class="meta-item">
                                 <span class="meta-label">First Tournament</span>
-                                <span class="meta-value">1988</span>
+                                <span class="meta-value" id="first-tournament">-</span>
                             </div>
                             <div class="meta-item">
                                 <span class="meta-label">Years Active</span>
-                                <span class="meta-value">36</span>
+                                <span class="meta-value" id="years-active">-</span>
                             </div>
                             <div class="meta-item">
-                                <span class="meta-label">Family Role</span>
-                                <span class="meta-value">Sister-in-law</span>
+                                <span class="meta-label">Total Tournaments</span>
+                                <span class="meta-value" id="total-tournaments">-</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Current Ranking</span>
+                                <span class="meta-value" id="current-ranking">-</span>
                             </div>
                         </div>
 
                         <div class="family-tree-link">
-                            <a href="../../families/?player=Margaret Wilson" class="family-tree-btn" onclick="return handleFamilyTreeLink(event)">
+                            <a href="#" class="family-tree-btn" id="family-tree-link" onclick="return handleFamilyTreeLink(event)">
                                 <span class="tree-icon">🌳</span>
-                                View in Wilson Family Tree
+                                View in Family Tree
                             </a>
                         </div>
 
-                        <div class="career-highlights">
+                        <div class="career-highlights" id="career-highlights">
                             <div class="highlight-card primary">
                                 <div class="highlight-icon">🏆</div>
                                 <div class="highlight-content">
-                                    <div class="highlight-number">8</div>
+                                    <div class="highlight-number" id="tournament-victories">-</div>
                                     <div class="highlight-label">Tournament Victories</div>
                                 </div>
                             </div>
                             <div class="highlight-card">
                                 <div class="highlight-icon">🎯</div>
                                 <div class="highlight-content">
-                                    <div class="highlight-number">127</div>
-                                    <div class="highlight-label">Career Wins</div>
+                                    <div class="highlight-number" id="total-tricks">-</div>
+                                    <div class="highlight-label">Total Tricks</div>
                                 </div>
                             </div>
                             <div class="highlight-card">
                                 <div class="highlight-icon">📊</div>
                                 <div class="highlight-content">
-                                    <div class="highlight-number">68.0%</div>
-                                    <div class="highlight-label">Win Percentage</div>
+                                    <div class="highlight-number" id="avg-tricks">-</div>
+                                    <div class="highlight-label">Avg Tricks/Round</div>
                                 </div>
                             </div>
                             <div class="highlight-card">
                                 <div class="highlight-icon">🥉</div>
                                 <div class="highlight-content">
-                                    <div class="highlight-number">23</div>
+                                    <div class="highlight-number" id="top-finishes">-</div>
                                     <div class="highlight-label">Top 3 Finishes</div>
                                 </div>
                             </div>
@@ -118,39 +118,9 @@
                             <span class="title-icon">📈</span>
                             Career Statistics
                         </h3>
-                        <div class="stats-table">
-                            <div class="stat-row">
-                                <span class="stat-name">Tournaments Played</span>
-                                <span class="stat-value">35</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-name">Total Rounds</span>
-                                <span class="stat-value">560</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-name">Total Tricks</span>
-                                <span class="stat-value">3,808</span>
-                            </div>
-                            <div class="stat-row highlighted">
-                                <span class="stat-name">Average Tricks per Round</span>
-                                <span class="stat-value">6.8</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-name">Tournament Win Rate</span>
-                                <span class="stat-value">22.9%</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-name">Runner-up Finishes</span>
-                                <span class="stat-value">12</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-name">Booby Prizes</span>
-                                <span class="stat-value">2</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-name">Current Ranking</span>
-                                <span class="stat-value">#1</span>
-                            </div>
+                        <div class="stats-table" id="career-stats">
+                            <!-- Will be populated by JavaScript -->
+                            <div class="loading-message">Loading career statistics...</div>
                         </div>
                     </div>
 
@@ -232,81 +202,9 @@
                     <span class="title-icon">🤝</span>
                     Partnership Analysis
                 </h3>
-                <div class="partnerships-grid">
-                    <div class="partnership-card best">
-                        <div class="partnership-header">
-                            <h4>Best Partnership</h4>
-                            <div class="partnership-rating">⭐⭐⭐⭐⭐</div>
-                        </div>
-                        <div class="partnership-players">
-                            <span class="player-name">James Ruston</span>
-                        </div>
-                        <div class="partnership-stats">
-                            <div class="partnership-stat">
-                                <span class="stat-label">Times Partnered</span>
-                                <span class="stat-value">15</span>
-                            </div>
-                            <div class="partnership-stat">
-                                <span class="stat-label">Success Rate</span>
-                                <span class="stat-value">73%</span>
-                            </div>
-                            <div class="partnership-stat">
-                                <span class="stat-label">Average Score</span>
-                                <span class="stat-value">7.0</span>
-                            </div>
-                        </div>
-                        <p class="partnership-note">The legendary "Master & Ace" combination - strategic brilliance meets intuitive play</p>
-                    </div>
-
-                    <div class="partnership-card">
-                        <div class="partnership-header">
-                            <h4>Challenging Partnership</h4>
-                            <div class="partnership-rating">⭐⭐⭐</div>
-                        </div>
-                        <div class="partnership-players">
-                            <span class="player-name">Tom Wilson</span>
-                        </div>
-                        <div class="partnership-stats">
-                            <div class="partnership-stat">
-                                <span class="stat-label">Times Partnered</span>
-                                <span class="stat-value">8</span>
-                            </div>
-                            <div class="partnership-stat">
-                                <span class="stat-label">Success Rate</span>
-                                <span class="stat-value">58%</span>
-                            </div>
-                            <div class="partnership-stat">
-                                <span class="stat-label">Average Score</span>
-                                <span class="stat-value">6.2</span>
-                            </div>
-                        </div>
-                        <p class="partnership-note">Generation gap creates interesting strategic tensions</p>
-                    </div>
-
-                    <div class="partnership-card">
-                        <div class="partnership-header">
-                            <h4>Rising Partnership</h4>
-                            <div class="partnership-rating">⭐⭐⭐⭐</div>
-                        </div>
-                        <div class="partnership-players">
-                            <span class="player-name">Emma Jones</span>
-                        </div>
-                        <div class="partnership-stats">
-                            <div class="partnership-stat">
-                                <span class="stat-label">Times Partnered</span>
-                                <span class="stat-value">6</span>
-                            </div>
-                            <div class="partnership-stat">
-                                <span class="stat-label">Success Rate</span>
-                                <span class="stat-value">69%</span>
-                            </div>
-                            <div class="partnership-stat">
-                                <span class="stat-label">Average Score</span>
-                                <span class="stat-value">6.9</span>
-                            </div>
-                        </div>
-                        <p class="partnership-note">Veteran champion mentoring the next generation</p>
-                    </div>
+                <div class="partnerships-grid" id="partnerships-grid">
+                    <!-- Will be populated by JavaScript -->
+                    <div class="loading-message">Loading partnership analysis...</div>
                 </div>
             </div>
         </section>
@@ -317,48 +215,9 @@
                     <span class="title-icon">🏅</span>
                     Notable Achievements & Records
                 </h3>
-                <div class="achievements-grid">
-                    <div class="achievement-card major">
-                        <div class="achievement-icon">👑</div>
-                        <h4>Three Consecutive Championships</h4>
-                        <p class="achievement-years">2021, 2022, 2023</p>
-                        <p>Tied the modern record for consecutive tournament victories, previously held by James Ruston Sr. (1993-1995).</p>
-                    </div>
-                    
-                    <div class="achievement-card">
-                        <div class="achievement-icon">⚡</div>
-                        <h4>Youngest Winner Record</h4>
-                        <p class="achievement-years">1993 (Age 25)</p>
-                        <p>Held the youngest winner record for 29 years until Emma Jones broke it in 2022.</p>
-                    </div>
-                    
-                    <div class="achievement-card">
-                        <div class="achievement-icon">🎯</div>
-                        <h4>Most 11-Trick Rounds</h4>
-                        <p class="achievement-years">Career Record: 47</p>
-                        <p>Unmatched ability to dominate individual rounds, averaging 1.3 eleven-trick rounds per tournament.</p>
-                    </div>
-                    
-                    <div class="achievement-card">
-                        <div class="achievement-icon">🧠</div>
-                        <h4>Strategic Innovation</h4>
-                        <p class="achievement-years">The Wilson Method</p>
-                        <p>Pioneered the "Aggressive Opening" strategy, now studied by all family members.</p>
-                    </div>
-                    
-                    <div class="achievement-card">
-                        <div class="achievement-icon">🏆</div>
-                        <h4>Tournament Organizer</h4>
-                        <p class="achievement-years">2010-Present</p>
-                        <p>Revolutionized tournament logistics while maintaining competitive excellence as a player.</p>
-                    </div>
-                    
-                    <div class="achievement-card">
-                        <div class="achievement-icon">📚</div>
-                        <h4>Mentorship Legacy</h4>
-                        <p class="achievement-years">Next Generation</p>
-                        <p>Directly influenced the playing styles of Emma Jones, Sarah Brown, and Michael Thompson Jr.</p>
-                    </div>
+                <div class="achievements-grid" id="achievements-grid">
+                    <!-- Will be populated by JavaScript -->
+                    <div class="loading-message">Loading achievements...</div>
                 </div>
             </div>
         </section>
@@ -396,63 +255,245 @@
     <script src="../../assets/js/main.js"></script>
     
     <script>
-        // Player profile specific JavaScript
+        // Dynamic player profile loading from Google Sheets
+        let currentPlayerName = null;
+        let tournamentEngine = null;
+        let playerData = null;
+
         document.addEventListener('DOMContentLoaded', function() {
             initializePlayerProfile();
         });
 
         async function initializePlayerProfile() {
             try {
-                // Generate tournament history timeline
-                generateTournamentTimeline();
+                // Extract player name from URL path or use default
+                const pathParts = window.location.pathname.split('/');
+                const playerFolder = pathParts[pathParts.length - 2] || 'margaret-wilson';
+                currentPlayerName = getPlayerNameFromFolder(playerFolder);
+                
+                console.log(`👑 Loading profile for: ${currentPlayerName}`);
+                
+                // Initialize tournament engine and load data
+                tournamentEngine = new TournamentEngine();
+                const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+                
+                await tournamentEngine.loadFromGoogleSheets(sheetId);
+                
+                // Get player data
+                const allPlayers = tournamentEngine.getAllPlayers('total_tricks');
+                playerData = allPlayers.find(p => 
+                    p.name.toLowerCase() === currentPlayerName.toLowerCase() ||
+                    p.name.toLowerCase().includes(currentPlayerName.toLowerCase().split(' ')[0])
+                );
+                
+                if (!playerData) {
+                    console.error(`Player not found: ${currentPlayerName}`);
+                    document.getElementById('player-name').textContent = 'Player Not Found';
+                    return;
+                }
+                
+                // Load all sections
+                await Promise.all([
+                    loadPlayerHeader(),
+                    loadCareerStats(),
+                    loadTournamentTimeline(),
+                    loadPartnerships(),
+                    loadAchievements()
+                ]);
                 
                 console.log('👑 Player profile loaded successfully');
             } catch (error) {
                 console.error('Error loading player profile:', error);
+                showErrorMessage();
             }
+        }
+
+        function getPlayerNameFromFolder(folder) {
+            // Convert folder name to proper player name
+            const nameMap = {
+                'margaret-wilson': 'Margaret Wilson',
+                'james-ruston': 'James Ruston',
+                'emma-jones': 'Emma Jones'
+            };
+            return nameMap[folder] || folder.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         }
 
         function handleFamilyTreeLink(event) {
             event.preventDefault();
-            
-            // Get player name from the link or page context
-            const playerName = "Margaret Wilson";
-            
-            // Navigate to families page with player parameter
-            window.location.href = `../../families/?player=${encodeURIComponent(playerName)}`;
-            
+            if (currentPlayerName) {
+                window.location.href = `../../families/?player=${encodeURIComponent(currentPlayerName)}`;
+            }
             return false;
         }
 
-        function generateTournamentTimeline() {
+        async function loadPlayerHeader() {
+            if (!playerData) return;
+            
+            const playerTournaments = Array.from(tournamentEngine.tournaments.values())
+                .filter(t => t.participants.some(p => p.name === playerData.name))
+                .sort((a, b) => b.year - a.year);
+            
+            const victories = playerTournaments.filter(t => {
+                const playerResult = t.participants.find(p => p.name === playerData.name);
+                return playerResult && playerResult.position === 1;
+            });
+            
+            const firstTournament = playerTournaments.length > 0 ? Math.min(...playerTournaments.map(t => t.year)) : null;
+            const yearsActive = firstTournament ? new Date().getFullYear() - firstTournament + 1 : 0;
+            
+            // Update header
+            document.getElementById('player-name').textContent = playerData.name;
+            document.getElementById('player-title').textContent = getTitleForPlayer(victories.length, playerTournaments);
+            
+            // Update meta info
+            document.getElementById('first-tournament').textContent = firstTournament || '-';
+            document.getElementById('years-active').textContent = yearsActive || '-';
+            document.getElementById('total-tournaments').textContent = playerTournaments.length;
+            document.getElementById('current-ranking').textContent = `#${playerData.rank || '-'}`;
+            
+            // Update career highlights
+            document.getElementById('tournament-victories').textContent = victories.length;
+            document.getElementById('total-tricks').textContent = playerData.totalTricks.toLocaleString();
+            document.getElementById('avg-tricks').textContent = playerData.averageTricks.toFixed(1);
+            
+            const topFinishes = playerTournaments.filter(t => {
+                const playerResult = t.participants.find(p => p.name === playerData.name);
+                return playerResult && playerResult.position <= 3;
+            });
+            document.getElementById('top-finishes').textContent = topFinishes.length;
+            
+            // Update family tree link
+            document.getElementById('family-tree-link').href = `../../families/?player=${encodeURIComponent(playerData.name)}`;
+            
+            // Update page title
+            document.title = `${playerData.name} - Player Profile | Ruston Family Whist Drive`;
+        }
+
+        function getTitleForPlayer(victories, tournaments) {
+            if (victories >= 3) {
+                const recent = tournaments.slice(0, 3);
+                const recentVictories = recent.filter(t => {
+                    const playerResult = t.participants.find(p => p.name === playerData.name);
+                    return playerResult && playerResult.position === 1;
+                });
+                if (recentVictories.length === 3) {
+                    return 'Three-Time Consecutive Champion';
+                }
+                return `${victories}-Time Champion`;
+            } else if (victories === 2) {
+                return 'Two-Time Champion';
+            } else if (victories === 1) {
+                return 'Tournament Champion';
+            } else {
+                const topFinish = Math.min(...tournaments.map(t => {
+                    const playerResult = t.participants.find(p => p.name === playerData.name);
+                    return playerResult ? playerResult.position : 999;
+                }));
+                
+                if (topFinish === 2) return 'Tournament Runner-up';
+                if (topFinish === 3) return 'Tournament Third Place';
+                return 'Family Competitor';
+            }
+        }
+
+        async function loadCareerStats() {
+            if (!playerData) return;
+            
+            const playerTournaments = Array.from(tournamentEngine.tournaments.values())
+                .filter(t => t.participants.some(p => p.name === playerData.name));
+            
+            const totalRounds = playerTournaments.reduce((sum, t) => {
+                const playerResult = t.participants.find(p => p.name === playerData.name);
+                return sum + (playerResult ? playerResult.rounds.length : 0);
+            }, 0);
+            
+            const victories = playerTournaments.filter(t => {
+                const playerResult = t.participants.find(p => p.name === playerData.name);
+                return playerResult && playerResult.position === 1;
+            });
+            
+            const runnerUps = playerTournaments.filter(t => {
+                const playerResult = t.participants.find(p => p.name === playerData.name);
+                return playerResult && playerResult.position === 2;
+            });
+            
+            const boobyPrizes = playerTournaments.filter(t => {
+                const playerResult = t.participants.find(p => p.name === playerData.name);
+                const maxPos = Math.max(...t.participants.map(p => p.position));
+                return playerResult && playerResult.position === maxPos;
+            });
+            
+            const winRate = playerTournaments.length > 0 ? (victories.length / playerTournaments.length * 100) : 0;
+            
+            const statsHTML = `
+                <div class="stat-row">
+                    <span class="stat-name">Tournaments Played</span>
+                    <span class="stat-value">${playerTournaments.length}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-name">Total Rounds</span>
+                    <span class="stat-value">${totalRounds.toLocaleString()}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-name">Total Tricks</span>
+                    <span class="stat-value">${playerData.totalTricks.toLocaleString()}</span>
+                </div>
+                <div class="stat-row highlighted">
+                    <span class="stat-name">Average Tricks per Round</span>
+                    <span class="stat-value">${playerData.averageTricks.toFixed(1)}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-name">Tournament Win Rate</span>
+                    <span class="stat-value">${winRate.toFixed(1)}%</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-name">Tournament Victories</span>
+                    <span class="stat-value">${victories.length}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-name">Runner-up Finishes</span>
+                    <span class="stat-value">${runnerUps.length}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-name">Booby Prizes</span>
+                    <span class="stat-value">${boobyPrizes.length}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-name">Current Ranking</span>
+                    <span class="stat-value">#${playerData.rank || '-'}</span>
+                </div>
+            `;
+            
+            document.getElementById('career-stats').innerHTML = statsHTML;
+        }
+
+        async function loadTournamentTimeline() {
             const timeline = document.getElementById('tournament-timeline');
-            if (!timeline) return;
+            if (!timeline || !playerData) return;
 
-            const tournaments = [
-                { year: 2023, position: 1, tricks: 112, highlight: 'Third Consecutive Title' },
-                { year: 2022, position: 1, tricks: 108, highlight: 'Back-to-Back Champion' },
-                { year: 2021, position: 1, tricks: 105, highlight: 'Return to Glory' },
-                { year: 2020, position: 3, tricks: 98, highlight: 'COVID Comeback' },
-                { year: 2019, position: 2, tricks: 102, highlight: 'Runner-up' },
-                { year: 2018, position: 1, tricks: 110, highlight: 'Championship Victory' },
-                { year: 2017, position: 4, tricks: 95, highlight: 'Rebuilding Year' },
-                { year: 2016, position: 1, tricks: 107, highlight: 'Dominant Performance' }
-            ];
+            const playerTournaments = Array.from(tournamentEngine.tournaments.values())
+                .filter(t => t.participants.some(p => p.name === playerData.name))
+                .sort((a, b) => b.year - a.year);
 
-            const timelineHTML = tournaments.map(tournament => {
-                const positionClass = tournament.position === 1 ? 'winner' : 
-                                    tournament.position === 2 ? 'runner-up' : 
-                                    tournament.position === 3 ? 'third' : 'other';
+            const timelineHTML = playerTournaments.map(tournament => {
+                const playerResult = tournament.participants.find(p => p.name === playerData.name);
+                if (!playerResult) return '';
+                
+                const positionClass = playerResult.position === 1 ? 'winner' : 
+                                    playerResult.position === 2 ? 'runner-up' : 
+                                    playerResult.position === 3 ? 'third' : 'other';
+                
+                const highlight = getHighlightForTournament(tournament, playerResult, playerTournaments);
                 
                 return `
                     <div class="timeline-item ${positionClass}">
                         <div class="timeline-year">${tournament.year}</div>
                         <div class="timeline-content">
                             <div class="timeline-position">
-                                ${getPositionDisplay(tournament.position)}
+                                ${getPositionDisplay(playerResult.position)}
                             </div>
-                            <div class="timeline-tricks">${tournament.tricks} tricks</div>
-                            <div class="timeline-highlight">${tournament.highlight}</div>
+                            <div class="timeline-tricks">${playerResult.totalTricks} tricks</div>
+                            <div class="timeline-highlight">${highlight}</div>
                         </div>
                     </div>
                 `;
@@ -461,15 +502,283 @@
             timeline.innerHTML = timelineHTML;
         }
 
+        function getHighlightForTournament(tournament, playerResult, allTournaments) {
+            if (playerResult.position === 1) {
+                const victories = allTournaments.filter(t => {
+                    const pr = t.participants.find(p => p.name === playerData.name);
+                    return pr && pr.position === 1;
+                });
+                const victoryIndex = victories.indexOf(tournament);
+                
+                if (victories.length >= 3 && victoryIndex < 3) {
+                    return victoryIndex === 0 ? 'Third Consecutive Title' :
+                           victoryIndex === 1 ? 'Back-to-Back Champion' : 'Championship Victory';
+                }
+                return 'Tournament Champion';
+            } else if (playerResult.position === 2) {
+                return 'Runner-up Finish';
+            } else if (playerResult.position === 3) {
+                return 'Third Place';
+            }
+            return `${getOrdinal(playerResult.position)} Place`;
+        }
+
+        function getOrdinal(n) {
+            const s = ["th", "st", "nd", "rd"];
+            const v = n % 100;
+            return n + (s[(v - 20) % 10] || s[v] || s[0]);
+        }
+
         function getPositionDisplay(position) {
             const displays = {
                 1: '🥇 Champion',
                 2: '🥈 Runner-up', 
-                3: '🥉 Third Place',
-                4: '4th Place',
-                5: '5th Place'
+                3: '🥉 Third Place'
             };
-            return displays[position] || `${position}th Place`;
+            return displays[position] || `${getOrdinal(position)} Place`;
+        }
+
+        async function loadPartnerships() {
+            // Calculate partnership statistics
+            const partnerships = new Map();
+            
+            Array.from(tournamentEngine.tournaments.values()).forEach(tournament => {
+                const playerResult = tournament.participants.find(p => p.name === playerData.name);
+                if (!playerResult) return;
+                
+                playerResult.rounds.forEach(round => {
+                    const partner = round.partner;
+                    if (partner && partner !== playerData.name) {
+                        if (!partnerships.has(partner)) {
+                            partnerships.set(partner, {
+                                name: partner,
+                                games: 0,
+                                totalTricks: 0,
+                                wins: 0
+                            });
+                        }
+                        
+                        const partnershipData = partnerships.get(partner);
+                        partnershipData.games++;
+                        partnershipData.totalTricks += round.tricks_taken;
+                        if (round.tricks_taken >= 7) partnershipData.wins++;
+                    }
+                });
+            });
+            
+            // Sort partnerships by success rate
+            const sortedPartnerships = Array.from(partnerships.values())
+                .filter(p => p.games >= 3) // Only show partnerships with at least 3 games
+                .sort((a, b) => (b.wins / b.games) - (a.wins / a.games))
+                .slice(0, 6); // Top 6 partnerships
+            
+            if (sortedPartnerships.length === 0) {
+                document.getElementById('partnerships-grid').innerHTML = '<p>No partnership data available.</p>';
+                return;
+            }
+            
+            const partnershipsHTML = sortedPartnerships.map((partnership, index) => {
+                const successRate = (partnership.wins / partnership.games * 100);
+                const avgScore = (partnership.totalTricks / partnership.games);
+                const rating = successRate >= 70 ? '⭐⭐⭐⭐⭐' :
+                              successRate >= 60 ? '⭐⭐⭐⭐' :
+                              successRate >= 50 ? '⭐⭐⭐' : '⭐⭐';
+                
+                const cardClass = index === 0 ? 'partnership-card best' : 'partnership-card';
+                const title = index === 0 ? 'Best Partnership' :
+                             successRate < 55 ? 'Challenging Partnership' : 'Strong Partnership';
+                
+                return `
+                    <div class="${cardClass}">
+                        <div class="partnership-header">
+                            <h4>${title}</h4>
+                            <div class="partnership-rating">${rating}</div>
+                        </div>
+                        <div class="partnership-players">
+                            <span class="player-name">${partnership.name}</span>
+                        </div>
+                        <div class="partnership-stats">
+                            <div class="partnership-stat">
+                                <span class="stat-label">Times Partnered</span>
+                                <span class="stat-value">${partnership.games}</span>
+                            </div>
+                            <div class="partnership-stat">
+                                <span class="stat-label">Success Rate</span>
+                                <span class="stat-value">${successRate.toFixed(0)}%</span>
+                            </div>
+                            <div class="partnership-stat">
+                                <span class="stat-label">Average Score</span>
+                                <span class="stat-value">${avgScore.toFixed(1)}</span>
+                            </div>
+                        </div>
+                        <p class="partnership-note">${getPartnershipNote(partnership, successRate)}</p>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('partnerships-grid').innerHTML = partnershipsHTML;
+        }
+
+        function getPartnershipNote(partnership, successRate) {
+            const notes = [
+                "Excellent strategic synergy and communication",
+                "Strong tactical understanding between partners", 
+                "Consistent performance across tournaments",
+                "Complementary playing styles create advantages",
+                "Room for improved coordination",
+                "Developing partnership with potential"
+            ];
+            
+            if (successRate >= 70) return notes[0];
+            if (successRate >= 60) return notes[1];
+            if (successRate >= 55) return notes[2];
+            if (successRate >= 50) return notes[3];
+            if (successRate >= 45) return notes[4];
+            return notes[5];
+        }
+
+        async function loadAchievements() {
+            if (!playerData) return;
+            
+            const playerTournaments = Array.from(tournamentEngine.tournaments.values())
+                .filter(t => t.participants.some(p => p.name === playerData.name))
+                .sort((a, b) => b.year - a.year);
+            
+            const victories = playerTournaments.filter(t => {
+                const playerResult = t.participants.find(p => p.name === playerData.name);
+                return playerResult && playerResult.position === 1;
+            });
+            
+            const achievements = [];
+            
+            // Championship achievements
+            if (victories.length >= 3) {
+                const recentVictories = victories.slice(0, 3);
+                const consecutive = areConsecutive(recentVictories.map(t => t.year));
+                if (consecutive) {
+                    achievements.push({
+                        icon: '👑',
+                        title: `${victories.length === 3 ? 'Three' : victories.length} Consecutive Championships`,
+                        years: recentVictories.map(t => t.year).join(', '),
+                        description: `Exceptional dominance across multiple tournaments.`,
+                        major: true
+                    });
+                } else {
+                    achievements.push({
+                        icon: '🏆',
+                        title: `${victories.length}-Time Champion`,
+                        years: `${victories.length} Tournament Victories`,
+                        description: `Consistent excellence across the tournament series.`,
+                        major: victories.length >= 5
+                    });
+                }
+            } else if (victories.length > 0) {
+                achievements.push({
+                    icon: '🏆',
+                    title: victories.length === 1 ? 'Tournament Champion' : `${victories.length}-Time Champion`,
+                    years: victories.map(t => t.year).join(', '),
+                    description: `Championship victory demonstrates exceptional skill.`,
+                    major: false
+                });
+            }
+            
+            // High scoring achievements
+            const highScoreRounds = getAllHighScoreRounds(playerTournaments);
+            if (highScoreRounds >= 10) {
+                achievements.push({
+                    icon: '🎯',
+                    title: 'High Score Specialist',
+                    years: `${highScoreRounds} High-Score Rounds`,
+                    description: `Exceptional ability to dominate individual rounds.`,
+                    major: false
+                });
+            }
+            
+            // Consistency achievements
+            if (playerData.averageTricks >= 7.0) {
+                achievements.push({
+                    icon: '📊',
+                    title: 'Consistent Excellence',
+                    years: `${playerData.averageTricks.toFixed(1)} Avg Tricks/Round`,
+                    description: `Remarkable consistency across all tournaments.`,
+                    major: false
+                });
+            }
+            
+            // Longevity achievements
+            const yearsActive = playerTournaments.length > 0 ? 
+                Math.max(...playerTournaments.map(t => t.year)) - Math.min(...playerTournaments.map(t => t.year)) + 1 : 0;
+            if (yearsActive >= 20) {
+                achievements.push({
+                    icon: '🏅',
+                    title: 'Tournament Veteran',
+                    years: `${yearsActive} Years of Competition`,
+                    description: `Long-standing dedication to family tournament tradition.`,
+                    major: false
+                });
+            }
+            
+            // Top performer achievements
+            if (playerData.rank <= 3) {
+                achievements.push({
+                    icon: '⭐',
+                    title: `Top ${playerData.rank} Player`,
+                    years: 'All-Time Rankings',
+                    description: `Among the elite performers in family history.`,
+                    major: playerData.rank === 1
+                });
+            }
+            
+            if (achievements.length === 0) {
+                achievements.push({
+                    icon: '🎴',
+                    title: 'Family Competitor',
+                    years: 'Tournament Participant',
+                    description: 'Valued member of the family tournament tradition.',
+                    major: false
+                });
+            }
+            
+            const achievementsHTML = achievements.map(achievement => `
+                <div class="achievement-card ${achievement.major ? 'major' : ''}">
+                    <div class="achievement-icon">${achievement.icon}</div>
+                    <h4>${achievement.title}</h4>
+                    <p class="achievement-years">${achievement.years}</p>
+                    <p>${achievement.description}</p>
+                </div>
+            `).join('');
+            
+            document.getElementById('achievements-grid').innerHTML = achievementsHTML;
+        }
+
+        function areConsecutive(years) {
+            if (years.length < 2) return false;
+            const sorted = years.sort((a, b) => b - a);
+            for (let i = 1; i < sorted.length; i++) {
+                if (sorted[i-1] - sorted[i] !== 1) return false;
+            }
+            return true;
+        }
+
+        function getAllHighScoreRounds(tournaments) {
+            let count = 0;
+            tournaments.forEach(tournament => {
+                const playerResult = tournament.participants.find(p => p.name === playerData.name);
+                if (playerResult) {
+                    count += playerResult.rounds.filter(r => r.tricks_taken >= 10).length;
+                }
+            });
+            return count;
+        }
+
+        function showErrorMessage() {
+            document.body.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: #666;">
+                    <h2>Error Loading Player Profile</h2>
+                    <p>Unable to load player data. Please try again later.</p>
+                    <a href="../" style="color: var(--primary);">← Return to Players</a>
+                </div>
+            `;
         }
     </script>
 

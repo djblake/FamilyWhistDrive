@@ -36,84 +36,33 @@
                 <div class="hero-content">
                     <div class="analytics-badge">📊 ADVANCED ANALYTICS</div>
                     <h1 class="hero-title">Tournament Statistics & Analysis</h1>
-                    <p class="hero-subtitle">Deep insights from four decades of championship data, performance trends, and strategic analysis</p>
+                    <p class="hero-subtitle">Deep insights from decades of championship data, performance trends, and strategic analysis</p>
                 </div>
             </div>
         </section>
 
-        <section class="tournament-progress-section">
+        <section class="tournament-summary-section">
             <div class="container">
                 <h2 class="section-title">
-                    <span class="title-icon">🏁</span>
-                    Tournament Progress Analysis
+                    <span class="title-icon">🏆</span>
+                    Tournament Data Overview
                 </h2>
-                <p class="section-description">
-                    Horse race-style visualization showing how player positions changed throughout the 2023 Championship
-                </p>
                 
-                <div class="chart-container">
-                    <div class="chart-wrapper">
-                        <canvas id="tournamentProgressChart"></canvas>
-                    </div>
-                    <div class="chart-insights">
-                        <h3>Key Insights</h3>
-                        <ul class="insights-list">
-                            <li><strong>Margaret Wilson</strong> took the lead in Round 3 and never relinquished it</li>
-                            <li><strong>Emma Jones</strong> showed remarkable consistency, staying in top 3 throughout</li>
-                            <li>The biggest position change was <strong>David Smith</strong> jumping from 8th to 4th in Round 6</li>
-                            <li>Final positions were decided by just <strong>8 tricks</strong> separating 1st and 3rd place</li>
-                        </ul>
-                    </div>
+                <div class="overview-stats-grid" id="overview-stats-grid">
+                    <!-- Overview statistics will be loaded dynamically -->
                 </div>
             </div>
         </section>
 
         <section class="analytics-grid-section">
             <div class="container">
-                <div class="analytics-grid">
-                    <div class="analytics-card">
-                        <h3 class="card-title">
-                            <span class="card-icon">🎯</span>
-                            Player Performance Radar
-                        </h3>
-                        <div class="chart-wrapper small">
-                            <canvas id="playerRadarChart"></canvas>
-                        </div>
-                        <p class="chart-description">Margaret Wilson's multi-dimensional playing style analysis</p>
-                    </div>
-
-                    <div class="analytics-card">
-                        <h3 class="card-title">
-                            <span class="card-icon">🤝</span>
-                            Partnership Success Rates
-                        </h3>
-                        <div class="chart-wrapper small">
-                            <canvas id="partnershipChart"></canvas>
-                        </div>
-                        <p class="chart-description">Most successful player combinations in tournament history</p>
-                    </div>
-
-                    <div class="analytics-card">
-                        <h3 class="card-title">
-                            <span class="card-icon">📈</span>
-                            Performance Distribution
-                        </h3>
-                        <div class="chart-wrapper small">
-                            <canvas id="statsChart"></canvas>
-                        </div>
-                        <p class="chart-description">Breakdown of tournament performance categories</p>
-                    </div>
-
-                    <div class="analytics-card">
-                        <h3 class="card-title">
-                            <span class="card-icon">📅</span>
-                            Yearly Performance Trends
-                        </h3>
-                        <div class="chart-wrapper small">
-                            <canvas id="yearlyTrendChart"></canvas>
-                        </div>
-                        <p class="chart-description">Performance evolution over the past decade</p>
-                    </div>
+                <h2 class="section-title">
+                    <span class="title-icon">📈</span>
+                    Performance Analytics
+                </h2>
+                
+                <div class="analytics-grid" id="analytics-grid">
+                    <!-- Analytics cards will be loaded dynamically -->
                 </div>
             </div>
         </section>
@@ -125,136 +74,8 @@
                     Advanced Performance Metrics
                 </h2>
                 
-                <div class="metrics-grid">
-                    <div class="metric-category">
-                        <h3>Strategic Analysis</h3>
-                        <div class="metric-list">
-                            <div class="metric-item">
-                                <div class="metric-name">Trump Suit Efficiency</div>
-                                <div class="metric-leaders">
-                                    <div class="leader">♠ Spades: Margaret Wilson (72%)</div>
-                                    <div class="leader">♥ Hearts: James Ruston (69%)</div>
-                                    <div class="leader">♦ Diamonds: Emma Jones (71%)</div>
-                                    <div class="leader">♣ Clubs: David Smith (68%)</div>
-                                </div>
-                            </div>
-                            
-                            <div class="metric-item">
-                                <div class="metric-name">Opening Round Performance</div>
-                                <div class="metric-leaders">
-                                    <div class="leader">1. Margaret Wilson: 8.2 avg tricks</div>
-                                    <div class="leader">2. Michael Thompson: 7.9 avg tricks</div>
-                                    <div class="leader">3. James Ruston: 7.7 avg tricks</div>
-                                </div>
-                            </div>
-                            
-                            <div class="metric-item">
-                                <div class="metric-name">Closing Strength (Final 3 Rounds)</div>
-                                <div class="metric-leaders">
-                                    <div class="leader">1. Margaret Wilson: 74% win rate</div>
-                                    <div class="leader">2. Emma Jones: 71% win rate</div>
-                                    <div class="leader">3. Sarah Brown: 68% win rate</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="metric-category">
-                        <h3>Partnership Dynamics</h3>
-                        <div class="metric-list">
-                            <div class="metric-item">
-                                <div class="metric-name">Cross-Generational Partnerships</div>
-                                <div class="metric-leaders">
-                                    <div class="leader">Tom Wilson + Emma Jones: 65%</div>
-                                    <div class="leader">James Sr. + Sarah Brown: 62%</div>
-                                    <div class="leader">Margaret + Michael Jr.: 59%</div>
-                                </div>
-                            </div>
-                            
-                            <div class="metric-item">
-                                <div class="metric-name">Family vs. In-Law Partnerships</div>
-                                <div class="metric-leaders">
-                                    <div class="leader">Ruston Family: 64% success rate</div>
-                                    <div class="leader">Wilson Family: 61% success rate</div>
-                                    <div class="leader">Mixed Families: 58% success rate</div>
-                                </div>
-                            </div>
-                            
-                            <div class="metric-item">
-                                <div class="metric-name">Communication Synergy Score</div>
-                                <div class="metric-leaders">
-                                    <div class="leader">Margaret + James: 9.2/10</div>
-                                    <div class="leader">David + Sarah: 8.8/10</div>
-                                    <div class="leader">Emma + Tom: 8.5/10</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="metric-category">
-                        <h3>Pressure Performance</h3>
-                        <div class="metric-list">
-                            <div class="metric-item">
-                                <div class="metric-name">High-Stakes Round Performance</div>
-                                <div class="metric-leaders">
-                                    <div class="leader">Margaret Wilson: +12% vs average</div>
-                                    <div class="leader">James Ruston: +8% vs average</div>
-                                    <div class="leader">Emma Jones: +6% vs average</div>
-                                </div>
-                            </div>
-                            
-                            <div class="metric-item">
-                                <div class="metric-name">Comeback Ability (From Behind)</div>
-                                <div class="metric-leaders">
-                                    <div class="leader">Sarah Brown: 7 dramatic comebacks</div>
-                                    <div class="leader">Margaret Wilson: 5 comeback wins</div>
-                                    <div class="leader">David Smith: 4 late surges</div>
-                                </div>
-                            </div>
-                            
-                            <div class="metric-item">
-                                <div class="metric-name">Lead Protection Rate</div>
-                                <div class="metric-leaders">
-                                    <div class="leader">Margaret Wilson: 89% (hold lead)</div>
-                                    <div class="leader">James Ruston: 84% (hold lead)</div>
-                                    <div class="leader">Michael Thompson: 81% (hold lead)</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="metric-category">
-                        <h3>Historical Patterns</h3>
-                        <div class="metric-list">
-                            <div class="metric-item">
-                                <div class="metric-name">Decade Performance</div>
-                                <div class="metric-leaders">
-                                    <div class="leader">2020s: Avg 6.8 tricks/round</div>
-                                    <div class="leader">2010s: Avg 6.5 tricks/round</div>
-                                    <div class="leader">2000s: Avg 6.3 tricks/round</div>
-                                    <div class="leader">1990s: Avg 6.1 tricks/round</div>
-                                </div>
-                            </div>
-                            
-                            <div class="metric-item">
-                                <div class="metric-name">Christmas Day Effects</div>
-                                <div class="metric-leaders">
-                                    <div class="leader">Morning Start: +3% performance</div>
-                                    <div class="leader">Post-Lunch: -2% performance</div>
-                                    <div class="leader">Evening Finish: +5% drama factor</div>
-                                </div>
-                            </div>
-                            
-                            <div class="metric-item">
-                                <div class="metric-name">Weather Correlation</div>
-                                <div class="metric-leaders">
-                                    <div class="leader">Snowy Christmas: +2% scores</div>
-                                    <div class="leader">Clear Weather: Standard performance</div>
-                                    <div class="leader">Rainy Day: +8% competitive edge</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="metrics-grid" id="metrics-grid">
+                    <!-- Metrics will be loaded dynamically -->
                 </div>
             </div>
         </section>
@@ -262,58 +83,12 @@
         <section class="statistical-records-section">
             <div class="container">
                 <h2 class="section-title">
-                    <span class="title-icon">🏆</span>
-                    Statistical Records & Milestones
+                    <span class="title-icon">🎯</span>
+                    Statistical Records & Achievements
                 </h2>
                 
-                <div class="records-showcase">
-                    <div class="record-highlight featured">
-                        <div class="record-icon">🎯</div>
-                        <div class="record-content">
-                            <h3>Perfect Game Record</h3>
-                            <div class="record-stat">13 Tricks in Single Round</div>
-                            <div class="record-details">
-                                <p><strong>Margaret Wilson</strong> - 2023 Championship, Round 7 (Spades)</p>
-                                <p>First perfect round in tournament history, achieved under maximum pressure</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="record-highlight">
-                        <div class="record-icon">🔥</div>
-                        <div class="record-content">
-                            <h3>Consecutive Wins Streak</h3>
-                            <div class="record-stat">23 Rounds</div>
-                            <div class="record-details">
-                                <p><strong>James Ruston Sr.</strong> - 1994-1995 Championships</p>
-                                <p>Legendary winning streak spanning two tournament years</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="record-highlight">
-                        <div class="record-icon">⚡</div>
-                        <div class="record-content">
-                            <h3>Fastest Tournament Completion</h3>
-                            <div class="record-stat">3h 42m</div>
-                            <div class="record-details">
-                                <p><strong>2020 COVID Tournament</strong> - Reduced field, focused play</p>
-                                <p>Most efficient tournament in 40-year history</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="record-highlight">
-                        <div class="record-icon">📊</div>
-                        <div class="record-content">
-                            <h3>Highest Single Tournament Score</h3>
-                            <div class="record-stat">142 Tricks</div>
-                            <div class="record-details">
-                                <p><strong>James Ruston Sr.</strong> - 1998 Championship</p>
-                                <p>Perfect strategy execution in peak performance year</p>
-                            </div>
-                        </div>
-                    </div>
+                <div class="records-showcase" id="records-showcase">
+                    <!-- Records will be loaded dynamically -->
                 </div>
             </div>
         </section>
@@ -323,131 +98,415 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
-                    <h4>Advanced Analytics</h4>
-                    <p>Tournament Progress Charts</p>
-                    <p>Partnership Analysis</p>
-                    <p>Performance Metrics</p>
+                    <h4>Data Analytics</h4>
+                    <p id="total-scorecards">Loading...</p>
+                    <p id="data-timespan">Loading...</p>
+                    <p><a href="../google-sheets-example.html">Data Source Details</a></p>
                 </div>
                 <div class="footer-section">
-                    <h4>Statistical Tools</h4>
-                    <p>Player Comparisons</p>
-                    <p>Trend Analysis</p>
-                    <p>Predictive Modeling</p>
+                    <h4>Statistics</h4>
+                    <p><a href="../leaderboard/">Player Rankings</a></p>
+                    <p><a href="../players/">Player Profiles</a></p>
+                    <p><a href="../tournaments/">Tournament Archive</a></p>
                 </div>
                 <div class="footer-section">
-                    <h4>Data Sources</h4>
-                    <p>40 Years of Scorecards</p>
-                    <p>Historical Records</p>
-                    <p>Tournament Archives</p>
+                    <h4>Performance</h4>
+                    <p>Real-time Analysis</p>
+                    <p>Historical Trends</p>
+                    <p>Championship Records</p>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2024 Ruston Family Whist Drive. Advanced analytics since 1984.</p>
+                <p>&copy; 2024 Ruston Family Whist Drive. Advanced analytics from real tournament data.</p>
             </div>
         </div>
     </footer>
 
     <script src="../assets/js/tournament-engine.js"></script>
-    <script src="../assets/js/charts.js"></script>
-    <script src="../assets/js/main.js"></script>
     
     <script>
-        // Statistics page specific JavaScript
-        let charts = null;
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeStatisticsPage();
-        });
-
-        async function initializeStatisticsPage() {
+        // Load real statistical data
+        document.addEventListener('DOMContentLoaded', async function() {
+            const tournamentEngine = new TournamentEngine();
+            const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+            
             try {
-                // Initialize chart system
-                charts = new TournamentCharts();
+                console.log('📊 Loading tournament statistics...');
+                await tournamentEngine.loadFromGoogleSheets(sheetId);
                 
-                // Wait a moment for Chart.js to load
-                setTimeout(() => {
-                    createAllCharts();
-                }, 1000);
+                const players = tournamentEngine.getAllPlayers('total_tricks');
+                const tournaments = Array.from(tournamentEngine.tournaments.values());
+                
+                // Calculate comprehensive statistics
+                const totalPlayers = players.length;
+                const totalTournaments = tournaments.length;
+                const totalRounds = tournaments.reduce((sum, t) => sum + t.total_rounds, 0);
+                const totalTricks = players.reduce((sum, p) => sum + p.total_tricks, 0);
+                
+                const uniqueChampions = new Set(tournaments.map(t => t.winner)).size;
+                const averagePlayersPerTournament = totalPlayers / totalTournaments;
+                
+                // Find top performers
+                const topPlayer = players[0];
+                const championships = tournaments.filter(t => t.winner === topPlayer.name).length;
+                
+                // Tournament timespan
+                const years = tournaments.map(t => t.year).sort((a, b) => a - b);
+                const firstYear = years[0];
+                const lastYear = years[years.length - 1];
+                
+                // Generate overview statistics
+                const overviewHTML = `
+                    <div class="overview-stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-number">${totalPlayers}</div>
+                        <div class="stat-label">Total Players</div>
+                        <div class="stat-detail">Across ${totalTournaments} tournaments</div>
+                    </div>
+                    <div class="overview-stat-card">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-number">${totalTournaments}</div>
+                        <div class="stat-label">Tournaments</div>
+                        <div class="stat-detail">${firstYear} - ${lastYear}</div>
+                    </div>
+                    <div class="overview-stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-number">${totalTricks.toLocaleString()}</div>
+                        <div class="stat-label">Total Tricks</div>
+                        <div class="stat-detail">${totalRounds} rounds played</div>
+                    </div>
+                    <div class="overview-stat-card">
+                        <div class="stat-icon">👑</div>
+                        <div class="stat-number">${uniqueChampions}</div>
+                        <div class="stat-label">Different Champions</div>
+                        <div class="stat-detail">Competitive balance</div>
+                    </div>
+                `;
+                
+                document.getElementById('overview-stats-grid').innerHTML = overviewHTML;
+                
+                // Generate analytics cards
+                const topPerformers = players.slice(0, 5);
+                const averageTricks = totalTricks / (totalPlayers * totalRounds / totalPlayers);
+                
+                const analyticsHTML = `
+                    <div class="analytics-card">
+                        <h3 class="card-title">
+                            <span class="card-icon">🏆</span>
+                            Top Performers
+                        </h3>
+                        <div class="performers-list">
+                            ${topPerformers.map((player, index) => `
+                                <div class="performer-item">
+                                    <span class="rank">${index + 1}.</span>
+                                    <span class="name">${player.name}</span>
+                                    <span class="tricks">${player.total_tricks} tricks</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="analytics-card">
+                        <h3 class="card-title">
+                            <span class="card-icon">📈</span>
+                            Performance Distribution
+                        </h3>
+                        <div class="distribution-stats">
+                            <div class="dist-item">
+                                <span class="label">High Performers (>avg):</span>
+                                <span class="value">${players.filter(p => p.total_tricks / p.tournaments_played > averageTricks).length}</span>
+                            </div>
+                            <div class="dist-item">
+                                <span class="label">Average Performers:</span>
+                                <span class="value">${players.filter(p => {
+                                    const avg = p.total_tricks / p.tournaments_played;
+                                    return avg <= averageTricks && avg >= averageTricks * 0.8;
+                                }).length}</span>
+                            </div>
+                            <div class="dist-item">
+                                <span class="label">Developing Players:</span>
+                                <span class="value">${players.filter(p => p.total_tricks / p.tournaments_played < averageTricks * 0.8).length}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="analytics-card">
+                        <h3 class="card-title">
+                            <span class="card-icon">🎯</span>
+                            Tournament Competition
+                        </h3>
+                        <div class="competition-stats">
+                            <div class="comp-item">
+                                <span class="label">Average Players per Tournament:</span>
+                                <span class="value">${averagePlayersPerTournament.toFixed(1)}</span>
+                            </div>
+                            <div class="comp-item">
+                                <span class="label">Championship Repeats:</span>
+                                <span class="value">${tournaments.length - uniqueChampions}</span>
+                            </div>
+                            <div class="comp-item">
+                                <span class="label">Most Championships:</span>
+                                <span class="value">${championships} (${topPlayer.name})</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="analytics-card">
+                        <h3 class="card-title">
+                            <span class="card-icon">📅</span>
+                            Historical Timeline
+                        </h3>
+                        <div class="timeline-stats">
+                            <div class="time-item">
+                                <span class="label">Tournament Era:</span>
+                                <span class="value">${lastYear - firstYear + 1} years</span>
+                            </div>
+                            <div class="time-item">
+                                <span class="label">Most Recent Champion:</span>
+                                <span class="value">${tournaments[0].winner}</span>
+                            </div>
+                            <div class="time-item">
+                                <span class="label">Longest Active Player:</span>
+                                <span class="value">${topPlayer.tournaments_played} tournaments</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('analytics-grid').innerHTML = analyticsHTML;
+                
+                // Generate advanced metrics
+                const trumpSuitAnalysis = calculateTrumpSuitAnalysis(tournaments);
+                const partnershipAnalysis = calculatePartnershipAnalysis(tournaments);
+                
+                const metricsHTML = `
+                    <div class="metric-category">
+                        <h3>Strategic Analysis</h3>
+                        <div class="metric-list">
+                            <div class="metric-item">
+                                <div class="metric-name">Trump Suit Performance</div>
+                                <div class="metric-leaders">
+                                    ${trumpSuitAnalysis.map(suit => `
+                                        <div class="leader">${suit.suit}: ${suit.averageTricks.toFixed(1)} avg tricks</div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            
+                            <div class="metric-item">
+                                <div class="metric-name">Top Consistent Performers</div>
+                                <div class="metric-leaders">
+                                    ${players.slice(0, 3).map((player, index) => `
+                                        <div class="leader">${index + 1}. ${player.name}: ${(player.total_tricks / player.tournaments_played).toFixed(1)} avg per tournament</div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            
+                            <div class="metric-item">
+                                <div class="metric-name">Tournament Participation</div>
+                                <div class="metric-leaders">
+                                    ${players
+                                        .sort((a, b) => b.tournaments_played - a.tournaments_played)
+                                        .slice(0, 3)
+                                        .map((player, index) => `
+                                            <div class="leader">${index + 1}. ${player.name}: ${player.tournaments_played} tournaments</div>
+                                        `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                console.log('📊 Statistics page loaded successfully');
+                    <div class="metric-category">
+                        <h3>Championship Analysis</h3>
+                        <div class="metric-list">
+                            <div class="metric-item">
+                                <div class="metric-name">Multiple Champions</div>
+                                <div class="metric-leaders">
+                                    ${getMultipleChampions(tournaments, players).map(champion => `
+                                        <div class="leader">${champion.name}: ${champion.championships} championships</div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            
+                            <div class="metric-item">
+                                <div class="metric-name">Recent Champions (Last 5 Tournaments)</div>
+                                <div class="metric-leaders">
+                                    ${tournaments.slice(0, 5).map(tournament => `
+                                        <div class="leader">${tournament.year}: ${tournament.winner}</div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            
+                            <div class="metric-item">
+                                <div class="metric-name">Championship Win Rates</div>
+                                <div class="metric-leaders">
+                                    ${getMultipleChampions(tournaments, players).map(champion => {
+                                        const winRate = (champion.championships / champion.tournaments_played * 100).toFixed(1);
+                                        return `<div class="leader">${champion.name}: ${winRate}% win rate</div>`;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
+                    <div class="metric-category">
+                        <h3>Performance Trends</h3>
+                        <div class="metric-list">
+                            <div class="metric-item">
+                                <div class="metric-name">Tournament Size Evolution</div>
+                                <div class="metric-leaders">
+                                    <div class="leader">Smallest Tournament: ${Math.min(...tournaments.map(t => t.total_players))} players</div>
+                                    <div class="leader">Largest Tournament: ${Math.max(...tournaments.map(t => t.total_players))} players</div>
+                                    <div class="leader">Average Size: ${averagePlayersPerTournament.toFixed(1)} players</div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-item">
+                                <div class="metric-name">Round Distribution</div>
+                                <div class="metric-leaders">
+                                    <div class="leader">Total Rounds Played: ${totalRounds}</div>
+                                    <div class="leader">Average per Tournament: ${(totalRounds / totalTournaments).toFixed(1)}</div>
+                                    <div class="leader">Most Rounds: ${Math.max(...tournaments.map(t => t.total_rounds))}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-item">
+                                <div class="metric-name">Player Engagement</div>
+                                <div class="metric-leaders">
+                                    <div class="leader">Active in All Tournaments: ${players.filter(p => p.tournaments_played === totalTournaments).length}</div>
+                                    <div class="leader">Single Tournament: ${players.filter(p => p.tournaments_played === 1).length}</div>
+                                    <div class="leader">Average Participation: ${(totalPlayers / totalTournaments * totalTournaments / totalPlayers).toFixed(1)} tournaments</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('metrics-grid').innerHTML = metricsHTML;
+                
+                // Generate records showcase
+                const recordsHTML = `
+                    <div class="record-highlight featured">
+                        <div class="record-icon">👑</div>
+                        <div class="record-stat">${championships}</div>
+                        <div class="record-content">
+                            <h3>Most Championships</h3>
+                            <div class="record-details">
+                                <p><strong>${topPlayer.name}</strong> holds the record</p>
+                                <p>Total tricks: ${topPlayer.total_tricks}</p>
+                                <p>Tournaments played: ${topPlayer.tournaments_played}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="record-highlight">
+                        <div class="record-icon">🎯</div>
+                        <div class="record-stat">${topPlayer.total_tricks}</div>
+                        <div class="record-content">
+                            <h3>Most Career Tricks</h3>
+                            <div class="record-details">
+                                <p><strong>${topPlayer.name}</strong></p>
+                                <p>Average per tournament: ${(topPlayer.total_tricks / topPlayer.tournaments_played).toFixed(1)}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="record-highlight">
+                        <div class="record-icon">🏆</div>
+                        <div class="record-stat">${totalTournaments}</div>
+                        <div class="record-content">
+                            <h3>Tournaments Held</h3>
+                            <div class="record-details">
+                                <p>Spanning <strong>${lastYear - firstYear + 1} years</strong></p>
+                                <p>From ${firstYear} to ${lastYear}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="record-highlight">
+                        <div class="record-icon">⚡</div>
+                        <div class="record-stat">${Math.max(...players.map(p => p.tournaments_played))}</div>
+                        <div class="record-content">
+                            <h3>Most Tournaments</h3>
+                            <div class="record-details">
+                                <p><strong>${players.find(p => p.tournaments_played === Math.max(...players.map(p => p.tournaments_played))).name}</strong></p>
+                                <p>Ultimate competitor</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('records-showcase').innerHTML = recordsHTML;
+                
+                // Update footer
+                document.getElementById('total-scorecards').textContent = `${totalRounds} Rounds Analyzed`;
+                document.getElementById('data-timespan').textContent = `${lastYear - firstYear + 1} Years of Data`;
+                
+                console.log('✅ Statistics loaded successfully!');
+                
             } catch (error) {
-                console.error('Error loading statistics page:', error);
+                console.error('❌ Error loading statistics:', error);
+                document.getElementById('overview-stats-grid').innerHTML = 
+                    '<p style="text-align: center; color: #666; padding: 2rem;">Error loading statistics. Please try refreshing the page.</p>';
             }
+        });
+        
+        // Helper functions for advanced calculations
+        function calculateTrumpSuitAnalysis(tournaments) {
+            const suitStats = {};
+            
+            tournaments.forEach(tournament => {
+                tournament.rounds.forEach(round => {
+                    const suit = round.trump_suit;
+                    if (!suitStats[suit]) {
+                        suitStats[suit] = { totalTricks: 0, roundCount: 0 };
+                    }
+                    
+                    round.tables.forEach(table => {
+                        table.partnerships.forEach(partnership => {
+                            suitStats[suit].totalTricks += partnership.tricks;
+                            suitStats[suit].roundCount++;
+                        });
+                    });
+                });
+            });
+            
+            return Object.entries(suitStats).map(([suit, stats]) => ({
+                suit,
+                averageTricks: stats.totalTricks / stats.roundCount
+            })).sort((a, b) => b.averageTricks - a.averageTricks);
         }
-
-        function createAllCharts() {
-            try {
-                // Create tournament progress chart
-                const progressData = generateSampleTournamentData();
-                charts.createTournamentProgressChart('tournamentProgressChart', progressData);
-
-                // Create player radar chart
-                const playerData = {
-                    name: 'Margaret Wilson',
-                    strategy: 95,
-                    aggression: 88,
-                    consistency: 92,
-                    partnership: 90,
-                    pressure: 96,
-                    trumpAnalysis: 89
-                };
-                charts.createPlayerRadarChart('playerRadarChart', playerData);
-
-                // Create partnership chart
-                const partnershipData = [
-                    { partnership: 'Margaret & James', successRate: 73, gamesPlayed: 15, averageScore: 7.0 },
-                    { partnership: 'Emma & Tom', successRate: 65, gamesPlayed: 6, averageScore: 6.9 },
-                    { partnership: 'David & Sarah', successRate: 62, gamesPlayed: 12, averageScore: 6.5 },
-                    { partnership: 'Michael & Jane', successRate: 58, gamesPlayed: 8, averageScore: 6.2 },
-                    { partnership: 'Mary & John', successRate: 55, gamesPlayed: 10, averageScore: 6.0 }
-                ];
-                charts.createPartnershipChart('partnershipChart', partnershipData);
-
-                // Create performance distribution chart
-                const statsData = [
-                    { category: 'Tournament Wins', value: 8 },
-                    { category: 'Runner-up', value: 12 },
-                    { category: 'Top 3', value: 15 },
-                    { category: 'Mid-field', value: 18 },
-                    { category: 'Lower Half', value: 7 }
-                ];
-                charts.createTournamentStatsChart('statsChart', statsData);
-
-                // Create yearly trend chart
-                const yearlyData = {
-                    years: ['2019', '2020', '2021', '2022', '2023'],
-                    averagePerformance: [6.2, 6.8, 7.1, 6.9, 7.2],
-                    tournamentWins: [0, 0, 1, 1, 1]
-                };
-                charts.createYearlyTrendChart('yearlyTrendChart', yearlyData);
-
-                console.log('📈 All charts created successfully');
-
-            } catch (error) {
-                console.error('Error creating charts:', error);
-            }
+        
+        function calculatePartnershipAnalysis(tournaments) {
+            // This would implement partnership combination analysis
+            // For now, return empty array as it requires more complex data processing
+            return [];
         }
-
-        function generateSampleTournamentData() {
-            return {
-                rounds: [
-                    { round: 1, tables: [{ partnerships: [{ players: ['Margaret Wilson', 'James Ruston'], tricks: 14 }] }] },
-                    { round: 2, tables: [{ partnerships: [{ players: ['Margaret Wilson', 'Emma Jones'], tricks: 13 }] }] }
-                ],
-                final_standings: [
-                    { player: 'Margaret Wilson', total_tricks: 112 },
-                    { player: 'James Ruston', total_tricks: 108 },
-                    { player: 'Emma Jones', total_tricks: 105 }
-                ]
-            };
+        
+        function getMultipleChampions(tournaments, players) {
+            const championshipCounts = {};
+            
+            tournaments.forEach(tournament => {
+                championshipCounts[tournament.winner] = (championshipCounts[tournament.winner] || 0) + 1;
+            });
+            
+            return Object.entries(championshipCounts)
+                .filter(([name, count]) => count > 1)
+                .map(([name, championships]) => {
+                    const player = players.find(p => p.name === name);
+                    return {
+                        name,
+                        championships,
+                        tournaments_played: player ? player.tournaments_played : championships
+                    };
+                })
+                .sort((a, b) => b.championships - a.championships);
         }
     </script>
-
+    
     <style>
-        /* Statistics page specific styles */
+        /* Statistics Page Specific Styles */
         .stats-hero {
-            background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             padding: var(--spacing-3xl) 0;
             position: relative;
@@ -460,8 +519,8 @@
             top: 50%;
             right: 5%;
             transform: translateY(-50%);
-            font-size: 20rem;
-            opacity: 0.05;
+            font-size: 15rem;
+            opacity: 0.1;
             z-index: 1;
         }
 
@@ -473,6 +532,7 @@
 
         .analytics-badge {
             background: rgba(255, 255, 255, 0.2);
+            color: white;
             padding: var(--spacing-sm) var(--spacing-xl);
             border-radius: var(--border-radius-lg);
             font-size: 0.875rem;
@@ -483,84 +543,69 @@
         }
 
         .hero-title {
-            font-size: 4rem;
+            font-size: 3.5rem;
             font-weight: 900;
             margin-bottom: var(--spacing-md);
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            font-family: var(--font-primary);
         }
 
         .hero-subtitle {
             font-size: 1.25rem;
             opacity: 0.9;
-            max-width: 700px;
+            max-width: 600px;
             margin: 0 auto;
         }
 
-        .tournament-progress-section {
+        .tournament-summary-section {
             padding: var(--spacing-3xl) 0;
+            background: var(--bg-primary);
         }
 
-        .section-description {
-            text-align: center;
-            font-size: 1.125rem;
-            color: var(--text-secondary);
-            margin-bottom: var(--spacing-2xl);
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .chart-container {
+        .overview-stats-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: var(--spacing-2xl);
-            align-items: start;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-xl);
         }
 
-        .chart-wrapper {
-            background: var(--card-bg);
+        .overview-stat-card {
+            background: white;
             border-radius: var(--border-radius-lg);
             padding: var(--spacing-xl);
-            box-shadow: var(--shadow-card);
-            height: 400px;
-            position: relative;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+            border: 2px solid var(--border-light);
+            transition: all 0.2s ease;
         }
 
-        .chart-wrapper.small {
-            height: 300px;
+        .overview-stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--primary);
         }
 
-        .chart-insights {
-            background: var(--card-bg);
-            border-radius: var(--border-radius-lg);
-            padding: var(--spacing-xl);
-            box-shadow: var(--shadow-card);
-        }
-
-        .chart-insights h3 {
-            color: var(--primary);
-            margin-bottom: var(--spacing-lg);
-            font-size: 1.25rem;
-        }
-
-        .insights-list {
-            list-style: none;
-            padding: 0;
-        }
-
-        .insights-list li {
+        .overview-stat-card .stat-icon {
+            font-size: 3rem;
             margin-bottom: var(--spacing-md);
-            padding-left: var(--spacing-lg);
-            position: relative;
-            line-height: 1.6;
-            color: var(--text-primary-dark);
         }
 
-        .insights-list li::before {
-            content: '💡';
-            position: absolute;
-            left: 0;
-            top: 0;
+        .overview-stat-card .stat-number {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: var(--spacing-sm);
+            display: block;
+        }
+
+        .overview-stat-card .stat-label {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .overview-stat-card .stat-detail {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
         }
 
         .analytics-grid-section {
@@ -570,16 +615,16 @@
 
         .analytics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: var(--spacing-2xl);
         }
 
         .analytics-card {
-            background: var(--card-bg);
+            background: white;
             border-radius: var(--border-radius-lg);
             padding: var(--spacing-xl);
-            box-shadow: var(--shadow-card);
-            border: 2px solid var(--card-border);
+            box-shadow: var(--shadow-lg);
+            border: 2px solid var(--border-light);
             transition: all 0.2s ease;
         }
 
@@ -596,17 +641,51 @@
             margin-bottom: var(--spacing-lg);
             font-size: 1.125rem;
             color: var(--text-primary);
+            font-weight: 600;
         }
 
         .card-icon {
             font-size: 1.5rem;
         }
 
-        .chart-description {
-            margin-top: var(--spacing-md);
-            font-size: 0.875rem;
+        .performers-list, .distribution-stats, .competition-stats, .timeline-stats {
+            display: grid;
+            gap: var(--spacing-md);
+        }
+
+        .performer-item, .dist-item, .comp-item, .time-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-sm);
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+        }
+
+        .performer-item .rank {
+            font-weight: 600;
+            color: var(--primary);
+            min-width: 20px;
+        }
+
+        .performer-item .name {
+            flex: 1;
+            margin-left: var(--spacing-sm);
+        }
+
+        .performer-item .tricks {
+            font-weight: 500;
             color: var(--text-secondary);
-            text-align: center;
+        }
+
+        .label {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .value {
+            font-weight: 600;
+            color: var(--primary);
         }
 
         .advanced-metrics-section {
@@ -615,15 +694,15 @@
 
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: var(--spacing-2xl);
         }
 
         .metric-category {
-            background: var(--card-bg);
+            background: white;
             border-radius: var(--border-radius-lg);
             padding: var(--spacing-xl);
-            box-shadow: var(--shadow-card);
+            box-shadow: var(--shadow-lg);
         }
 
         .metric-category h3 {
@@ -631,6 +710,7 @@
             margin-bottom: var(--spacing-lg);
             padding-bottom: var(--spacing-sm);
             border-bottom: 2px solid var(--primary);
+            font-size: 1.25rem;
         }
 
         .metric-list {
@@ -668,16 +748,16 @@
 
         .records-showcase {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: var(--spacing-xl);
         }
 
         .record-highlight {
-            background: var(--card-bg);
+            background: white;
             border-radius: var(--border-radius-lg);
             padding: var(--spacing-2xl);
-            box-shadow: var(--shadow-card);
-            border: 2px solid var(--card-border);
+            box-shadow: var(--shadow-lg);
+            border: 2px solid var(--border-light);
             text-align: center;
             transition: all 0.2s ease;
         }
@@ -689,7 +769,7 @@
 
         .record-highlight.featured {
             border-color: var(--gold);
-            background: linear-gradient(135deg, var(--card-bg) 0%, #fef3c7 100%);
+            background: linear-gradient(135deg, white 0%, #fef3c7 100%);
         }
 
         .record-icon {
@@ -705,18 +785,20 @@
             margin-bottom: var(--spacing-md);
         }
 
+        .record-content h3 {
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+            font-size: 1.25rem;
+        }
+
         .record-details p {
             margin-bottom: var(--spacing-sm);
-            color: var(--text-primary-dark);
+            color: var(--text-secondary);
+            font-size: 0.875rem;
         }
 
         .record-details strong {
             color: var(--primary);
-        }
-
-        .record-content h3 {
-            color: var(--text-primary-dark);
-            margin-bottom: var(--spacing-md);
         }
 
         @media (max-width: 768px) {
@@ -724,7 +806,7 @@
                 font-size: 2.5rem;
             }
             
-            .chart-container {
+            .overview-stats-grid {
                 grid-template-columns: 1fr;
             }
             

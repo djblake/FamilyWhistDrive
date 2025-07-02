@@ -143,8 +143,18 @@ WhistWebsite/
 python -m http.server 8000
 
 # Deploy to Cloudflare Pages
-# Connect GitHub repo in Cloudflare dashboard
+# Automatic deployment via GitHub integration
+# Push to main branch triggers rebuild at rustonwhistdrive.pages.dev
+git add .
+git commit -m "Deploy updates"
+git push origin main
 ```
+
+## Deployment Status
+- **Current URL**: https://rustonwhistdrive.pages.dev
+- **Hosting**: Cloudflare Pages (free tier)
+- **Auto-Deploy**: Connected to GitHub repo djblake/FamilyWhistDrive
+- **Latest Deploy**: Google Sheets integration completed (2025-07-02)
 
 ## Future Enhancements (Post-MVP)
 - Custom domain upgrade (rustonwhistdrive.com)

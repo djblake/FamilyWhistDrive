@@ -48,126 +48,8 @@
                     Current Champions & Stars
                 </h2>
                 
-                <div class="players-grid">
-                    <div class="player-card featured">
-                        <div class="player-avatar">
-                            <div class="avatar-placeholder">
-                                <div class="avatar-icon">👑</div>
-                                <div class="avatar-initial">MW</div>
-                            </div>
-                            <div class="player-status">Current Champion</div>
-                        </div>
-                        <div class="player-info">
-                            <h3 class="player-name">Margaret Wilson</h3>
-                            <div class="player-nickname">"The Ace"</div>
-                            <div class="player-stats">
-                                <div class="stat-highlight">
-                                    <span class="stat-number">8</span>
-                                    <span class="stat-label">Championships</span>
-                                </div>
-                                <div class="stat-highlight">
-                                    <span class="stat-number">68%</span>
-                                    <span class="stat-label">Win Rate</span>
-                                </div>
-                                <div class="stat-highlight">
-                                    <span class="stat-number">3</span>
-                                    <span class="stat-label">Consecutive Titles</span>
-                                </div>
-                            </div>
-                            <p class="player-description">Three-time consecutive champion and tournament legend. Known for her aggressive strategy and unmatched pressure performance.</p>
-                            <a href="margaret-wilson/" class="player-link">View Full Profile</a>
-                        </div>
-                    </div>
-
-                    <div class="player-card">
-                        <div class="player-avatar">
-                            <div class="avatar-placeholder">
-                                <div class="avatar-icon">🎯</div>
-                                <div class="avatar-initial">JR</div>
-                            </div>
-                            <div class="player-status">Tournament Founder</div>
-                        </div>
-                        <div class="player-info">
-                            <h3 class="player-name">James Ruston</h3>
-                            <div class="player-nickname">"The Master"</div>
-                            <div class="player-stats">
-                                <div class="stat-highlight">
-                                    <span class="stat-number">7</span>
-                                    <span class="stat-label">Championships</span>
-                                </div>
-                                <div class="stat-highlight">
-                                    <span class="stat-number">65%</span>
-                                    <span class="stat-label">Win Rate</span>
-                                </div>
-                                <div class="stat-highlight">
-                                    <span class="stat-number">40</span>
-                                    <span class="stat-label">Years Active</span>
-                                </div>
-                            </div>
-                            <p class="player-description">Tournament founder and strategic genius. Dominated the 1990s era and continues to be a formidable competitor.</p>
-                            <a href="#" class="player-link">View Full Profile</a>
-                        </div>
-                    </div>
-
-                    <div class="player-card">
-                        <div class="player-avatar">
-                            <div class="avatar-placeholder">
-                                <div class="avatar-icon">⭐</div>
-                                <div class="avatar-initial">EJ</div>
-                            </div>
-                            <div class="player-status">Rising Star</div>
-                        </div>
-                        <div class="player-info">
-                            <h3 class="player-name">Emma Jones</h3>
-                            <div class="player-nickname">"The Prodigy"</div>
-                            <div class="player-stats">
-                                <div class="stat-highlight">
-                                    <span class="stat-number">2</span>
-                                    <span class="stat-label">Championships</span>
-                                </div>
-                                <div class="stat-highlight">
-                                    <span class="stat-number">72%</span>
-                                    <span class="stat-label">Win Rate</span>
-                                </div>
-                                <div class="stat-highlight">
-                                    <span class="stat-number">23</span>
-                                    <span class="stat-label">Age at First Win</span>
-                                </div>
-                            </div>
-                            <p class="player-description">Youngest tournament winner in history. Known for innovative tactics and exceptional partnership play.</p>
-                            <a href="#" class="player-link">View Full Profile</a>
-                        </div>
-                    </div>
-
-                    <div class="player-card">
-                        <div class="player-avatar">
-                            <div class="avatar-placeholder">
-                                <div class="avatar-icon">🔥</div>
-                                <div class="avatar-initial">DS</div>
-                            </div>
-                            <div class="player-status">Comeback King</div>
-                        </div>
-                        <div class="player-info">
-                            <h3 class="player-name">David Smith</h3>
-                            <div class="player-nickname">"The Clutch"</div>
-                            <div class="player-stats">
-                                <div class="stat-highlight">
-                                    <span class="stat-number">3</span>
-                                    <span class="stat-label">Championships</span>
-                                </div>
-                                <div class="stat-highlight">
-                                    <span class="stat-number">58%</span>
-                                    <span class="stat-label">Win Rate</span>
-                                </div>
-                                <div class="stat-highlight">
-                                    <span class="stat-number">7</span>
-                                    <span class="stat-label">Dramatic Comebacks</span>
-                                </div>
-                            </div>
-                            <p class="player-description">Master of late-game comebacks. Never count him out, especially in the final rounds of any tournament.</p>
-                            <a href="#" class="player-link">View Full Profile</a>
-                        </div>
-                    </div>
+                <div class="players-grid" id="players-grid">
+                    <!-- Players will be loaded dynamically from Google Sheets -->
                 </div>
             </div>
         </section>
@@ -287,7 +169,189 @@
         </div>
     </footer>
 
-    <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/tournament-engine.js"></script>
+    
+    <script>
+        // Load real player data
+        document.addEventListener('DOMContentLoaded', async function() {
+            const tournamentEngine = new TournamentEngine();
+            const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+            
+            try {
+                console.log('👥 Loading player data...');
+                await tournamentEngine.loadFromGoogleSheets(sheetId);
+                
+                const players = tournamentEngine.getAllPlayers('total_tricks');
+                const tournaments = Array.from(tournamentEngine.tournaments.values());
+                
+                // Generate player cards - top performers first
+                const playersHTML = players.slice(0, 12).map((player, index) => {
+                    const isChampion = index === 0;
+                    const winRate = player.tournaments_played > 0 ? 
+                        ((player.total_tricks / (player.tournaments_played * 13)) * 100).toFixed(1) : '0.0';
+                    
+                    const championships = tournaments.filter(t => t.winner === player.name).length;
+                    
+                    return `
+                        <div class="player-card ${isChampion ? 'featured' : ''}">
+                            <div class="player-avatar">
+                                <div class="avatar-placeholder">
+                                    <div class="avatar-icon">${isChampion ? '👑' : index < 3 ? '🏆' : index < 6 ? '⭐' : '🎯'}</div>
+                                    <div class="avatar-initial">${player.name.split(' ').map(n => n[0]).join('')}</div>
+                                </div>
+                                <div class="player-status">
+                                    ${isChampion ? 'Top Performer' : 
+                                      index < 3 ? 'Championship Contender' : 
+                                      index < 6 ? 'Rising Star' : 'Tournament Regular'}
+                                </div>
+                            </div>
+                            <div class="player-info">
+                                <h3 class="player-name">${player.name}</h3>
+                                <div class="player-nickname">"${player.nickname || 'The Competitor'}"</div>
+                                <div class="player-stats">
+                                    <div class="stat-highlight">
+                                        <span class="stat-number">${championships}</span>
+                                        <span class="stat-label">Championship${championships !== 1 ? 's' : ''}</span>
+                                    </div>
+                                    <div class="stat-highlight">
+                                        <span class="stat-number">${winRate}%</span>
+                                        <span class="stat-label">Tricks Rate</span>
+                                    </div>
+                                    <div class="stat-highlight">
+                                        <span class="stat-number">${player.tournaments_played}</span>
+                                        <span class="stat-label">Tournament${player.tournaments_played !== 1 ? 's' : ''}</span>
+                                    </div>
+                                </div>
+                                <p class="player-description">
+                                    ${championships > 0 ? 
+                                        `Championship winner with ${player.total_tricks} career tricks across ${player.tournaments_played} tournaments.` :
+                                        `Competitive player with ${player.total_tricks} career tricks across ${player.tournaments_played} tournaments.`
+                                    }
+                                </p>
+                                <a href="#" class="player-link">View Full Profile</a>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                document.getElementById('players-grid').innerHTML = playersHTML;
+                
+                // Update generation data with real players
+                const playersByFirstYear = new Map();
+                players.forEach(player => {
+                    const firstYear = Math.min(...tournaments
+                        .filter(t => t.final_standings.some(s => s.player === player.name))
+                        .map(t => t.year));
+                    
+                    if (firstYear !== Infinity) {
+                        if (!playersByFirstYear.has(firstYear)) {
+                            playersByFirstYear.set(firstYear, []);
+                        }
+                        playersByFirstYear.get(firstYear).push(player.name);
+                    }
+                });
+                
+                // Update generations based on real data
+                const allYears = Array.from(playersByFirstYear.keys()).sort();
+                const foundingGeneration = players.filter(p => {
+                    const firstYear = Math.min(...tournaments
+                        .filter(t => t.final_standings.some(s => s.player === p.name))
+                        .map(t => t.year));
+                    return firstYear <= 1990;
+                }).slice(0, 6);
+                
+                const goldenGeneration = players.filter(p => {
+                    const firstYear = Math.min(...tournaments
+                        .filter(t => t.final_standings.some(s => s.player === p.name))
+                        .map(t => t.year));
+                    return firstYear > 1990 && firstYear <= 2005;
+                }).slice(0, 6);
+                
+                const newWave = players.filter(p => {
+                    const firstYear = Math.min(...tournaments
+                        .filter(t => t.final_standings.some(s => s.player === p.name))
+                        .map(t => t.year));
+                    return firstYear > 2005;
+                }).slice(0, 6);
+                
+                // Update generations grid
+                const generationsHTML = `
+                    <div class="generation-card">
+                        <h3 class="generation-title">Founding Generation</h3>
+                        <div class="generation-years">1984 - 1990</div>
+                        <div class="generation-players">
+                            ${foundingGeneration.map(p => `<div class="player-chip">${p.name}</div>`).join('')}
+                        </div>
+                        <p class="generation-description">The pioneers who established the tournament traditions and competitive spirit that continues today.</p>
+                    </div>
+                    <div class="generation-card">
+                        <h3 class="generation-title">Golden Generation</h3>
+                        <div class="generation-years">1990 - 2005</div>
+                        <div class="generation-players">
+                            ${goldenGeneration.map(p => `<div class="player-chip">${p.name}</div>`).join('')}
+                        </div>
+                        <p class="generation-description">The competitive peak era with multiple championship dynasties and legendary rivalries.</p>
+                    </div>
+                    <div class="generation-card">
+                        <h3 class="generation-title">New Wave</h3>
+                        <div class="generation-years">2005 - Present</div>
+                        <div class="generation-players">
+                            ${newWave.map(p => `<div class="player-chip">${p.name}</div>`).join('')}
+                        </div>
+                        <p class="generation-description">The modern era bringing fresh strategies and intense competition to family traditions.</p>
+                    </div>
+                `;
+                
+                document.querySelector('.generations-grid').innerHTML = generationsHTML;
+                
+                // Update statistics overview with real data
+                const uniqueChampions = new Set(tournaments.map(t => t.winner)).size;
+                const totalRounds = tournaments.reduce((sum, t) => sum + t.total_rounds, 0);
+                const mostChampionships = Math.max(...players.map(p => 
+                    tournaments.filter(t => t.winner === p.name).length
+                ));
+                const topChampion = players.find(p => 
+                    tournaments.filter(t => t.winner === p.name).length === mostChampionships
+                );
+                
+                const statsOverviewHTML = `
+                    <div class="overview-stat">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-number">${players.length}</div>
+                        <div class="stat-label">Total Players</div>
+                        <div class="stat-description">Across ${tournaments.length} tournaments</div>
+                    </div>
+                    <div class="overview-stat">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-number">${uniqueChampions}</div>
+                        <div class="stat-label">Different Champions</div>
+                        <div class="stat-description">Unique winners</div>
+                    </div>
+                    <div class="overview-stat">
+                        <div class="stat-icon">👑</div>
+                        <div class="stat-number">${mostChampionships}</div>
+                        <div class="stat-label">${topChampion ? topChampion.name : 'Top Player'}</div>
+                        <div class="stat-description">Most championships</div>
+                    </div>
+                    <div class="overview-stat">
+                        <div class="stat-icon">⚡</div>
+                        <div class="stat-number">${totalRounds}</div>
+                        <div class="stat-label">Total Rounds</div>
+                        <div class="stat-description">Across all tournaments</div>
+                    </div>
+                `;
+                
+                document.querySelector('.stats-overview-grid').innerHTML = statsOverviewHTML;
+                
+                console.log('✅ Player data loaded successfully!');
+                
+            } catch (error) {
+                console.error('❌ Error loading player data:', error);
+                document.getElementById('players-grid').innerHTML = 
+                    '<p style="text-align: center; color: #666; padding: 2rem;">Error loading player data. Please try refreshing the page.</p>';
+            }
+        });
+    </script>
     
     <style>
         /* Players Archive Specific Styles */
