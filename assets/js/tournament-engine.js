@@ -338,12 +338,23 @@ class TournamentEngine {
      */
     async processTournamentCSV(csvData, sheetName) {
         const lines = csvData.trim().split('\n');
+        
+        console.log(`🔍 DEBUG: Processing ${sheetName}:`);
+        console.log(`  Total lines: ${lines.length}`);
+        console.log(`  First 3 lines:`, lines.slice(0, 3));
+        
+        if (lines.length <= 1) {
+            console.log(`⚠️  ${sheetName} has no data rows (only ${lines.length} lines)`);
+            return 0;
+        }
+        
         const headers = lines[0].split(',').map(h => h.trim());
         
         console.log(`📋 Processing tournament CSV with headers: ${headers.join(', ')}`);
         
         let validScorecards = 0;
         let errors = [];
+        let emptyRows = 0;
         
         for (let i = 1; i < lines.length; i++) {
             const values = lines[i].split(',').map(v => v.trim());
@@ -355,8 +366,12 @@ class TournamentEngine {
             
             // Skip empty rows
             if (!scorecard.Id || !scorecard.Tournament) {
+                emptyRows++;
+                console.log(`🔍 DEBUG: Skipping empty row ${i + 1}:`, scorecard);
                 continue;
             }
+            
+            console.log(`🔍 DEBUG: Processing row ${i + 1}:`, scorecard);
             
             try {
                 // Handle date parsing - if blank, use Jan 2 of following year
@@ -384,16 +399,23 @@ class TournamentEngine {
                 if (this.validateTournamentScorecard(scorecard, i + 1, sheetName)) {
                     this.rawScorecards.push(scorecard);
                     validScorecards++;
+                    console.log(`✅ Valid scorecard from row ${i + 1}`);
                 }
             } catch (error) {
+                console.log(`❌ Validation error on row ${i + 1}:`, error.message, scorecard);
                 errors.push(`Row ${i + 1}: ${error.message}`);
             }
         }
         
+        console.log(`📊 ${sheetName} summary:`);
+        console.log(`  - Total data rows: ${lines.length - 1}`);
+        console.log(`  - Empty rows skipped: ${emptyRows}`);
+        console.log(`  - Valid scorecards: ${validScorecards}`);
+        console.log(`  - Validation errors: ${errors.length}`);
+        
         if (errors.length > 0) {
-            const errorMessage = `Errors found in ${sheetName}:\n${errors.join('\n')}`;
-            console.error(`❌ ${errorMessage}`);
-            throw new Error(errorMessage);
+            console.warn(`⚠️  Validation errors in ${sheetName}:`, errors);
+            // Don't throw error, just log warnings to see what's happening
         }
         
         console.log(`✅ Processed ${validScorecards} valid scorecards from ${sheetName}`);
