@@ -287,19 +287,54 @@ class TournamentEngine {
     }
 
     /**
-     * Update cumulative player scores
+     * Parse shared hands from player names containing "+"
+     * Returns { players: [array], isShared: boolean }
+     */
+    parseSharedHand(playerName) {
+        if (playerName.includes('+')) {
+            const players = playerName.split('+').map(name => name.trim());
+            return { players, isShared: true };
+        }
+        return { players: [playerName], isShared: false };
+    }
+
+    /**
+     * Update cumulative player scores with shared hand support
      */
     updatePlayerScores(playerScores, roundData) {
         for (const table of roundData.tables) {
             for (const partnership of table.partnerships) {
-                for (const player of partnership.players) {
-                    if (!playerScores.has(player)) {
-                        playerScores.set(player, { total_tricks: 0, rounds_played: 0 });
-                    }
+                for (const playerName of partnership.players) {
+                    const parsedPlayer = this.parseSharedHand(playerName);
                     
-                    const playerData = playerScores.get(player);
-                    playerData.total_tricks += partnership.tricks;
-                    playerData.rounds_played += 1;
+                    for (const actualPlayer of parsedPlayer.players) {
+                        if (!playerScores.has(actualPlayer)) {
+                            playerScores.set(actualPlayer, { 
+                                total_tricks: 0, 
+                                rounds_played: 0,
+                                individual_tricks: 0,
+                                individual_rounds: 0,
+                                shared_tricks: 0,
+                                shared_rounds: 0
+                            });
+                        }
+                        
+                        const playerData = playerScores.get(actualPlayer);
+                        
+                        if (parsedPlayer.isShared) {
+                            // Split tricks equally among shared players
+                            const splitTricks = partnership.tricks / parsedPlayer.players.length;
+                            playerData.total_tricks += partnership.tricks; // Full credit for averages
+                            playerData.shared_tricks += splitTricks; // Split credit for sums
+                            playerData.shared_rounds += 1;
+                        } else {
+                            playerData.total_tricks += partnership.tricks;
+                            playerData.individual_tricks += partnership.tricks;
+                            playerData.individual_rounds += 1;
+                        }
+                        
+                        playerData.rounds_played += 1;
+                    }
                 }
             }
         }
@@ -312,15 +347,22 @@ class TournamentEngine {
         const standings = [];
         
         for (const [player, data] of playerScores) {
+            // Use combined tricks for tournament standings (individual + split shared)
+            const combinedTricks = data.individual_tricks + data.shared_tricks;
+            
             standings.push({
                 player: player,
-                total_tricks: data.total_tricks,
+                total_tricks: combinedTricks, // Combined total for rankings
                 rounds_played: data.rounds_played,
-                average_tricks: (data.total_tricks / data.rounds_played).toFixed(2)
+                average_tricks: (data.total_tricks / data.rounds_played).toFixed(2), // Average using full trick credit
+                individual_tricks: data.individual_tricks || 0,
+                shared_tricks: data.shared_tricks || 0,
+                individual_rounds: data.individual_rounds || 0,
+                shared_rounds: data.shared_rounds || 0
             });
         }
         
-        // Sort by total tricks (descending)
+        // Sort by combined tricks (descending)
         standings.sort((a, b) => b.total_tricks - a.total_tricks);
         
         // Add positions
@@ -332,7 +374,7 @@ class TournamentEngine {
     }
 
     /**
-     * Calculate comprehensive player statistics
+     * Calculate comprehensive player statistics with shared hand support
      */
     calculatePlayerStatistics() {
         // This will calculate career stats across all tournaments
@@ -343,40 +385,157 @@ class TournamentEngine {
                 if (!this.players.has(player)) {
                     this.players.set(player, {
                         name: player,
+                        // Combined stats (default display)
                         tournaments_played: 0,
-                        total_tricks: 0,
+                        total_tricks: 0, // Combined individual + shared
                         total_rounds: 0,
                         tournament_wins: 0,
                         top_three_finishes: 0,
+                        // Individual stats (solo play only)
+                        individual: {
+                            tournaments_played: 0,
+                            total_tricks: 0,
+                            total_rounds: 0,
+                            tournament_wins: 0,
+                            top_three_finishes: 0
+                        },
+                        // Shared hand tracking
+                        shared_rounds: 0,
+                        shared_tricks: 0,
                         tournament_history: []
                     });
                 }
                 
                 const playerData = this.players.get(player);
+                const hasSharedRounds = standing.shared_rounds > 0;
+                
+                // Combined stats (always updated)
                 playerData.tournaments_played++;
-                playerData.total_tricks += standing.total_tricks;
+                playerData.total_tricks += standing.total_tricks; // Combined total
                 playerData.total_rounds += standing.rounds_played;
+                playerData.shared_rounds += standing.shared_rounds || 0;
+                playerData.shared_tricks += standing.shared_tricks || 0;
                 
                 if (standing.position === 1) {
                     playerData.tournament_wins++;
                 }
-                
                 if (standing.position <= 3) {
                     playerData.top_three_finishes++;
+                }
+                
+                // Individual stats (only if no shared rounds in this tournament)
+                if (!hasSharedRounds) {
+                    playerData.individual.tournaments_played++;
+                    playerData.individual.total_tricks += standing.individual_tricks || standing.total_tricks;
+                    playerData.individual.total_rounds += standing.individual_rounds || standing.rounds_played;
+                    
+                    if (standing.position === 1) {
+                        playerData.individual.tournament_wins++;
+                    }
+                    if (standing.position <= 3) {
+                        playerData.individual.top_three_finishes++;
+                    }
                 }
                 
                 playerData.tournament_history.push({
                     tournament: tournament.name,
                     year: tournament.year,
                     position: standing.position,
-                    tricks: standing.total_tricks
+                    tricks: standing.total_tricks,
+                    individual_tricks: standing.individual_tricks || 0,
+                    shared_tricks: standing.shared_tricks || 0,
+                    has_shared_rounds: hasSharedRounds
                 });
             }
+        }
+        
+        // Calculate averages for both combined and individual stats
+        for (const [player, data] of this.players) {
+            data.average_tricks = data.total_rounds > 0 ? (data.total_tricks / data.total_rounds).toFixed(2) : 0;
+            data.individual.average_tricks = data.individual.total_rounds > 0 ? 
+                (data.individual.total_tricks / data.individual.total_rounds).toFixed(2) : 0;
         }
     }
 
     /**
-     * Calculate partnership statistics
+     * Get player statistics with option for individual vs combined
+     */
+    getPlayerStats(playerName, includeSharedHands = true) {
+        const player = this.players.get(playerName);
+        if (!player) return null;
+        
+        if (includeSharedHands) {
+            // Return combined stats (default)
+            return {
+                name: player.name,
+                tournaments_played: player.tournaments_played,
+                total_tricks: player.total_tricks,
+                total_rounds: player.total_rounds,
+                average_tricks: player.average_tricks,
+                tournament_wins: player.tournament_wins,
+                top_three_finishes: player.top_three_finishes,
+                shared_rounds: player.shared_rounds,
+                shared_tricks: player.shared_tricks,
+                win_percentage: player.tournaments_played > 0 ? 
+                    ((player.tournament_wins / player.tournaments_played) * 100).toFixed(1) : 0,
+                stat_type: 'combined'
+            };
+        } else {
+            // Return individual-only stats
+            return {
+                name: player.name,
+                tournaments_played: player.individual.tournaments_played,
+                total_tricks: player.individual.total_tricks,
+                total_rounds: player.individual.total_rounds,
+                average_tricks: player.individual.average_tricks,
+                tournament_wins: player.individual.tournament_wins,
+                top_three_finishes: player.individual.top_three_finishes,
+                win_percentage: player.individual.tournaments_played > 0 ? 
+                    ((player.individual.tournament_wins / player.individual.tournaments_played) * 100).toFixed(1) : 0,
+                stat_type: 'individual'
+            };
+        }
+    }
+
+    /**
+     * Get all players ranked by combined stats
+     */
+    getPlayerRankings(includeSharedHands = true) {
+        const rankings = [];
+        
+        for (const [playerName, playerData] of this.players) {
+            const stats = this.getPlayerStats(playerName, includeSharedHands);
+            if (stats) {
+                rankings.push(stats);
+            }
+        }
+        
+        // Sort by tournament wins, then by total tricks
+        rankings.sort((a, b) => {
+            if (b.tournament_wins !== a.tournament_wins) {
+                return b.tournament_wins - a.tournament_wins;
+            }
+            return b.total_tricks - a.total_tricks;
+        });
+        
+        // Add ranking positions
+        rankings.forEach((player, index) => {
+            player.rank = index + 1;
+        });
+        
+        return rankings;
+    }
+
+    /**
+     * Check if a player has any shared hand history
+     */
+    playerHasSharedHands(playerName) {
+        const player = this.players.get(playerName);
+        return player ? player.shared_rounds > 0 : false;
+    }
+
+    /**
+     * Calculate partnership statistics with shared hand awareness
      */
     calculatePartnershipStatistics() {
         // Analyze partnership combinations and success rates
@@ -464,6 +623,67 @@ class TournamentEngine {
             partnerships: Object.fromEntries(this.partnerships),
             generated_at: new Date().toISOString()
         };
+    }
+
+    /**
+     * Create sample CSV data with shared hands for testing
+     */
+    generateSampleSharedHandCSV() {
+        const csvData = `Tournament,Year,Round,Trump_Suit,Player1,Player2,Tricks_Won,Opponent1,Opponent2,Opponent_Tricks
+Christmas,2023,1,Hearts,James Ruston,Margaret Wilson,8,David Smith+Sarah Brown,Emma Jones,5
+Christmas,2023,1,Hearts,David Smith+Sarah Brown,Emma Jones,5,James Ruston,Margaret Wilson,8
+Christmas,2023,2,Diamonds,James Ruston,Emma Jones,7,Margaret Wilson,David Smith+Sarah Brown,6
+Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston,Emma Jones,7`;
+        
+        return csvData;
+    }
+
+    /**
+     * Test shared hand parsing with sample data
+     */
+    testSharedHands() {
+        console.log('🧪 Testing Shared Hand System...');
+        
+        // Test the parsing function
+        const testCases = [
+            'James Ruston',
+            'David Smith+Sarah Brown',
+            'Tom Wilson + Jane Smith',
+            'Player A+Player B+Player C'
+        ];
+        
+        testCases.forEach(playerName => {
+            const result = this.parseSharedHand(playerName);
+            console.log(`Input: "${playerName}" -> Players: [${result.players.join(', ')}], Shared: ${result.isShared}`);
+        });
+        
+        // Process sample data
+        const sampleCSV = this.generateSampleSharedHandCSV();
+        console.log('\n📄 Sample CSV with shared hands:');
+        console.log(sampleCSV);
+        
+        // Process the sample data
+        this.processScorecardCSV(sampleCSV).then(recordCount => {
+            console.log(`\n✅ Processed ${recordCount} scorecard records`);
+            
+            // Show player stats
+            console.log('\n👥 Player Statistics:');
+            for (const [playerName, playerData] of this.players) {
+                const combinedStats = this.getPlayerStats(playerName, true);
+                const individualStats = this.getPlayerStats(playerName, false);
+                const hasShared = this.playerHasSharedHands(playerName);
+                
+                console.log(`\n${playerName}:`);
+                console.log(`  Combined: ${combinedStats.total_tricks} tricks, ${combinedStats.average_tricks} avg`);
+                console.log(`  Individual: ${individualStats.total_tricks} tricks, ${individualStats.average_tricks} avg`);
+                console.log(`  Has shared hands: ${hasShared}`);
+                if (hasShared) {
+                    console.log(`  Shared rounds: ${combinedStats.shared_rounds}, Shared tricks: ${combinedStats.shared_tricks}`);
+                }
+            }
+        });
+        
+        return true;
     }
 }
 
