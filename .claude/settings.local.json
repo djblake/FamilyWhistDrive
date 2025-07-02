@@ -3,7 +3,21 @@
     "allow": [
       "Bash(mkdir:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(gh:*)",
+      "Bash(brew install:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(ssh-keygen:*)",
+      "Bash(git config:*)",
+      "Bash(ls:*)",
+      "Bash(git commit:*)",
+      "Bash(python3:*)",
+      "Bash(node:*)",
+      "Bash(npx serve:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

@@ -1,0 +1,368 @@
+{
+  "families": {
+    "ruston": {
+      "family_name": "Ruston",
+      "family_color": "#dc2626",
+      "founded_tournament": 1984,
+      "family_motto": "Strategy Through Tradition",
+      "generations": {
+        "1": {
+          "generation_name": "Founding Generation",
+          "years_active": "1984-2010",
+          "members": [
+            {
+              "id": "james_ruston_sr",
+              "name": "James Ruston Sr.",
+              "nickname": "The Master",
+              "birth_year": 1945,
+              "role": "Tournament Founder",
+              "spouse": "mary_ruston",
+              "children": ["james_ruston_jr", "sarah_ruston"],
+              "status": "active"
+            },
+            {
+              "id": "mary_ruston",
+              "name": "Mary Ruston",
+              "nickname": "The Rock",
+              "birth_year": 1948,
+              "role": "Founding Matriarch",
+              "spouse": "james_ruston_sr",
+              "children": ["james_ruston_jr", "sarah_ruston"],
+              "status": "active"
+            }
+          ]
+        },
+        "2": {
+          "generation_name": "Second Generation",
+          "years_active": "1995-present",
+          "members": [
+            {
+              "id": "james_ruston_jr",
+              "name": "James Ruston Jr.",
+              "nickname": "The Tactician",
+              "birth_year": 1970,
+              "role": "Family Champion",
+              "parents": ["james_ruston_sr", "mary_ruston"],
+              "spouse": "lisa_ruston",
+              "children": ["emma_ruston", "michael_ruston"],
+              "status": "active"
+            },
+            {
+              "id": "sarah_ruston",
+              "name": "Sarah Ruston Brown",
+              "nickname": "Lucky Sarah",
+              "birth_year": 1975,
+              "role": "Family Ambassador",
+              "parents": ["james_ruston_sr", "mary_ruston"],
+              "spouse": "david_brown",
+              "children": ["tom_brown"],
+              "maiden_name": "Ruston",
+              "status": "active"
+            },
+            {
+              "id": "lisa_ruston",
+              "name": "Lisa Ruston",
+              "nickname": "The Calculator",
+              "birth_year": 1972,
+              "role": "Strategic Advisor",
+              "spouse": "james_ruston_jr",
+              "children": ["emma_ruston", "michael_ruston"],
+              "married_into": "ruston",
+              "status": "active"
+            }
+          ]
+        },
+        "3": {
+          "generation_name": "Third Generation",
+          "years_active": "2010-present",
+          "members": [
+            {
+              "id": "emma_ruston",
+              "name": "Emma Ruston",
+              "nickname": "The Prodigy",
+              "birth_year": 2000,
+              "role": "Rising Star",
+              "parents": ["james_ruston_jr", "lisa_ruston"],
+              "status": "active"
+            },
+            {
+              "id": "michael_ruston",
+              "name": "Michael Ruston Jr.",
+              "nickname": "The Young Gun",
+              "birth_year": 2002,
+              "role": "Next Generation",
+              "parents": ["james_ruston_jr", "lisa_ruston"],
+              "status": "active"
+            },
+            {
+              "id": "tom_brown",
+              "name": "Tom Brown",
+              "nickname": "The Hybrid",
+              "birth_year": 1998,
+              "role": "Cross-Family Bridge",
+              "parents": ["sarah_ruston", "david_brown"],
+              "family_heritage": ["ruston", "brown"],
+              "status": "active"
+            }
+          ]
+        }
+      }
+    },
+    "wilson": {
+      "family_name": "Wilson",
+      "family_color": "#22c55e",
+      "founded_tournament": 1984,
+      "family_motto": "Excellence Through Competition",
+      "generations": {
+        "1": {
+          "generation_name": "Founding Generation",
+          "years_active": "1984-2015",
+          "members": [
+            {
+              "id": "tom_wilson_sr",
+              "name": "Tom Wilson Sr.",
+              "nickname": "The Veteran",
+              "birth_year": 1942,
+              "role": "Co-Founder",
+              "spouse": "patricia_wilson",
+              "children": ["margaret_wilson", "tom_wilson_jr"],
+              "status": "retired"
+            },
+            {
+              "id": "patricia_wilson",
+              "name": "Patricia Wilson",
+              "nickname": "The Gentle Giant",
+              "birth_year": 1945,
+              "role": "Tournament Organizer",
+              "spouse": "tom_wilson_sr",
+              "children": ["margaret_wilson", "tom_wilson_jr"],
+              "status": "retired"
+            }
+          ]
+        },
+        "2": {
+          "generation_name": "Championship Generation",
+          "years_active": "1988-present",
+          "members": [
+            {
+              "id": "margaret_wilson",
+              "name": "Margaret Wilson",
+              "nickname": "The Ace",
+              "birth_year": 1968,
+              "role": "Current Champion",
+              "parents": ["tom_wilson_sr", "patricia_wilson"],
+              "spouse": "james_wilson",
+              "children": ["alex_wilson", "sophie_wilson"],
+              "status": "active"
+            },
+            {
+              "id": "tom_wilson_jr",
+              "name": "Tom Wilson Jr.",
+              "nickname": "The Steady Hand",
+              "birth_year": 1970,
+              "role": "Family Strategist",
+              "parents": ["tom_wilson_sr", "patricia_wilson"],
+              "spouse": "jane_wilson",
+              "children": ["mark_wilson"],
+              "status": "active"
+            },
+            {
+              "id": "james_wilson",
+              "name": "James Wilson",
+              "nickname": "The Supportive",
+              "birth_year": 1965,
+              "role": "Champion's Partner",
+              "spouse": "margaret_wilson",
+              "children": ["alex_wilson", "sophie_wilson"],
+              "married_into": "wilson",
+              "status": "active"
+            }
+          ]
+        },
+        "3": {
+          "generation_name": "Next Generation",
+          "years_active": "2015-present",
+          "members": [
+            {
+              "id": "alex_wilson",
+              "name": "Alex Wilson",
+              "nickname": "The Future",
+              "birth_year": 1995,
+              "role": "Emerging Talent",
+              "parents": ["margaret_wilson", "james_wilson"],
+              "status": "active"
+            },
+            {
+              "id": "sophie_wilson",
+              "name": "Sophie Wilson",
+              "nickname": "The Dark Horse",
+              "birth_year": 1997,
+              "role": "Surprise Contender",
+              "parents": ["margaret_wilson", "james_wilson"],
+              "status": "active"
+            },
+            {
+              "id": "mark_wilson",
+              "name": "Mark Wilson",
+              "nickname": "The Methodical",
+              "birth_year": 1999,
+              "role": "Strategic Thinker",
+              "parents": ["tom_wilson_jr", "jane_wilson"],
+              "status": "active"
+            }
+          ]
+        }
+      }
+    },
+    "smith": {
+      "family_name": "Smith",
+      "family_color": "#d4af37",
+      "founded_tournament": 1987,
+      "family_motto": "Steady Hands, Strong Hearts",
+      "generations": {
+        "1": {
+          "generation_name": "Early Adopters",
+          "years_active": "1987-2010",
+          "members": [
+            {
+              "id": "robert_smith",
+              "name": "Robert Smith",
+              "nickname": "The Steady",
+              "birth_year": 1950,
+              "role": "Family Patriarch",
+              "spouse": "helen_smith",
+              "children": ["david_smith", "susan_smith"],
+              "status": "retired"
+            },
+            {
+              "id": "helen_smith",
+              "name": "Helen Smith",
+              "nickname": "The Wise",
+              "birth_year": 1952,
+              "role": "Family Matriarch",
+              "spouse": "robert_smith",
+              "children": ["david_smith", "susan_smith"],
+              "status": "retired"
+            }
+          ]
+        },
+        "2": {
+          "generation_name": "Current Generation",
+          "years_active": "2000-present",
+          "members": [
+            {
+              "id": "david_smith",
+              "name": "David Smith",
+              "nickname": "Steady Eddie",
+              "birth_year": 1978,
+              "role": "Family Representative",
+              "parents": ["robert_smith", "helen_smith"],
+              "spouse": "anna_smith",
+              "children": ["lucy_smith"],
+              "status": "active"
+            },
+            {
+              "id": "susan_smith",
+              "name": "Susan Smith Thompson",
+              "nickname": "The Diplomatic",
+              "birth_year": 1980,
+              "role": "Inter-Family Liaison",
+              "parents": ["robert_smith", "helen_smith"],
+              "spouse": "michael_thompson",
+              "children": ["jack_thompson"],
+              "maiden_name": "Smith",
+              "status": "active"
+            }
+          ]
+        },
+        "3": {
+          "generation_name": "New Generation",
+          "years_active": "2020-present",
+          "members": [
+            {
+              "id": "lucy_smith",
+              "name": "Lucy Smith",
+              "nickname": "The Newcomer",
+              "birth_year": 2005,
+              "role": "Future Prospect",
+              "parents": ["david_smith", "anna_smith"],
+              "status": "active"
+            },
+            {
+              "id": "jack_thompson",
+              "name": "Jack Thompson",
+              "nickname": "The Cross-Bearer",
+              "birth_year": 2003,
+              "role": "Bridge Builder",
+              "parents": ["susan_smith", "michael_thompson"],
+              "family_heritage": ["smith", "thompson"],
+              "status": "active"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "family_rivalries": [
+    {
+      "families": ["ruston", "wilson"],
+      "rivalry_name": "The Original Rivalry",
+      "started": 1984,
+      "description": "Founding families' 40-year competitive tradition",
+      "head_to_head": {
+        "tournament_wins": {"ruston": 18, "wilson": 15},
+        "total_championships": {"ruston": 12, "wilson": 20},
+        "current_streak": {"family": "wilson", "count": 3}
+      }
+    },
+    {
+      "families": ["ruston", "smith"],
+      "rivalry_name": "The Strategic Battle",
+      "started": 1987,
+      "description": "Methodical planning vs instinctive play",
+      "head_to_head": {
+        "tournament_wins": {"ruston": 12, "smith": 6},
+        "partnership_success": {"ruston": 68, "smith": 71}
+      }
+    },
+    {
+      "families": ["wilson", "smith"],
+      "rivalry_name": "The Friendly Competition",
+      "started": 1987,
+      "description": "Mutual respect with competitive edge",
+      "head_to_head": {
+        "tournament_wins": {"wilson": 15, "smith": 6},
+        "average_performance": {"wilson": 6.8, "smith": 6.5}
+      }
+    }
+  ],
+  "family_alliances": [
+    {
+      "families": ["ruston", "wilson"],
+      "alliance_name": "The Founding Alliance",
+      "formed": 1984,
+      "description": "Original tournament creators who set the traditions",
+      "joint_achievements": [
+        "Established 40-year tournament tradition",
+        "Created official rules and scoring system",
+        "Maintained tournament continuity through family changes"
+      ]
+    }
+  ],
+  "cross_family_marriages": [
+    {
+      "marriage_id": "ruston_brown_2001",
+      "families": ["ruston", "brown"],
+      "married": ["sarah_ruston", "david_brown"],
+      "year": 2001,
+      "impact": "Brought Brown family strategic insights to Ruston lineage"
+    },
+    {
+      "marriage_id": "wilson_james_1992",
+      "families": ["wilson", "external"],
+      "married": ["margaret_wilson", "james_wilson"],
+      "year": 1992,
+      "impact": "James Wilson adopted Wilson family competitive spirit"
+    }
+  ]
+}
