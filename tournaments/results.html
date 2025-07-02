@@ -355,6 +355,7 @@
             width: 100%;
             background: white;
             border-collapse: collapse;
+            color: #1f2937; /* Ensure all table text is dark */
         }
 
         .rankings-table th {
@@ -368,6 +369,7 @@
         .rankings-table td {
             padding: var(--spacing-md);
             border-bottom: 1px solid var(--border-light);
+            color: #1f2937; /* Ensure dark text on white background */
         }
 
         .podium-row {
@@ -377,6 +379,16 @@
         .rank-cell {
             text-align: center;
             font-weight: 700;
+            color: #1f2937; /* Ensure rank numbers are dark */
+        }
+
+        .player-cell strong {
+            color: #1f2937; /* Ensure player names are dark */
+        }
+
+        .tricks-cell, .best-round, .worst-round {
+            color: #1f2937; /* Ensure numeric values are dark */
+            font-weight: 600;
         }
 
         .medal {
