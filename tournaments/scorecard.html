@@ -441,6 +441,11 @@
             padding: var(--spacing-2xl);
             box-shadow: var(--shadow-lg);
             margin-bottom: var(--spacing-2xl);
+            color: #1f2937; /* Ensure dark text on white background */
+        }
+
+        .scorecard-section .section-title {
+            color: #1f2937; /* Dark color for section title */
         }
 
         .scorecard-table-container {
@@ -464,6 +469,7 @@
         .scorecard-table td {
             padding: var(--spacing-md);
             border-bottom: 1px solid var(--border-light);
+            color: #1f2937; /* Ensure dark text in table body */
         }
 
         .round-row:hover {
@@ -503,21 +509,39 @@
             border-radius: var(--border-radius-lg);
             padding: var(--spacing-2xl);
             box-shadow: var(--shadow-lg);
+            color: #1f2937; /* Ensure dark text on white background */
+        }
+
+        .photo-section h3 {
+            color: #1f2937; /* Dark color for "Scorecard Verification" heading */
+            margin-bottom: var(--spacing-lg);
+        }
+
+        /* Global section title styling for readability */
+        .section-title {
+            color: #1f2937 !important; /* Ensure all section titles are dark */
         }
 
         .photo-upload-info {
-            background: var(--background-light);
+            background: #f8f9fa; /* Light gray background */
             padding: var(--spacing-lg);
             border-radius: var(--border-radius);
             margin-bottom: var(--spacing-xl);
+            color: #1f2937; /* Dark text for readability */
+        }
+
+        .photo-upload-info p {
+            color: #1f2937; /* Ensure paragraph text is dark */
+            margin-bottom: var(--spacing-sm);
         }
 
         .photo-upload-info code {
-            background: var(--background-dark);
-            color: var(--accent);
+            background: #2d3748; /* Dark background */
+            color: #fbbf24; /* Gold/yellow text for good contrast */
             padding: var(--spacing-xs) var(--spacing-sm);
             border-radius: var(--border-radius-sm);
             font-family: monospace;
+            font-weight: 600;
         }
 
         /* Scorecard Photo Gallery Styles */
