@@ -417,6 +417,223 @@ class PhotoGallery {
     getAllGalleries() {
         return Array.from(this.galleries.values());
     }
+
+    /**
+     * Load photos for a specific player's scorecard verification
+     */
+    async loadPlayerScorecardPhotos(tournamentYear, playerSlug) {
+        const photosPath = `/tournaments/${tournamentYear}/${playerSlug}/`;
+        
+        try {
+            // In a real implementation, this would scan the directory
+            // For demonstration, check if this is a known player with photos
+            const sampleScorecardPhotos = this.getSampleScorecardPhotos(tournamentYear, playerSlug);
+            
+            if (sampleScorecardPhotos.length === 0) {
+                throw new Error('No scorecard photos found');
+            }
+            
+            const gallery = {
+                year: tournamentYear,
+                player: playerSlug,
+                path: photosPath,
+                photos: sampleScorecardPhotos,
+                totalPhotos: sampleScorecardPhotos.length,
+                type: 'scorecard'
+            };
+            
+            const galleryKey = `${tournamentYear}_${playerSlug}`;
+            this.galleries.set(galleryKey, gallery);
+            return gallery;
+            
+        } catch (error) {
+            console.error(`Error loading scorecard photos for ${playerSlug} in ${tournamentYear}:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get sample scorecard photos for demonstration
+     */
+    getSampleScorecardPhotos(year, playerSlug) {
+        // Sample data - in reality this would check the actual directory
+        const samplePlayers = {
+            'david': [
+                {
+                    filename: 'david_scorecard_original.jpg',
+                    caption: 'Original Scorecard - Front Side',
+                    date: `${year}-12-25`,
+                    type: 'scorecard_front'
+                },
+                {
+                    filename: 'david_scorecard_back.jpg',
+                    caption: 'Original Scorecard - Back Side with Notes',
+                    date: `${year}-12-25`,
+                    type: 'scorecard_back'
+                }
+            ],
+            'margaret-wilson': [
+                {
+                    filename: 'margaret_scorecard_page1.jpg',
+                    caption: 'Margaret Wilson - Scorecard Page 1',
+                    date: `${year}-12-25`,
+                    type: 'scorecard_front'
+                },
+                {
+                    filename: 'margaret_scorecard_page2.jpg',
+                    caption: 'Margaret Wilson - Scorecard Page 2',
+                    date: `${year}-12-25`,
+                    type: 'scorecard_back'
+                }
+            ]
+        };
+
+        const playerPhotos = samplePlayers[playerSlug] || [];
+        
+        return playerPhotos.map(photo => ({
+            ...photo,
+            url: `/tournaments/${year}/${playerSlug}/${photo.filename}`,
+            thumbnailUrl: `/tournaments/${year}/${playerSlug}/thumbs/${photo.filename}`,
+            fullUrl: `/tournaments/${year}/${playerSlug}/full/${photo.filename}`
+        }));
+    }
+
+    /**
+     * Create scorecard photos HTML for verification
+     */
+    createScorecardPhotosHTML(photosPath, containerSelector) {
+        const container = document.querySelector(containerSelector);
+        if (!container) {
+            console.warn(`Container ${containerSelector} not found`);
+            return;
+        }
+
+        // Extract player info from path
+        const pathParts = photosPath.split('/');
+        const year = pathParts[1];
+        const playerSlug = pathParts[2];
+        
+        const galleryKey = `${year}_${playerSlug}`;
+        const gallery = this.galleries.get(galleryKey);
+        
+        if (!gallery) {
+            container.innerHTML = '<p style="color: #666; font-style: italic;">No scorecard photos uploaded yet.</p>';
+            return;
+        }
+
+        // Create scorecard gallery HTML
+        const galleryHTML = `
+            <div class="scorecard-photo-gallery" data-year="${year}" data-player="${playerSlug}">
+                <div class="gallery-header">
+                    <h4 class="gallery-title">
+                        <span class="gallery-icon">📷</span>
+                        Original Scorecard Photos (${gallery.totalPhotos})
+                    </h4>
+                    <p class="gallery-subtitle">Verify the digital scorecard against these original photos</p>
+                </div>
+                <div class="scorecard-photo-grid">
+                    ${gallery.photos.map(photo => this.createScorecardPhotoCard(photo, year, playerSlug)).join('')}
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = galleryHTML;
+
+        // Add click handlers for scorecard photos
+        this.attachScorecardPhotoHandlers(container);
+    }
+
+    /**
+     * Create individual scorecard photo card HTML
+     */
+    createScorecardPhotoCard(photo, year, playerSlug) {
+        return `
+            <div class="scorecard-photo-card" data-photo="${photo.filename}" data-year="${year}" data-player="${playerSlug}">
+                <div class="photo-container">
+                    <div class="photo-placeholder scorecard-placeholder">
+                        <div class="photo-icon">📋</div>
+                        <div class="photo-filename">${photo.filename}</div>
+                        <div class="verification-badge">Original Scorecard</div>
+                    </div>
+                    <div class="photo-overlay">
+                        <button class="photo-view-btn" title="View Full Size for Verification">
+                            <span class="icon">🔍</span>
+                            <span class="view-text">Verify</span>
+                        </button>
+                        <div class="photo-type-badge ${photo.type}">${this.formatScorecardPhotoType(photo.type)}</div>
+                    </div>
+                </div>
+                <div class="photo-caption">
+                    <h5 class="photo-title">${photo.caption}</h5>
+                    <div class="photo-meta">
+                        <span class="photo-date">${this.formatDate(photo.date)}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Format scorecard photo type for display
+     */
+    formatScorecardPhotoType(type) {
+        const types = {
+            'scorecard_front': 'Front',
+            'scorecard_back': 'Back',
+            'scorecard_detail': 'Detail',
+            'scorecard_full': 'Full'
+        };
+        return types[type] || 'Scorecard';
+    }
+
+    /**
+     * Attach click handlers for scorecard photos
+     */
+    attachScorecardPhotoHandlers(container) {
+        const photoCards = container.querySelectorAll('.scorecard-photo-card');
+        
+        photoCards.forEach(card => {
+            card.addEventListener('click', (e) => {
+                const year = card.dataset.year;
+                const filename = card.dataset.photo;
+                const player = card.dataset.player;
+                this.openScorecardLightbox(year, player, filename);
+            });
+        });
+    }
+
+    /**
+     * Open lightbox for scorecard verification
+     */
+    openScorecardLightbox(year, playerSlug, filename) {
+        const galleryKey = `${year}_${playerSlug}`;
+        const gallery = this.galleries.get(galleryKey);
+        
+        if (!gallery) {
+            console.error('Gallery not found for scorecard lightbox');
+            return;
+        }
+
+        const photoIndex = gallery.photos.findIndex(p => p.filename === filename);
+        if (photoIndex === -1) {
+            console.error('Photo not found in gallery');
+            return;
+        }
+
+        this.currentLightbox = {
+            year: year,
+            gallery: gallery,
+            currentIndex: photoIndex,
+            type: 'scorecard'
+        };
+
+        const lightbox = document.getElementById('photo-lightbox');
+        lightbox.style.display = 'flex';
+        lightbox.classList.add('scorecard-mode');
+        
+        this.showCurrentPhoto();
+        document.body.style.overflow = 'hidden';
+    }
 }
 
 // Export for use in other scripts

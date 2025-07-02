@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title">Player Scorecard - Ruston Family Whist Drive</title>
+    <meta name="description" id="page-description" content="Detailed scorecard and tournament performance analysis">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
+                    <h1 class="site-title">Ruston Family Whist Drive</h1>
+                    <p class="site-subtitle">Est. 1984 • The World's Most Elite Family Tournament</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="../" class="nav-link">Home</a>
+                    <a href="../tournaments/" class="nav-link">Tournaments</a>
+                    <a href="../players/" class="nav-link">Players</a>
+                    <a href="../leaderboard/" class="nav-link">Hall of Fame</a>
+                    <a href="../stats/" class="nav-link">Statistics</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <!-- Loading State -->
+        <section class="loading-section" id="loading-section">
+            <div class="container">
+                <div class="loading-content">
+                    <div class="loading-spinner">🎴</div>
+                    <h2>Loading Player Scorecard...</h2>
+                    <p>Retrieving tournament data from archives...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Error State -->
+        <section class="error-section" id="error-section" style="display: none;">
+            <div class="container">
+                <div class="error-content">
+                    <div class="error-icon">❌</div>
+                    <h2>Scorecard Not Found</h2>
+                    <p id="error-message">Unable to load player scorecard data.</p>
+                    <a href="../tournaments/" class="btn btn-primary">← Back to Tournaments</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Player Scorecard Content -->
+        <section class="player-scorecard" id="scorecard-content" style="display: none;">
+            <div class="container">
+                <!-- Player Header -->
+                <div class="player-header">
+                    <div class="player-info">
+                        <div class="back-link">
+                            <a href="#" id="back-to-tournament">← Back to Tournament</a>
+                        </div>
+                        <h1 class="player-name" id="player-name">Loading...</h1>
+                        <p class="tournament-context" id="tournament-context">Tournament Context</p>
+                        <div class="player-rank">
+                            <span class="rank-badge" id="player-rank">Loading...</span>
+                            <span class="performance-summary" id="performance-summary">Performance Summary</span>
+                        </div>
+                    </div>
+                    <div class="tournament-summary">
+                        <div class="summary-stats">
+                            <div class="stat">
+                                <span class="stat-value" id="total-tricks">--</span>
+                                <span class="stat-label">Total Tricks</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value" id="average-tricks">--</span>
+                                <span class="stat-label">Average</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value" id="rounds-played">--</span>
+                                <span class="stat-label">Rounds</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value" id="best-round">--</span>
+                                <span class="stat-label">Best Round</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Statistics -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Performance Metrics</h3>
+                        <div class="metrics-list" id="performance-metrics">
+                            <!-- Will be populated dynamically -->
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Partnership Analysis</h3>
+                        <div class="partnerships-list" id="partnership-analysis">
+                            <!-- Will be populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Complete Round-by-Round Scorecard -->
+                <div class="scorecard-section">
+                    <h2 class="section-title">
+                        <span class="title-icon">📋</span>
+                        Complete Tournament Scorecard
+                    </h2>
+                    <div class="scorecard-table-container">
+                        <table class="scorecard-table" id="scorecard-table">
+                            <thead>
+                                <tr>
+                                    <th>Round</th>
+                                    <th>Trump</th>
+                                    <th>Table</th>
+                                    <th>Partner</th>
+                                    <th>Opponents</th>
+                                    <th>Our Tricks</th>
+                                    <th>Their Tricks</th>
+                                    <th>Result</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scorecard-body">
+                                <!-- Will be populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Photo Upload Section -->
+                <div class="photo-section">
+                    <h3>Scorecard Verification</h3>
+                    <div class="photo-upload-info">
+                        <p>📸 Original scorecard photos can be uploaded to:</p>
+                        <code id="photo-path">tournaments/YEAR/PLAYER/</code>
+                        <p>Photos will automatically appear here for verification against the digital scorecard above.</p>
+                    </div>
+                    <div id="scorecard-photos">
+                        <!-- Photos will be loaded here if available -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Navigation</h4>
+                    <p><a href="../tournaments/">All Tournaments</a></p>
+                    <p><a href="../players/">All Players</a></p>
+                    <p><a href="../">Home</a></p>
+                </div>
+                <div class="footer-section">
+                    <h4>Tournament Data</h4>
+                    <p>Official Scorecards</p>
+                    <p>Partnership Statistics</p>
+                    <p>Historical Analysis</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Verification</h4>
+                    <p>Cross-reference with photos</p>
+                    <p>Data accuracy guarantee</p>
+                    <p>Family tournament integrity</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive. Championship excellence since 1984.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../assets/js/tournament-engine.js"></script>
+    <script src="../assets/js/photo-gallery.js"></script>
+    
+    <script>
+        // Parse URL parameters to get year and player
+        function parseURLParameters() {
+            const path = window.location.pathname;
+            const pathParts = path.split('/').filter(part => part.length > 0);
+            
+            // Expected format: tournaments/YEAR/PLAYER/
+            if (pathParts.length >= 3 && pathParts[0] === 'tournaments') {
+                return {
+                    year: pathParts[1],
+                    playerSlug: pathParts[2]
+                };
+            }
+            
+            // Fallback: check for query parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            return {
+                year: urlParams.get('year'),
+                playerSlug: urlParams.get('player')
+            };
+        }
+
+        // Convert player slug back to player name
+        function slugToPlayerName(slug) {
+            return slug
+                .split('-')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+
+        // Convert player name to slug
+        function playerNameToSlug(name) {
+            return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        }
+
+        // Initialize scorecard page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeScorecardPage();
+        });
+
+        async function initializeScorecardPage() {
+            try {
+                const params = parseURLParameters();
+                
+                if (!params.year || !params.playerSlug) {
+                    throw new Error('Missing year or player parameter in URL');
+                }
+
+                const playerName = slugToPlayerName(params.playerSlug);
+                console.log(`🎴 Loading scorecard for ${playerName} in ${params.year}`);
+
+                // Update page title and photo path
+                document.getElementById('page-title').textContent = `${playerName} - ${params.year} Tournament Scorecard`;
+                document.getElementById('photo-path').textContent = `tournaments/${params.year}/${params.playerSlug}/`;
+
+                // Load tournament data
+                const engine = new TournamentEngine();
+                const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+                
+                await engine.loadFromGoogleSheets(sheetId);
+                
+                // Find the tournament for the specified year
+                const tournaments = Array.from(engine.tournaments.values());
+                const tournament = tournaments.find(t => t.year.toString() === params.year);
+                
+                if (!tournament) {
+                    throw new Error(`Tournament for year ${params.year} not found`);
+                }
+
+                // Find the player in tournament standings
+                const playerStanding = tournament.final_standings.find(
+                    standing => playerNameToSlug(standing.player) === params.playerSlug
+                );
+
+                if (!playerStanding) {
+                    throw new Error(`Player ${playerName} not found in ${params.year} tournament`);
+                }
+
+                // Generate scorecard
+                await generatePlayerScorecard(tournament, playerStanding, params);
+
+                // Try to load photos
+                await loadScorecardPhotos(params.year, params.playerSlug);
+
+                // Hide loading, show content
+                document.getElementById('loading-section').style.display = 'none';
+                document.getElementById('scorecard-content').style.display = 'block';
+
+            } catch (error) {
+                console.error('Error loading scorecard:', error);
+                showError(error.message);
+            }
+        }
+
+        async function generatePlayerScorecard(tournament, playerStanding, params) {
+            const playerName = playerStanding.player;
+
+            // Update player header
+            document.getElementById('player-name').textContent = playerName;
+            document.getElementById('tournament-context').textContent = `${tournament.name} • ${tournament.year}`;
+            
+            // Update back link
+            document.getElementById('back-to-tournament').href = `../${params.year}/`;
+            
+            // Update rank and performance
+            const rankText = playerStanding.position === 1 ? '🏆 Champion' : 
+                           playerStanding.position === 2 ? '🥈 Runner-up' :
+                           playerStanding.position === 3 ? '🥉 Third Place' :
+                           `#${playerStanding.position}`;
+            
+            document.getElementById('player-rank').textContent = rankText;
+            document.getElementById('performance-summary').textContent = 
+                `${playerStanding.total_tricks} tricks in ${playerStanding.rounds_played} rounds`;
+
+            // Update summary stats
+            document.getElementById('total-tricks').textContent = playerStanding.total_tricks;
+            document.getElementById('average-tricks').textContent = playerStanding.average_tricks;
+            document.getElementById('rounds-played').textContent = playerStanding.rounds_played;
+
+            // Calculate detailed player statistics
+            const playerRounds = getPlayerRounds(tournament, playerName);
+            const bestRound = Math.max(...playerRounds.map(r => r.tricks));
+            document.getElementById('best-round').textContent = bestRound;
+
+            // Generate performance metrics
+            generatePerformanceMetrics(playerRounds, playerStanding);
+
+            // Generate partnership analysis
+            generatePartnershipAnalysis(playerRounds);
+
+            // Generate complete scorecard table
+            generateScorecardTable(playerRounds);
+        }
+
+        function getPlayerRounds(tournament, playerName) {
+            const playerRounds = [];
+
+            for (const round of tournament.rounds) {
+                for (const table of round.tables) {
+                    for (const partnership of table.partnerships) {
+                        if (partnership.players.includes(playerName)) {
+                            playerRounds.push({
+                                round: round.round,
+                                trump: round.trump_suit,
+                                table: table.table,
+                                partner: partnership.players.find(p => p !== playerName),
+                                opponents: partnership.opponents,
+                                tricks: partnership.tricks,
+                                opponentTricks: 13 - partnership.tricks,
+                                won: partnership.tricks > 6
+                            });
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return playerRounds.sort((a, b) => a.round - b.round);
+        }
+
+        function generatePerformanceMetrics(playerRounds, playerStanding) {
+            const metrics = [];
+            
+            const wins = playerRounds.filter(r => r.won).length;
+            const winPercentage = Math.round((wins / playerRounds.length) * 100);
+            
+            const tricks = playerRounds.map(r => r.tricks);
+            const maxTricks = Math.max(...tricks);
+            const minTricks = Math.min(...tricks);
+            
+            const perfectRounds = tricks.filter(t => t === 13).length;
+            const highRounds = tricks.filter(t => t >= 10).length;
+            
+            metrics.push(`Rounds Won: ${wins}/${playerRounds.length} (${winPercentage}%)`);
+            metrics.push(`Best Round: ${maxTricks} tricks`);
+            metrics.push(`Worst Round: ${minTricks} tricks`);
+            metrics.push(`Perfect Rounds: ${perfectRounds}`);
+            metrics.push(`High Scoring Rounds (10+): ${highRounds}`);
+            
+            const consistency = calculateConsistency(tricks);
+            metrics.push(`Consistency Score: ${consistency}%`);
+
+            document.getElementById('performance-metrics').innerHTML = 
+                metrics.map(metric => `<div class="metric-item">${metric}</div>`).join('');
+        }
+
+        function calculateConsistency(tricks) {
+            const avg = tricks.reduce((sum, t) => sum + t, 0) / tricks.length;
+            const variance = tricks.reduce((sum, t) => sum + Math.pow(t - avg, 2), 0) / tricks.length;
+            const stdDev = Math.sqrt(variance);
+            
+            // Lower standard deviation = higher consistency (inverted scale)
+            const consistencyScore = Math.max(0, 100 - (stdDev * 10));
+            return Math.round(consistencyScore);
+        }
+
+        function generatePartnershipAnalysis(playerRounds) {
+            const partnerships = new Map();
+            
+            for (const round of playerRounds) {
+                if (!partnerships.has(round.partner)) {
+                    partnerships.set(round.partner, {
+                        partner: round.partner,
+                        rounds: 0,
+                        tricks: 0,
+                        wins: 0
+                    });
+                }
+                
+                const partnership = partnerships.get(round.partner);
+                partnership.rounds++;
+                partnership.tricks += round.tricks;
+                if (round.won) partnership.wins++;
+            }
+
+            const partnershipArray = Array.from(partnerships.values())
+                .sort((a, b) => (b.tricks / b.rounds) - (a.tricks / a.rounds));
+
+            const html = partnershipArray.map(p => {
+                const avg = (p.tricks / p.rounds).toFixed(1);
+                const winPct = Math.round((p.wins / p.rounds) * 100);
+                return `
+                    <div class="partnership-item">
+                        <strong>${p.partner}</strong><br>
+                        ${p.rounds} rounds, ${avg} avg tricks, ${winPct}% wins
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('partnership-analysis').innerHTML = html;
+        }
+
+        function generateScorecardTable(playerRounds) {
+            const tbody = document.getElementById('scorecard-body');
+            
+            const html = playerRounds.map(round => {
+                const resultClass = round.won ? 'result-win' : 'result-loss';
+                const resultText = round.won ? 'WIN' : 'LOSS';
+                const trumpSymbol = getTrumpSymbol(round.trump);
+                
+                return `
+                    <tr class="round-row ${resultClass}">
+                        <td class="round-number">${round.round}</td>
+                        <td class="trump-suit">
+                            <span class="trump-symbol ${round.trump.toLowerCase()}">${trumpSymbol}</span>
+                            ${round.trump}
+                        </td>
+                        <td class="table-number">${round.table}</td>
+                        <td class="partner-name">${round.partner}</td>
+                        <td class="opponents-names">${round.opponents.join(' & ')}</td>
+                        <td class="our-tricks">${round.tricks}</td>
+                        <td class="their-tricks">${round.opponentTricks}</td>
+                        <td class="result ${resultClass}">${resultText}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            tbody.innerHTML = html;
+        }
+
+        function getTrumpSymbol(suit) {
+            const symbols = {
+                'Hearts': '♥',
+                'Diamonds': '♦',
+                'Spades': '♠',
+                'Clubs': '♣'
+            };
+            return symbols[suit] || '🎴';
+        }
+
+        async function loadScorecardPhotos(year, playerSlug) {
+            try {
+                const gallery = new PhotoGallery();
+                const photosPath = `tournaments/${year}/${playerSlug}`;
+                
+                // Try to load photos from the player's folder
+                await gallery.loadPlayerScorecardPhotos(year, playerSlug);
+                gallery.createScorecardPhotosHTML(photosPath, '#scorecard-photos');
+            } catch (error) {
+                console.log('No scorecard photos found for this player');
+                document.getElementById('scorecard-photos').innerHTML = 
+                    '<p style="color: #666; font-style: italic;">No scorecard photos uploaded yet.</p>';
+            }
+        }
+
+        function showError(message) {
+            document.getElementById('loading-section').style.display = 'none';
+            document.getElementById('error-section').style.display = 'block';
+            document.getElementById('error-message').textContent = message;
+        }
+    </script>
+
+    <style>
+        /* Loading and Error States */
+        .loading-section, .error-section {
+            padding: var(--spacing-3xl) 0;
+            text-align: center;
+        }
+
+        .loading-spinner {
+            font-size: 4rem;
+            animation: spin 2s linear infinite;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .error-icon {
+            font-size: 4rem;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        /* Player Header */
+        .player-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: var(--spacing-2xl) 0;
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .player-info {
+            text-align: center;
+        }
+
+        .back-link {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .back-link a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .back-link a:hover {
+            color: white;
+        }
+
+        .player-name {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .tournament-context {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .player-rank {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .rank-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--border-radius-xl);
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .tournament-summary {
+            margin-top: var(--spacing-xl);
+        }
+
+        .summary-stats {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-xl);
+            flex-wrap: wrap;
+        }
+
+        .summary-stats .stat {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius);
+            min-width: 100px;
+        }
+
+        .summary-stats .stat-value {
+            display: block;
+            font-size: 2rem;
+            font-weight: 900;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .summary-stats .stat-label {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-xl);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-card h3 {
+            margin-bottom: var(--spacing-lg);
+            color: var(--primary);
+        }
+
+        .metric-item, .partnership-item {
+            padding: var(--spacing-sm) 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .metric-item:last-child, .partnership-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Scorecard Table */
+        .scorecard-section {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-2xl);
+            box-shadow: var(--shadow-lg);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .scorecard-table-container {
+            overflow-x: auto;
+        }
+
+        .scorecard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: var(--spacing-lg);
+        }
+
+        .scorecard-table th {
+            background: var(--primary);
+            color: white;
+            padding: var(--spacing-md);
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .scorecard-table td {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .round-row:hover {
+            background: rgba(var(--primary-rgb), 0.05);
+        }
+
+        .result-win {
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .result-loss {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .result.result-win {
+            color: #059669;
+            font-weight: 600;
+        }
+
+        .result.result-loss {
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        .trump-symbol {
+            margin-right: var(--spacing-xs);
+        }
+
+        .trump-symbol.hearts { color: #dc2626; }
+        .trump-symbol.diamonds { color: #dc2626; }
+        .trump-symbol.spades { color: #000; }
+        .trump-symbol.clubs { color: #000; }
+
+        /* Photo Section */
+        .photo-section {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-2xl);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .photo-upload-info {
+            background: var(--background-light);
+            padding: var(--spacing-lg);
+            border-radius: var(--border-radius);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .photo-upload-info code {
+            background: var(--background-dark);
+            color: var(--accent);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--border-radius-sm);
+            font-family: monospace;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .player-name {
+                font-size: 2rem;
+            }
+
+            .summary-stats {
+                gap: var(--spacing-md);
+            }
+
+            .summary-stats .stat {
+                min-width: 80px;
+                padding: var(--spacing-sm);
+            }
+
+            .scorecard-table {
+                font-size: 0.875rem;
+            }
+
+            .scorecard-table th,
+            .scorecard-table td {
+                padding: var(--spacing-sm);
+            }
+        }
+    </style>
+</body>
+</html> 
