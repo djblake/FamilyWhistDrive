@@ -93,10 +93,10 @@
                         <div class="insight-icon">👑</div>
                         <h3>Current Dynasty</h3>
                         <div class="insight-content">
-                            <p><strong>Margaret Wilson</strong> leads the modern era with three consecutive championships (2021-2023), tying the record set by James Ruston Sr. in the 1990s.</p>
+                            <p><strong>David</strong> claimed victory in the historic "[2000] Covid Begins!" tournament, demonstrating exceptional skill in this family competition.</p>
                             <div class="insight-stat">
-                                <span class="stat-number">3</span>
-                                <span class="stat-label">Consecutive Titles</span>
+                                <span class="stat-number">1</span>
+                                <span class="stat-label">Tournament Victory</span>
                             </div>
                         </div>
                     </div>
@@ -320,8 +320,6 @@
     </footer>
 
     <script src="../assets/js/tournament-engine.js"></script>
-    <script src="../assets/js/sample-data-generator.js"></script>
-    <script src="../assets/js/main.js"></script>
     
     <script>
         // Leaderboard specific JavaScript
@@ -334,30 +332,26 @@
 
         async function initializeLeaderboard() {
             try {
-                // Initialize engines and generate sample data
+                // Initialize engine and load real data
                 const engine = new TournamentEngine();
-                const generator = new SampleDataGenerator();
+                const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
 
-                // Generate multiple years of tournament data
-                const years = [2023, 2022, 2021, 2020, 2019];
-                for (const year of years) {
-                    const csvData = generator.generateTournament(`Championship ${year}`, year, 8);
-                    await engine.processScorecardCSV(csvData);
-                }
+                console.log('🏆 Loading real tournament data for Hall of Fame...');
+                await engine.loadFromGoogleSheets(sheetId);
 
-                // Get all players with comprehensive stats
+                // Get all players with comprehensive stats from real data
                 allPlayers = engine.getAllPlayers('overall');
                 
                 // Initialize rankings display
                 updateRankingsDisplay('overall');
                 
-                // Generate championship history
+                // Generate championship history from real data
                 generateChampionshipHistory();
                 
                 // Add filter event listeners
                 setupFilterListeners();
 
-                console.log('🏆 Hall of Fame loaded successfully');
+                console.log('🏆 Hall of Fame loaded successfully with real data');
 
             } catch (error) {
                 console.error('Error loading leaderboard:', error);

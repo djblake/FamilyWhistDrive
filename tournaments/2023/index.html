@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2023 Christmas Championship - Ruston Family Whist Drive</title>
-    <meta name="description" content="Complete results from the 2023 Christmas Championship - Margaret Wilson claims her third consecutive title">
+    <title>[2000] Covid Begins! Tournament - Ruston Family Whist Drive</title>
+    <meta name="description" content="Complete results from the [2000] Covid Begins! Tournament - David claims victory in this historic family tournament">
     <link rel="stylesheet" href="../../assets/css/main.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,25 +35,25 @@
             <div class="container">
                 <div class="tournament-header">
                     <div class="tournament-badge">🏆 TOURNAMENT RESULTS</div>
-                    <h1 class="tournament-title">2023 Christmas Championship</h1>
-                    <p class="tournament-subtitle">December 25, 2023 • 20 Players • 8 Rounds • Pure Championship Excellence</p>
+                    <h1 class="tournament-title" id="tournament-title">[2000] Covid Begins!</h1>
+                    <p class="tournament-subtitle" id="tournament-subtitle">2000 • 16 Players • 16 Rounds • Historic Family Competition</p>
                     
                     <div class="tournament-champion">
                         <div class="champion-crown">👑</div>
-                        <h2 class="champion-name">Margaret "The Ace" Wilson</h2>
-                        <p class="champion-achievement">Third Consecutive Championship Victory</p>
+                        <h2 class="champion-name" id="champion-name">Loading Champion...</h2>
+                        <p class="champion-achievement" id="champion-achievement">Tournament Victory</p>
                         <div class="champion-stats">
                             <div class="stat">
-                                <span class="stat-number">112</span>
+                                <span class="stat-number" id="champion-total-tricks">--</span>
                                 <span class="stat-label">Total Tricks</span>
                             </div>
                             <div class="stat">
-                                <span class="stat-number">14.0</span>
+                                <span class="stat-number" id="champion-avg-tricks">--</span>
                                 <span class="stat-label">Avg Per Round</span>
                             </div>
                             <div class="stat">
-                                <span class="stat-number">3</span>
-                                <span class="stat-label">Consecutive Titles</span>
+                                <span class="stat-number" id="champion-rounds">16</span>
+                                <span class="stat-label">Rounds Played</span>
                             </div>
                         </div>
                     </div>
@@ -153,16 +153,16 @@
                     <h3 class="section-title">Tournament Legacy</h3>
                     <div class="legacy-grid">
                         <div class="legacy-card">
-                            <h4>Historic Achievement</h4>
-                            <p>Margaret Wilson's third consecutive championship ties the modern record set by James Ruston Sr. in the 1990s. Her dominance across three years demonstrates exceptional consistency and strategic evolution.</p>
+                            <h4>Historic Tournament</h4>
+                            <p>The "[2000] Covid Begins!" tournament represents a significant moment in family history, capturing the strategic brilliance and competitive spirit that defines the Ruston Family Whist Drive tradition.</p>
                         </div>
                         <div class="legacy-card">
-                            <h4>Competitive Excellence</h4>
-                            <p>The 2023 tournament featured the closest competition in recent memory, with only 8 tricks separating first and third place. Every round mattered in this epic championship battle.</p>
+                            <h4>Championship Victory</h4>
+                            <p>David's victory in this tournament showcased exceptional skill and consistency across 16 rounds of competition, with Lydia as a worthy runner-up in this closely contested championship.</p>
                         </div>
                         <div class="legacy-card">
-                            <h4>Family Tradition</h4>
-                            <p>This tournament marked the 40th anniversary of the Ruston Family Whist Drive, celebrating four decades of strategic competition, family bonding, and championship excellence.</p>
+                            <h4>Family Competition</h4>
+                            <p>With 16 family members competing across multiple generations, this tournament exemplifies the multi-generational appeal and enduring legacy of competitive whist within the family.</p>
                         </div>
                     </div>
                 </div>
@@ -199,9 +199,7 @@
     </footer>
 
     <script src="../../assets/js/tournament-engine.js"></script>
-    <script src="../../assets/js/sample-data-generator.js"></script>
     <script src="../../assets/js/photo-gallery.js"></script>
-    <script src="../../assets/js/main.js"></script>
     
     <script>
         // Tournament-specific JavaScript
@@ -213,27 +211,51 @@
             try {
                 // Initialize engines
                 const engine = new TournamentEngine();
-                const generator = new SampleDataGenerator();
-                const gallery = new PhotoGallery();
+                const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
 
-                // Generate and process tournament data
-                const csvData = generator.generateTournament('Christmas Championship', 2023, 8);
-                await engine.processScorecardCSV(csvData);
+                console.log('🏆 Loading real tournament data...');
+                await engine.loadFromGoogleSheets(sheetId);
 
-                // Get tournament data
-                const tournament = engine.getTournament('Christmas Championship_2023');
+                // Get the tournament data (should be "[2000] Covid Begins!")
+                const tournaments = Array.from(engine.tournaments.values());
+                const tournament = tournaments[0]; // Get the loaded tournament
                 
                 if (tournament) {
+                    console.log('📊 Found tournament:', tournament.name);
+                    
+                    // Update page title and info
+                    document.getElementById('tournament-title').textContent = tournament.name;
+                    document.getElementById('tournament-subtitle').textContent = 
+                        `${tournament.year} • ${tournament.total_players} Players • ${tournament.total_rounds} Rounds • Historic Family Competition`;
+                    
+                    // Update champion info
+                    document.getElementById('champion-name').textContent = tournament.winner;
+                    document.getElementById('champion-achievement').textContent = `${tournament.name} Champion`;
+                    
+                    // Update champion stats
+                    const winnerStats = tournament.final_standings[0];
+                    document.getElementById('champion-total-tricks').textContent = winnerStats.total_tricks;
+                    document.getElementById('champion-avg-tricks').textContent = winnerStats.average_tricks;
+                    
                     // Populate final standings
                     populateFinalStandings(tournament.final_standings);
                     
                     // Populate round-by-round results
                     populateRoundByRound(tournament.rounds);
+                } else {
+                    console.error('No tournament data found');
                 }
 
-                // Load photo gallery
-                await gallery.loadTournamentPhotos(2023);
-                gallery.createGalleryHTML(2023, '#tournament-photos');
+                // Try to load photo gallery (may not exist for 2000)
+                try {
+                    const gallery = new PhotoGallery();
+                    await gallery.loadTournamentPhotos(2000);
+                    gallery.createGalleryHTML(2000, '#tournament-photos');
+                } catch (photoError) {
+                    console.log('No photos found for 2000 tournament');
+                    document.getElementById('tournament-photos').innerHTML = 
+                        '<p style="text-align: center; color: #666; padding: 2rem;">Photo gallery coming soon for historical tournaments</p>';
+                }
 
                 console.log('🏆 Tournament page loaded successfully');
 

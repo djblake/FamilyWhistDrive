@@ -42,20 +42,20 @@
                     </p>
                     <div class="hero-stats">
                         <div class="stat-card">
-                            <div class="stat-number">40</div>
-                            <div class="stat-label">Years of Glory</div>
+                            <div class="stat-number" id="tournaments-count">1</div>
+                            <div class="stat-label">Tournaments</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-number">640</div>
+                            <div class="stat-number" id="rounds-count">16</div>
                             <div class="stat-label">Rounds Played</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-number">8,320</div>
+                            <div class="stat-number" id="tricks-count">832</div>
                             <div class="stat-label">Tricks Taken</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-number">∞</div>
-                            <div class="stat-label">Memories Made</div>
+                            <div class="stat-number" id="players-count">16</div>
+                            <div class="stat-label">Family Players</div>
                         </div>
                     </div>
                 </div>
@@ -64,44 +64,21 @@
 
         <section class="current-champion-section">
             <div class="container">
-                <h2 class="section-title">Reigning Champion</h2>
+                <h2 class="section-title">Tournament Champion</h2>
                 <div class="champion-card">
                     <div class="champion-crown">👑</div>
-                    <h3 class="champion-name">Margaret "The Ace" Ruston</h3>
-                    <p class="champion-year">2023 Tournament Victor</p>
-                    <p class="champion-record">127 Career Wins • 3 Consecutive Titles</p>
-                    <a href="players/margaret-ruston" class="champion-link">View Championship Profile</a>
+                    <h3 class="champion-name" id="current-champion">Loading Champion...</h3>
+                    <p class="champion-year" id="champion-year">Loading Tournament...</p>
+                    <p class="champion-record" id="champion-record">Loading Record...</p>
+                    <a href="#" class="champion-link" id="champion-link">View Championship Profile</a>
                 </div>
             </div>
         </section>
 
         <section class="quick-stats-section">
             <div class="container">
-                <div class="stats-grid">
-                    <div class="quick-stat-card">
-                        <h3>Latest Tournament</h3>
-                        <div class="stat-value">Christmas 2023</div>
-                        <p>12 Players • 16 Rounds • Epic Finale</p>
-                        <a href="tournaments/2023">View Results</a>
-                    </div>
-                    <div class="quick-stat-card">
-                        <h3>All-Time Leader</h3>
-                        <div class="stat-value">James Ruston Sr.</div>
-                        <p>8 Tournament Wins • 156 Career Victories</p>
-                        <a href="players/james-ruston-sr">View Profile</a>
-                    </div>
-                    <div class="quick-stat-card">
-                        <h3>Rising Star</h3>
-                        <div class="stat-value">Emma Ruston</div>
-                        <p>Youngest Ever Winner (Age 16) • 2022</p>
-                        <a href="players/emma-ruston">View Profile</a>
-                    </div>
-                    <div class="quick-stat-card">
-                        <h3>Legendary Rivalry</h3>
-                        <div class="stat-value">Ruston vs Wilson</div>
-                        <p>23-22 Head-to-Head • 40 Year Feud</p>
-                        <a href="rivalries/ruston-wilson">View Rivalry</a>
-                    </div>
+                <div class="stats-grid" id="quick-stats">
+                    <!-- Stats will be loaded from real tournament data -->
                 </div>
             </div>
         </section>
@@ -109,31 +86,11 @@
         <section class="recent-tournaments-section">
             <div class="container">
                 <h2 class="section-title">Recent Tournament Glory</h2>
-                <div class="tournament-grid">
-                    <div class="tournament-card">
-                        <div class="tournament-year">2023</div>
-                        <h3 class="tournament-title">Christmas Championship</h3>
-                        <div class="tournament-winner">Champion: Margaret Ruston</div>
-                        <div class="tournament-stats">12 Players • 208 Total Tricks</div>
-                        <a href="tournaments/2023" class="tournament-link">Full Results</a>
-                    </div>
-                    <div class="tournament-card">
-                        <div class="tournament-year">2022</div>
-                        <h3 class="tournament-title">Ruby Anniversary Cup</h3>
-                        <div class="tournament-winner">Champion: Emma Ruston</div>
-                        <div class="tournament-stats">14 Players • 224 Total Tricks</div>
-                        <a href="tournaments/2022" class="tournament-link">Full Results</a>
-                    </div>
-                    <div class="tournament-card">
-                        <div class="tournament-year">2021</div>
-                        <h3 class="tournament-title">COVID Comeback Classic</h3>
-                        <div class="tournament-winner">Champion: David Wilson</div>
-                        <div class="tournament-stats">10 Players • 160 Total Tricks</div>
-                        <a href="tournaments/2021" class="tournament-link">Full Results</a>
-                    </div>
+                <div class="tournament-grid" id="tournament-grid">
+                    <!-- Tournaments will be loaded from real data -->
                 </div>
                 <div class="view-all-tournaments">
-                    <a href="tournaments/" class="btn btn-primary">View All 40 Tournaments</a>
+                    <a href="tournaments/" class="btn btn-primary" id="view-all-link">View All Tournaments</a>
                 </div>
             </div>
         </section>
@@ -165,7 +122,88 @@
     </footer>
 
     <script src="assets/js/tournament-engine.js"></script>
-    <script src="assets/js/sample-data-generator.js"></script>
-    <script src="assets/js/main.js"></script>
+    <script>
+        // Load real tournament data from Google Sheets
+        document.addEventListener('DOMContentLoaded', async function() {
+            const tournamentEngine = new TournamentEngine();
+            const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+            
+            try {
+                console.log('🏆 Loading real tournament data...');
+                await tournamentEngine.loadFromGoogleSheets(sheetId);
+                
+                // Update hero stats
+                const tournaments = Array.from(tournamentEngine.tournaments.values());
+                const totalRounds = tournaments.reduce((sum, t) => sum + t.total_rounds, 0);
+                const totalTricks = tournamentEngine.rawScorecards.reduce((sum, sc) => sum + (sc.Tricks_Won || 0), 0);
+                const totalPlayers = new Set();
+                tournaments.forEach(t => t.final_standings.forEach(s => totalPlayers.add(s.player)));
+                
+                document.getElementById('tournaments-count').textContent = tournaments.length;
+                document.getElementById('rounds-count').textContent = totalRounds;
+                document.getElementById('tricks-count').textContent = totalTricks.toLocaleString();
+                document.getElementById('players-count').textContent = totalPlayers.size;
+                
+                // Update current champion (latest tournament winner)
+                if (tournaments.length > 0) {
+                    const latestTournament = tournaments[0]; // Assuming first is latest
+                    document.getElementById('current-champion').textContent = latestTournament.winner;
+                    document.getElementById('champion-year').textContent = `${latestTournament.name} ${latestTournament.year} Champion`;
+                    document.getElementById('champion-record').textContent = `${latestTournament.final_standings[0].total_tricks} Total Tricks • Tournament Victory`;
+                    document.getElementById('champion-link').href = `players/${latestTournament.winner.toLowerCase().replace(/\s+/g, '-')}/`;
+                }
+                
+                // Update quick stats
+                const quickStatsHTML = tournaments.map(tournament => `
+                    <div class="quick-stat-card">
+                        <h3>Tournament Results</h3>
+                        <div class="stat-value">${tournament.name}</div>
+                        <p>${tournament.total_players} Players • ${tournament.total_rounds} Rounds • Year ${tournament.year}</p>
+                        <a href="tournaments/${tournament.year}">View Results</a>
+                    </div>
+                    <div class="quick-stat-card">
+                        <h3>Champion</h3>
+                        <div class="stat-value">${tournament.winner}</div>
+                        <p>${tournament.final_standings[0].total_tricks} Total Tricks • ${tournament.final_standings[0].average_tricks} Average</p>
+                        <a href="players/${tournament.winner.toLowerCase().replace(/\s+/g, '-')}/">View Profile</a>
+                    </div>
+                    <div class="quick-stat-card">
+                        <h3>Runner-up</h3>
+                        <div class="stat-value">${tournament.runner_up}</div>
+                        <p>${tournament.final_standings[1].total_tricks} Total Tricks • Close Competition</p>
+                        <a href="players/${tournament.runner_up.toLowerCase().replace(/\s+/g, '-')}/">View Profile</a>
+                    </div>
+                    <div class="quick-stat-card">
+                        <h3>Data Quality</h3>
+                        <div class="stat-value">${tournamentEngine.rawScorecards.length} Scorecards</div>
+                        <p>32 Shared Hands • 3 Historical Data Issues</p>
+                        <a href="google-sheets-example.html">View Details</a>
+                    </div>
+                `).join('');
+                document.getElementById('quick-stats').innerHTML = quickStatsHTML;
+                
+                // Update tournament grid
+                const tournamentGridHTML = tournaments.map(tournament => `
+                    <div class="tournament-card">
+                        <div class="tournament-year">${tournament.year}</div>
+                        <h3 class="tournament-title">${tournament.name}</h3>
+                        <div class="tournament-winner">Champion: ${tournament.winner}</div>
+                        <div class="tournament-stats">${tournament.total_players} Players • ${tournament.final_standings.reduce((sum, s) => sum + s.total_tricks, 0)} Total Tricks</div>
+                        <a href="tournaments/${tournament.year}" class="tournament-link">Full Results</a>
+                    </div>
+                `).join('');
+                document.getElementById('tournament-grid').innerHTML = tournamentGridHTML;
+                
+                // Update view all link
+                document.getElementById('view-all-link').textContent = `View Tournament Details`;
+                
+                console.log('✅ Real tournament data loaded successfully!');
+                
+            } catch (error) {
+                console.error('❌ Error loading tournament data:', error);
+                // Keep fallback content if data loading fails
+            }
+        });
+    </script>
 </body>
 </html>
