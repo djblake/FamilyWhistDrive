@@ -231,7 +231,8 @@ class TournamentEngine {
                     if (csvData && csvData.trim().length > 0 && !csvData.includes('<!DOCTYPE html>')) {
                         // Check for "not found" indicator in the first sheet fallback
                         const firstLine = csvData.split('\n')[0].toLowerCase();
-                        if (firstLine.includes('not found') || firstLine.includes('invalid') || firstLine.includes('sheet not found')) {
+                        if (firstLine.includes('not found') || firstLine.includes('notfound') || 
+                            firstLine.includes('invalid') || firstLine.includes('sheet not found')) {
                             console.log(`⚠️  Sheet ${name} returned "not found" indicator - sheet doesn't exist`);
                             continue; // Skip this non-existent sheet
                         }
