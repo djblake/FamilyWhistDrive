@@ -7,15 +7,16 @@ class TournamentCharts {
     constructor() {
         this.charts = new Map();
         this.colors = {
-            primary: '#1D7874',
-            secondary: '#679289',
-            accent: '#EE2E31',
-            gold: '#F4C095',
-            silver: '#679289',
-            bronze: '#1D7874',
-            deepTeal: '#071E22',
-            warmCream: '#F4C095',
-            coralRed: '#EE2E31'
+            primary: '#d4af37',        // Muted gold
+            secondary: '#22c55e',      // Softer green
+            accent: '#dc2626',         // Classic red
+            gold: '#d4af37',           // Muted gold
+            silver: '#cbd5e1',         // Warm silver
+            bronze: '#a16207',         // Warm bronze
+            cardBlack: '#f8fafc',      // Soft white
+            cardRed: '#dc2626',        // Classic red
+            pokerGreen: '#0f2419',     // Dark poker green
+            creamWhite: '#fefefe'      // Warm white
         };
         
         // Load Chart.js if not already loaded
@@ -52,9 +53,9 @@ class TournamentCharts {
         if (typeof Chart === 'undefined') return;
 
         Chart.defaults.font.family = 'Inter, sans-serif';
-        Chart.defaults.color = '#1D7874';
-        Chart.defaults.borderColor = '#679289';
-        Chart.defaults.backgroundColor = 'rgba(29, 120, 116, 0.1)';
+        Chart.defaults.color = '#374151';
+        Chart.defaults.borderColor = '#22c55e';
+        Chart.defaults.backgroundColor = 'rgba(212, 175, 55, 0.1)';
     }
 
     /**
@@ -109,7 +110,7 @@ class TournamentCharts {
                             weight: 'bold',
                             family: 'Playfair Display'
                         },
-                        color: '#1f2937'
+                        color: '#1a1a1a'
                     },
                     legend: {
                         position: 'top',
@@ -145,7 +146,8 @@ class TournamentCharts {
                             font: {
                                 size: 14,
                                 weight: 'bold'
-                            }
+                            },
+                            color: '#374151'
                         },
                         grid: {
                             color: 'rgba(0, 0, 0, 0.05)'
@@ -158,7 +160,8 @@ class TournamentCharts {
                             font: {
                                 size: 14,
                                 weight: 'bold'
-                            }
+                            },
+                            color: '#374151'
                         },
                         grid: {
                             color: 'rgba(0, 0, 0, 0.05)'
@@ -227,7 +230,8 @@ class TournamentCharts {
                         font: {
                             size: 16,
                             weight: 'bold'
-                        }
+                        },
+                        color: '#1a1a1a'
                     },
                     legend: {
                         display: false
@@ -286,7 +290,8 @@ class TournamentCharts {
                         font: {
                             size: 16,
                             weight: 'bold'
-                        }
+                        },
+                        color: '#1a1a1a'
                     },
                     legend: {
                         display: false
@@ -309,14 +314,16 @@ class TournamentCharts {
                         title: {
                             display: true,
                             text: 'Partnerships',
-                            font: { weight: 'bold' }
+                            font: { weight: 'bold' },
+                            color: '#374151'
                         }
                     },
                     y: {
                         title: {
                             display: true,
                             text: 'Success Rate (%)',
-                            font: { weight: 'bold' }
+                            font: { weight: 'bold' },
+                            color: '#374151'
                         },
                         beginAtZero: true,
                         max: 100
@@ -367,7 +374,8 @@ class TournamentCharts {
                         font: {
                             size: 16,
                             weight: 'bold'
-                        }
+                        },
+                        color: '#1a1a1a'
                     },
                     legend: {
                         position: 'bottom',
@@ -442,7 +450,8 @@ class TournamentCharts {
                         font: {
                             size: 16,
                             weight: 'bold'
-                        }
+                        },
+                        color: '#1a1a1a'
                     },
                     legend: {
                         position: 'top'
@@ -453,7 +462,8 @@ class TournamentCharts {
                         title: {
                             display: true,
                             text: 'Year',
-                            font: { weight: 'bold' }
+                            font: { weight: 'bold' },
+                            color: '#374151'
                         }
                     },
                     y: {
@@ -463,7 +473,8 @@ class TournamentCharts {
                         title: {
                             display: true,
                             text: 'Average Score',
-                            font: { weight: 'bold' }
+                            font: { weight: 'bold' },
+                            color: '#374151'
                         }
                     },
                     y1: {
@@ -473,7 +484,8 @@ class TournamentCharts {
                         title: {
                             display: true,
                             text: 'Tournament Wins',
-                            font: { weight: 'bold' }
+                            font: { weight: 'bold' },
+                            color: '#374151'
                         },
                         grid: {
                             drawOnChartArea: false,
@@ -548,16 +560,16 @@ class TournamentCharts {
      */
     getPlayerColor(index, alpha = 1) {
         const colors = [
-            this.colors.primary,      // #1D7874
-            this.colors.secondary,    // #679289
-            this.colors.accent,       // #EE2E31
-            this.colors.gold,         // #F4C095
-            this.colors.deepTeal,     // #071E22
-            this.colors.warmCream,    // #F4C095 (lighter variant)
-            this.colors.coralRed,     // #EE2E31 (variant)
-            '#4A9B8E',               // medium teal
-            '#B8A082',               // muted cream
-            '#C42326'                // darker coral
+            this.colors.gold,         // #d4af37 - Muted gold
+            this.colors.accent,       // #dc2626 - Classic red
+            this.colors.secondary,    // #22c55e - Softer green
+            this.colors.cardBlack,    // #f8fafc - Soft white
+            this.colors.silver,       // #cbd5e1 - Warm silver
+            this.colors.bronze,       // #a16207 - Warm bronze
+            '#059669',               // Forest green
+            '#7c3aed',               // Purple
+            '#0891b2',               // Teal
+            '#65a30d'                // Olive green
         ];
         
         const color = colors[index % colors.length];

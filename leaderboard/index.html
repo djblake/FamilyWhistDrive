@@ -15,7 +15,7 @@
         <div class="container">
             <div class="header-content">
                 <div class="logo-section">
-                    <div class="card-suits">♠ ♥ ♦ ♣</div>
+                    <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
                     <h1 class="site-title">Ruston Family Whist Drive</h1>
                     <p class="site-subtitle">Est. 1984 • The World's Most Elite Family Tournament</p>
                 </div>
@@ -895,6 +895,7 @@
             border-bottom: 1px solid var(--border);
             align-items: center;
             transition: all 0.2s ease;
+            color: var(--text-primary-dark);
         }
 
         .ranking-row:hover {
@@ -932,7 +933,7 @@
         .player-nickname {
             display: block;
             font-size: 0.75rem;
-            color: var(--text-muted);
+            color: var(--text-secondary-dark);
             font-style: italic;
         }
 
@@ -982,9 +983,15 @@
             margin-bottom: var(--spacing-lg);
         }
 
-        .insight-content h3 {
-            color: var(--primary);
+        .insight-content h3,
+        .insight-card h3 {
+            color: var(--text-primary-dark);
             margin-bottom: var(--spacing-md);
+        }
+
+        .insight-content p {
+            color: var(--text-primary-dark);
+            line-height: 1.6;
         }
 
         .insight-stat {
@@ -1005,7 +1012,7 @@
 
         .stat-label {
             font-size: 0.875rem;
-            color: var(--text-secondary);
+            color: var(--text-secondary-dark);
         }
 
         .historical-champions {
@@ -1085,14 +1092,15 @@
             justify-content: space-between;
             align-items: center;
             background: var(--card-bg);
-            padding: var(--spacing-md);
+            padding: var(--spacing-md) var(--spacing-lg);
             border-radius: var(--border-radius);
             box-shadow: var(--shadow-sm);
+            gap: var(--spacing-lg);
         }
 
         .record-title {
             font-weight: 500;
-            color: var(--text-secondary);
+            color: var(--text-primary-dark);
         }
 
         .record-holder {

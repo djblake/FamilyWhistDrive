@@ -15,7 +15,7 @@
         <div class="container">
             <div class="header-content">
                 <div class="logo-section">
-                    <div class="card-suits">♠ ♥ ♦ ♣</div>
+                    <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
                     <h1 class="site-title">Ruston Family Whist Drive</h1>
                     <p class="site-subtitle">Est. 1984 • The World's Most Elite Family Tournament</p>
                 </div>
@@ -554,6 +554,7 @@
             padding-left: var(--spacing-lg);
             position: relative;
             line-height: 1.6;
+            color: var(--text-primary-dark);
         }
 
         .insights-list li::before {
@@ -707,10 +708,16 @@
 
         .record-details p {
             margin-bottom: var(--spacing-sm);
+            color: var(--text-primary-dark);
         }
 
         .record-details strong {
             color: var(--primary);
+        }
+
+        .record-content h3 {
+            color: var(--text-primary-dark);
+            margin-bottom: var(--spacing-md);
         }
 
         @media (max-width: 768px) {
