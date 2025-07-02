@@ -555,6 +555,11 @@
             margin-bottom: var(--spacing-sm);
         }
 
+        .partnership-players .player-name {
+            color: var(--text-primary-dark);
+            font-weight: 600;
+        }
+
         .player-nickname {
             font-size: 1.5rem;
             font-style: italic;
@@ -667,6 +672,15 @@
 
         .tree-icon {
             font-size: 1.25rem;
+        }
+
+        /* Fix section title readability */
+        .section-title {
+            color: var(--text-primary-dark) !important;
+        }
+
+        .section-title .title-icon {
+            margin-right: var(--spacing-sm);
         }
 
         .player-stats {
@@ -788,6 +802,12 @@
             background: linear-gradient(90deg, rgba(245, 158, 11, 0.1) 0%, var(--bg-secondary) 100%);
         }
 
+        .timeline-item.winner .timeline-tricks,
+        .timeline-item.winner .timeline-highlight {
+            color: var(--text-primary-dark);
+            font-weight: 600;
+        }
+
         .timeline-item.runner-up {
             border-left-color: var(--silver);
         }
@@ -810,8 +830,9 @@
         }
 
         .timeline-tricks {
-            color: var(--text-secondary);
+            color: var(--text-primary-dark);
             margin-bottom: var(--spacing-sm);
+            font-weight: 500;
         }
 
         .timeline-highlight {
@@ -843,11 +864,20 @@
             background: linear-gradient(135deg, var(--card-bg) 0%, #fef3c7 100%);
         }
 
+        .partnership-card.best .player-name,
+        .partnership-card.best .partnership-note {
+            color: var(--text-primary-dark) !important;
+        }
+
         .partnership-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: var(--spacing-lg);
+        }
+
+        .partnership-header h4 {
+            color: var(--text-primary-dark);
         }
 
         .partnership-rating {
@@ -912,6 +942,11 @@
         .achievement-card.major {
             border-color: var(--gold);
             background: linear-gradient(135deg, var(--card-bg) 0%, #fef3c7 100%);
+        }
+
+        .achievement-card.major h4,
+        .achievement-card.major p {
+            color: var(--text-primary-dark) !important;
         }
 
         .achievement-icon {
