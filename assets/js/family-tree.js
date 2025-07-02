@@ -308,9 +308,9 @@ class FamilyTree {
     }
 
     /**
-     * Generate family tree visualization data
+     * Generate family tree visualization data with optional player highlighting
      */
-    generateTreeVisualization(familyId) {
+    generateTreeVisualization(familyId, highlightPlayerId = null) {
         const family = this.getFamily(familyId);
         const members = this.getFamilyMembers(familyId);
         
@@ -319,6 +319,7 @@ class FamilyTree {
         const treeData = {
             family_name: family.family_name,
             family_color: family.family_color,
+            highlight_player: highlightPlayerId,
             generations: {}
         };
 
@@ -335,12 +336,65 @@ class FamilyTree {
             
             treeData.generations[gen].members.push({
                 ...member,
+                is_highlighted: member.id === highlightPlayerId,
                 tournament_stats: this.tournamentEngine ? 
                     this.tournamentEngine.getPlayerStats(member.name) : null
             });
         }
 
         return treeData;
+    }
+
+    /**
+     * Get player's family ID for navigation purposes
+     */
+    getPlayerFamilyId(playerName) {
+        // Try to find player by name
+        for (const [playerId, player] of this.players) {
+            if (player.name.toLowerCase() === playerName.toLowerCase() ||
+                player.nickname.toLowerCase() === playerName.toLowerCase()) {
+                return player.family_id;
+            }
+        }
+        
+        // Try approximate matching
+        for (const [playerId, player] of this.players) {
+            if (player.name.toLowerCase().includes(playerName.toLowerCase()) ||
+                playerName.toLowerCase().includes(player.name.toLowerCase())) {
+                return player.family_id;
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Get player ID by name for highlighting
+     */
+    getPlayerIdByName(playerName) {
+        // Try exact matching first
+        for (const [playerId, player] of this.players) {
+            if (player.name.toLowerCase() === playerName.toLowerCase()) {
+                return playerId;
+            }
+        }
+        
+        // Try nickname matching
+        for (const [playerId, player] of this.players) {
+            if (player.nickname.toLowerCase() === playerName.toLowerCase()) {
+                return playerId;
+            }
+        }
+        
+        // Try partial matching
+        for (const [playerId, player] of this.players) {
+            if (player.name.toLowerCase().includes(playerName.toLowerCase()) ||
+                playerName.toLowerCase().includes(player.name.toLowerCase())) {
+                return playerId;
+            }
+        }
+        
+        return null;
     }
 
     /**

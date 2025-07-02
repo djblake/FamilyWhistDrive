@@ -187,7 +187,18 @@
                 populateFamiliesGrid();
                 populateRivalriesGrid();
                 populateGenerationalStats();
-                renderFamilyTree('ruston');
+                
+                // Check for player parameter in URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const playerParam = urlParams.get('player');
+                
+                if (playerParam) {
+                    // Show specific player in family tree
+                    showPlayerInFamilyTree(playerParam);
+                } else {
+                    // Default to Ruston family
+                    renderFamilyTree('ruston');
+                }
                 
                 // Set up event listeners
                 setupFamilyTreeControls();
@@ -327,9 +338,9 @@
             }
         }
 
-        function renderFamilyTree(familyId) {
+        function renderFamilyTree(familyId, highlightPlayerId = null) {
             const container = document.getElementById('family-tree-container');
-            const treeData = familyTree.generateTreeVisualization(familyId);
+            const treeData = familyTree.generateTreeVisualization(familyId, highlightPlayerId);
             
             if (!treeData) {
                 container.innerHTML = '<p>Family tree data not available</p>';
@@ -339,6 +350,14 @@
             let treeHTML = `<div class="family-tree" style="border-color: ${treeData.family_color}">`;
             treeHTML += `<h3 class="tree-title" style="color: ${treeData.family_color}">${treeData.family_name} Family Tree</h3>`;
             
+            // Add highlight notice if player is highlighted
+            if (highlightPlayerId) {
+                const highlightedPlayer = familyTree.players.get(highlightPlayerId);
+                if (highlightedPlayer) {
+                    treeHTML += `<div class="highlight-notice">Showing <strong>${highlightedPlayer.name}</strong> in family context</div>`;
+                }
+            }
+            
             // Render each generation
             Object.values(treeData.generations).forEach(generation => {
                 treeHTML += `
@@ -346,9 +365,9 @@
                         <h4 class="generation-label">${generation.generation_name}</h4>
                         <div class="generation-members">
                             ${generation.members.map(member => `
-                                <div class="tree-member" style="border-color: ${treeData.family_color}">
+                                <div class="tree-member ${member.is_highlighted ? 'highlighted' : ''}" style="border-color: ${treeData.family_color}">
                                     <div class="member-avatar">
-                                        <div class="avatar-initial" style="background: ${treeData.family_color}">${member.name.split(' ').map(n => n[0]).join('')}</div>
+                                        <div class="avatar-initial" style="background: ${member.is_highlighted ? '#fbbf24' : treeData.family_color}">${member.name.split(' ').map(n => n[0]).join('')}</div>
                                     </div>
                                     <div class="member-info">
                                         <div class="member-name">${member.name}</div>
@@ -370,7 +389,42 @@
             
             treeHTML += '</div>';
             container.innerHTML = treeHTML;
+            
+            // Scroll to highlighted player if present
+            if (highlightPlayerId) {
+                setTimeout(() => {
+                    const highlightedElement = container.querySelector('.tree-member.highlighted');
+                    if (highlightedElement) {
+                        highlightedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 100);
+            }
         }
+
+        // Function to handle family tree links from player profiles
+        function showPlayerInFamilyTree(playerName) {
+            const familyId = familyTree.getPlayerFamilyId(playerName);
+            const playerId = familyTree.getPlayerIdByName(playerName);
+            
+            if (familyId && playerId) {
+                // Update active button
+                const buttons = document.querySelectorAll('.tree-btn');
+                buttons.forEach(b => b.classList.remove('active'));
+                const targetButton = document.querySelector(`[data-family="${familyId}"]`);
+                if (targetButton) {
+                    targetButton.classList.add('active');
+                }
+                
+                // Render tree with highlighting
+                renderFamilyTree(familyId, playerId);
+                
+                // Scroll to tree section
+                document.querySelector('.family-tree-visualization-section').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Make function globally available for external links
+        window.showPlayerInFamilyTree = showPlayerInFamilyTree;
 
         function setupFamilyTreeControls() {
             const buttons = document.querySelectorAll('.tree-btn');
@@ -843,6 +897,41 @@ Christmas,2021,1,Spades,Margaret Wilson,Emma Jones,6,James Ruston,David Smith,7`
             justify-content: space-between;
             font-size: 0.75rem;
             color: var(--text-secondary-dark);
+        }
+
+        .tree-member.highlighted {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(251, 191, 36, 0.3);
+            border-width: 3px;
+            border-color: #fbbf24 !important;
+            position: relative;
+            z-index: 10;
+        }
+
+        .tree-member.highlighted::before {
+            content: '⭐';
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-size: 1.5rem;
+            background: #fbbf24;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid white;
+        }
+
+        .highlight-notice {
+            text-align: center;
+            background: rgba(251, 191, 36, 0.1);
+            color: #92400e;
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius);
+            margin-bottom: var(--spacing-lg);
+            border: 1px solid rgba(251, 191, 36, 0.3);
         }
 
         @media (max-width: 768px) {

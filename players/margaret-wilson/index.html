@@ -23,7 +23,6 @@
                     <a href="../../" class="nav-link">Home</a>
                     <a href="../../tournaments/" class="nav-link">Tournaments</a>
                     <a href="../" class="nav-link active">Players</a>
-                    <a href="../../families/" class="nav-link">Families</a>
                     <a href="../../leaderboard/" class="nav-link">Hall of Fame</a>
                     <a href="../../stats/" class="nav-link">Statistics</a>
                 </nav>
@@ -67,6 +66,13 @@
                                 <span class="meta-label">Family Role</span>
                                 <span class="meta-value">Sister-in-law</span>
                             </div>
+                        </div>
+
+                        <div class="family-tree-link">
+                            <a href="../../families/?player=Margaret Wilson" class="family-tree-btn" onclick="return handleFamilyTreeLink(event)">
+                                <span class="tree-icon">🌳</span>
+                                View in Wilson Family Tree
+                            </a>
                         </div>
 
                         <div class="career-highlights">
@@ -413,6 +419,18 @@
             }
         }
 
+        function handleFamilyTreeLink(event) {
+            event.preventDefault();
+            
+            // Get player name from the link or page context
+            const playerName = "Margaret Wilson";
+            
+            // Navigate to families page with player parameter
+            window.location.href = `../../families/?player=${encodeURIComponent(playerName)}`;
+            
+            return false;
+        }
+
         function generateTournamentTimeline() {
             const timeline = document.getElementById('tournament-timeline');
             if (!timeline) return;
@@ -618,6 +636,36 @@
         .highlight-label {
             font-size: 0.875rem;
             opacity: 0.9;
+        }
+
+        .family-tree-link {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .family-tree-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+            color: white;
+            padding: var(--spacing-md) var(--spacing-xl);
+            border-radius: var(--border-radius-lg);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            box-shadow: var(--shadow-card);
+            transition: all 0.2s ease;
+        }
+
+        .family-tree-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        }
+
+        .tree-icon {
+            font-size: 1.25rem;
         }
 
         .player-stats {
