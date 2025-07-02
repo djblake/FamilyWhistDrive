@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raw Tournament Data Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .tournament { border: 2px solid #333; margin: 20px 0; padding: 15px; }
+        .round { border: 1px solid #666; margin: 10px 0; padding: 10px; }
+        .table { border: 1px solid #999; margin: 5px; padding: 8px; display: inline-block; min-width: 300px; }
+        .partnership { display: flex; justify-content: space-between; margin: 3px 0; padding: 5px; }
+        .winner { background: #e8f5e8; }
+        .loser { background: #ffe8e8; }
+    </style>
+</head>
+<body>
+    <h1>Raw Tournament Data Debug</h1>
+    <div id="loading">Loading...</div>
+    <div id="content"></div>
+
+    <script src="assets/js/tournament-engine.js"></script>
+    <script>
+        async function loadData() {
+            try {
+                const engine = new TournamentEngine();
+                await engine.loadFromGoogleSheets('1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k');
+                
+                const scorecards = engine.rawScorecards || [];
+                
+                // Group by tournament, round, table
+                const grouped = {};
+                scorecards.forEach(card => {
+                    const t = card.Tournament;
+                    const r = card.Round;
+                    const table = card.Table;
+                    
+                    if (!grouped[t]) grouped[t] = {};
+                    if (!grouped[t][r]) grouped[t][r] = {};
+                    if (!grouped[t][r][table]) grouped[t][r][table] = [];
+                    
+                    grouped[t][r][table].push(card);
+                });
+                
+                let html = '';
+                Object.keys(grouped).forEach(tournament => {
+                    html += `<div class="tournament"><h2>${tournament}</h2>`;
+                    
+                    Object.keys(grouped[tournament]).sort((a,b) => parseInt(a) - parseInt(b)).forEach(round => {
+                        html += `<div class="round"><h3>Round ${round}</h3>`;
+                        
+                        Object.keys(grouped[tournament][round]).sort((a,b) => parseInt(a) - parseInt(b)).forEach(table => {
+                            const cards = grouped[tournament][round][table];
+                            html += `<div class="table"><strong>Table ${table}</strong> (Trump: ${cards[0].Trump_Suit})<br>`;
+                            
+                            cards.forEach(card => {
+                                const p1 = (card.Player1Names?.names || [card.Player1]).join(' & ');
+                                const p2 = (card.Player2Names?.names || [card.Player2]).join(' & ');
+                                const o1 = (card.Opponent1Names?.names || [card.Opponent1]).join(' & ');
+                                const o2 = (card.Opponent2Names?.names || [card.Opponent2]).join(' & ');
+                                
+                                const tricks1 = parseInt(card.Tricks_Won);
+                                const tricks2 = parseInt(card.Opponent_Tricks);
+                                
+                                html += `
+                                    <div class="partnership ${tricks1 > tricks2 ? 'winner' : 'loser'}">
+                                        <span>${p1} + ${p2}</span>
+                                        <span>${tricks1}</span>
+                                    </div>
+                                    <div class="partnership ${tricks2 > tricks1 ? 'winner' : 'loser'}">
+                                        <span>${o1} + ${o2}</span>
+                                        <span>${tricks2}</span>
+                                    </div>
+                                `;
+                            });
+                            
+                            html += '</div>';
+                        });
+                        
+                        html += '</div>';
+                    });
+                    
+                    html += '</div>';
+                });
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').innerHTML = html;
+                
+            } catch (error) {
+                document.getElementById('loading').innerHTML = 'Error: ' + error.message;
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html> 
