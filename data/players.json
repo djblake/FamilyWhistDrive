@@ -1,0 +1,140 @@
+{
+  "players": [
+    {
+      "id": "james_ruston",
+      "name": "James Ruston",
+      "nickname": "The Master",
+      "birth_date": "1965-03-15",
+      "first_tournament": 1985,
+      "profile_image": "james_ruston.jpg",
+      "family_relation": "Patriarch",
+      "favorite_trump": "Hearts",
+      "playing_style": "Strategic and calculated",
+      "notable_achievements": [
+        "12 Tournament Victories",
+        "Most Consistent Player Award (1995-2005)",
+        "Highest Single Tournament Score (142 tricks, 1998)"
+      ]
+    },
+    {
+      "id": "margaret_wilson",
+      "name": "Margaret Wilson",
+      "nickname": "The Ace",
+      "birth_date": "1968-07-22",
+      "first_tournament": 1988,
+      "profile_image": "margaret_wilson.jpg",
+      "family_relation": "Sister-in-law",
+      "favorite_trump": "Spades",
+      "playing_style": "Aggressive and intuitive",
+      "notable_achievements": [
+        "Current Champion (2023)",
+        "3 Consecutive Titles (2021-2023)",
+        "Youngest Winner at Age 25 (1993)"
+      ]
+    },
+    {
+      "id": "emma_jones",
+      "name": "Emma Jones",
+      "nickname": "The Prodigy",
+      "birth_date": "2001-11-08",
+      "first_tournament": 2017,
+      "profile_image": "emma_jones.jpg",
+      "family_relation": "Granddaughter",
+      "favorite_trump": "Diamonds",
+      "playing_style": "Modern and analytical",
+      "notable_achievements": [
+        "Youngest Ever Winner (Age 21, 2022)",
+        "Highest Win Percentage in First 5 Years",
+        "Digital Scorecard Innovation Award"
+      ]
+    },
+    {
+      "id": "david_smith",
+      "name": "David Smith",
+      "nickname": "Steady Eddie",
+      "birth_date": "1972-05-14",
+      "first_tournament": 1995,
+      "profile_image": "david_smith.jpg",
+      "family_relation": "Brother-in-law",
+      "favorite_trump": "Clubs",
+      "playing_style": "Reliable and methodical",
+      "notable_achievements": [
+        "Most Top-3 Finishes (28)",
+        "Never Finished Last",
+        "Partnership Harmony Award (5 times)"
+      ]
+    },
+    {
+      "id": "tom_wilson",
+      "name": "Tom Wilson",
+      "nickname": "The Veteran",
+      "birth_date": "1945-12-03",
+      "first_tournament": 1984,
+      "profile_image": "tom_wilson.jpg",
+      "family_relation": "Father-in-law",
+      "favorite_trump": "Hearts",
+      "playing_style": "Traditional and wise",
+      "notable_achievements": [
+        "Founding Tournament Member",
+        "40 Years Perfect Attendance",
+        "Tournament Historian and Rule Keeper"
+      ]
+    },
+    {
+      "id": "sarah_brown",
+      "name": "Sarah Brown",
+      "nickname": "Lucky Sarah",
+      "birth_date": "1978-09-18",
+      "first_tournament": 2000,
+      "profile_image": "sarah_brown.jpg",
+      "family_relation": "Cousin",
+      "favorite_trump": "Diamonds",
+      "playing_style": "Unpredictable and bold",
+      "notable_achievements": [
+        "Most Dramatic Comebacks (7)",
+        "Millennium Tournament Winner (2000)",
+        "Best Partnership Chemistry with Multiple Players"
+      ]
+    },
+    {
+      "id": "michael_thompson",
+      "name": "Michael Thompson",
+      "nickname": "The Professor",
+      "birth_date": "1950-04-12",
+      "first_tournament": 1984,
+      "profile_image": "michael_thompson.jpg",
+      "family_relation": "Uncle",
+      "favorite_trump": "Spades",
+      "playing_style": "Mathematical and precise",
+      "notable_achievements": [
+        "Developed the Thompson Scoring System",
+        "Tournament Strategy Guide Author",
+        "Highest Average Tricks Per Round (7.1)"
+      ]
+    },
+    {
+      "id": "mary_ruston",
+      "name": "Mary Ruston",
+      "nickname": "The Rock",
+      "birth_date": "1970-01-28",
+      "first_tournament": 1992,
+      "profile_image": "mary_ruston.jpg",
+      "family_relation": "Wife",
+      "favorite_trump": "Clubs",
+      "playing_style": "Defensive and patient",
+      "notable_achievements": [
+        "Most Consistent Scorer",
+        "Tournament Organization Committee Chair",
+        "Family Harmony Keeper Award"
+      ]
+    }
+  ],
+  "generation_info": {
+    "total_players": 20,
+    "active_players": 18,
+    "retired_players": 2,
+    "family_branches": 4,
+    "age_range": "19-82 years",
+    "average_tournament_experience": "15.3 years"
+  }
+}

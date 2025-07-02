@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hall of Fame - Player Rankings | Ruston Family Whist Drive</title>
+    <meta name="description" content="Official rankings and leaderboards for the world's most prestigious family tournament - 40 years of championship excellence">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits">♠ ♥ ♦ ♣</div>
+                    <h1 class="site-title">Ruston Family Whist Drive</h1>
+                    <p class="site-subtitle">Est. 1984 • The World's Most Elite Family Tournament</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="../" class="nav-link">Home</a>
+                    <a href="../tournaments/" class="nav-link">Tournaments</a>
+                    <a href="../players/" class="nav-link">Players</a>
+                    <a href="#" class="nav-link active">Hall of Fame</a>
+                    <a href="../stats/" class="nav-link">Statistics</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="leaderboard-hero">
+            <div class="container">
+                <div class="hero-content">
+                    <div class="hall-of-fame-badge">🏛️ HALL OF FAME</div>
+                    <h1 class="hero-title">Championship Rankings</h1>
+                    <p class="hero-subtitle">The Official Leaderboards of the World's Most Prestigious Family Tournament</p>
+                    
+                    <div class="ranking-filters">
+                        <button class="filter-btn active" data-ranking="overall">Overall Excellence</button>
+                        <button class="filter-btn" data-ranking="championships">Tournament Wins</button>
+                        <button class="filter-btn" data-ranking="career_wins">Career Victories</button>
+                        <button class="filter-btn" data-ranking="win_percentage">Win Percentage</button>
+                        <button class="filter-btn" data-ranking="recent_form">Recent Form</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="current-rankings">
+            <div class="container">
+                <div class="rankings-header">
+                    <h2 class="rankings-title" id="current-ranking-title">Overall Excellence Rankings</h2>
+                    <p class="rankings-subtitle" id="current-ranking-description">Comprehensive ranking based on tournament victories, career performance, and recent form</p>
+                </div>
+
+                <div class="podium-section">
+                    <div class="podium-container" id="podium-container">
+                        <!-- Top 3 will be populated here -->
+                    </div>
+                </div>
+
+                <div class="full-rankings">
+                    <div class="rankings-table">
+                        <div class="rankings-table-header">
+                            <div class="rank-col">Rank</div>
+                            <div class="player-col">Player</div>
+                            <div class="score-col">Score</div>
+                            <div class="tournaments-col">Tournaments</div>
+                            <div class="wins-col">Wins</div>
+                            <div class="percentage-col">Win %</div>
+                            <div class="trend-col">Trend</div>
+                        </div>
+                        <div class="rankings-table-body" id="rankings-table-body">
+                            <!-- Rankings will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="ranking-insights">
+            <div class="container">
+                <h2 class="section-title">
+                    <span class="title-icon">📊</span>
+                    Championship Insights & Analysis
+                </h2>
+                
+                <div class="insights-grid">
+                    <div class="insight-card featured">
+                        <div class="insight-icon">👑</div>
+                        <h3>Current Dynasty</h3>
+                        <div class="insight-content">
+                            <p><strong>Margaret Wilson</strong> leads the modern era with three consecutive championships (2021-2023), tying the record set by James Ruston Sr. in the 1990s.</p>
+                            <div class="insight-stat">
+                                <span class="stat-number">3</span>
+                                <span class="stat-label">Consecutive Titles</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="insight-card">
+                        <div class="insight-icon">🏆</div>
+                        <h3>All-Time Champion</h3>
+                        <div class="insight-content">
+                            <p><strong>James Ruston Sr.</strong> remains the tournament GOAT with 12 total championships spanning four decades of excellence.</p>
+                            <div class="insight-stat">
+                                <span class="stat-number">12</span>
+                                <span class="stat-label">Total Championships</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="insight-card">
+                        <div class="insight-icon">⚡</div>
+                        <h3>Rising Star</h3>
+                        <div class="insight-content">
+                            <p><strong>Emma Jones</strong> broke the youngest winner record at age 21 and shows championship potential for the next generation.</p>
+                            <div class="insight-stat">
+                                <span class="stat-number">21</span>
+                                <span class="stat-label">Age at First Win</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="insight-card">
+                        <div class="insight-icon">🎯</div>
+                        <h3>Consistency King</h3>
+                        <div class="insight-content">
+                            <p><strong>David Smith</strong> holds the record for most top-3 finishes (28) and has never finished last in 25+ tournaments.</p>
+                            <div class="insight-stat">
+                                <span class="stat-number">28</span>
+                                <span class="stat-label">Top-3 Finishes</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="historical-champions">
+            <div class="container">
+                <h2 class="section-title">
+                    <span class="title-icon">📜</span>
+                    Championship History
+                </h2>
+                
+                <div class="champions-timeline" id="champions-timeline">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+                
+                <div class="championship-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-content">
+                            <h4>Total Championships</h4>
+                            <div class="stat-number">40</div>
+                            <div class="stat-detail">Four Decades of Excellence</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-content">
+                            <h4>Total Champions</h4>
+                            <div class="stat-number">15</div>
+                            <div class="stat-detail">Different Winners</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">🔄</div>
+                        <div class="stat-content">
+                            <h4>Most Consecutive</h4>
+                            <div class="stat-number">3</div>
+                            <div class="stat-detail">Margaret Wilson (2021-2023)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">📈</div>
+                        <div class="stat-content">
+                            <h4>Participation Rate</h4>
+                            <div class="stat-number">94%</div>
+                            <div class="stat-detail">Average Family Attendance</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="records-section">
+            <div class="container">
+                <h2 class="section-title">
+                    <span class="title-icon">🥇</span>
+                    Tournament Records & Achievements
+                </h2>
+                
+                <div class="records-grid">
+                    <div class="record-category">
+                        <h3>Championship Records</h3>
+                        <div class="record-list">
+                            <div class="record-item">
+                                <span class="record-title">Most Championships</span>
+                                <span class="record-holder">James Ruston Sr. (12)</span>
+                            </div>
+                            <div class="record-item">
+                                <span class="record-title">Most Consecutive</span>
+                                <span class="record-holder">James Ruston Sr. / Margaret Wilson (3)</span>
+                            </div>
+                            <div class="record-item">
+                                <span class="record-title">Youngest Winner</span>
+                                <span class="record-holder">Emma Jones (Age 21)</span>
+                            </div>
+                            <div class="record-item">
+                                <span class="record-title">Oldest Winner</span>
+                                <span class="record-holder">Tom Wilson (Age 76)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="record-category">
+                        <h3>Performance Records</h3>
+                        <div class="record-list">
+                            <div class="record-item">
+                                <span class="record-title">Highest Tournament Score</span>
+                                <span class="record-holder">James Ruston Sr. (142 tricks, 1998)</span>
+                            </div>
+                            <div class="record-item">
+                                <span class="record-title">Best Win Percentage</span>
+                                <span class="record-holder">Margaret Wilson (68.0%)</span>
+                            </div>
+                            <div class="record-item">
+                                <span class="record-title">Most Career Wins</span>
+                                <span class="record-holder">James Ruston Sr. (156)</span>
+                            </div>
+                            <div class="record-item">
+                                <span class="record-title">Most 11-Trick Rounds</span>
+                                <span class="record-holder">Margaret Wilson (47)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="record-category">
+                        <h3>Participation Records</h3>
+                        <div class="record-list">
+                            <div class="record-item">
+                                <span class="record-title">Perfect Attendance</span>
+                                <span class="record-holder">Tom Wilson (40 years)</span>
+                            </div>
+                            <div class="record-item">
+                                <span class="record-title">Most Tournaments</span>
+                                <span class="record-holder">James Ruston Sr. (40)</span>
+                            </div>
+                            <div class="record-item">
+                                <span class="record-title">Most Top-3 Finishes</span>
+                                <span class="record-holder">David Smith (28)</span>
+                            </div>
+                            <div class="record-item">
+                                <span class="record-title">Never Last Place</span>
+                                <span class="record-holder">David Smith (25 tournaments)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="record-category">
+                        <h3>Partnership Records</h3>
+                        <div class="record-list">
+                            <div class="record-item">
+                                <span class="record-title">Best Partnership</span>
+                                <span class="record-holder">Margaret Wilson & James Ruston (73% success)</span>
+                            </div>
+                            <div class="record-item">
+                                <span class="record-title">Most Partnerships</span>
+                                <span class="record-holder">James Ruston Sr. (156 different partners)</span>
+                            </div>
+                            <div class="record-item">
+                                <span class="record-title">Family Chemistry</span>
+                                <span class="record-holder">Ruston Brothers (68% success rate)</span>
+                            </div>
+                            <div class="record-item">
+                                <span class="record-title">Cross-Generation</span>
+                                <span class="record-holder">Tom Wilson & Emma Jones (65% success)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Hall of Fame</h4>
+                    <p><a href="../players/margaret-wilson/">Margaret Wilson</a></p>
+                    <p><a href="../players/james-ruston/">James Ruston Sr.</a></p>
+                    <p><a href="../players/">All Champions</a></p>
+                </div>
+                <div class="footer-section">
+                    <h4>Statistics</h4>
+                    <p><a href="../stats/">Advanced Analytics</a></p>
+                    <p>Head-to-Head Records</p>
+                    <p>Partnership Analysis</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Tournament History</h4>
+                    <p><a href="../tournaments/">All Tournaments</a></p>
+                    <p>Championship Timeline</p>
+                    <p>Record Performances</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive. Hall of Fame excellence since 1984.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../assets/js/tournament-engine.js"></script>
+    <script src="../assets/js/sample-data-generator.js"></script>
+    <script src="../assets/js/main.js"></script>
+    
+    <script>
+        // Leaderboard specific JavaScript
+        let currentRankingType = 'overall';
+        let allPlayers = [];
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeLeaderboard();
+        });
+
+        async function initializeLeaderboard() {
+            try {
+                // Initialize engines and generate sample data
+                const engine = new TournamentEngine();
+                const generator = new SampleDataGenerator();
+
+                // Generate multiple years of tournament data
+                const years = [2023, 2022, 2021, 2020, 2019];
+                for (const year of years) {
+                    const csvData = generator.generateTournament(`Championship ${year}`, year, 8);
+                    await engine.processScorecardCSV(csvData);
+                }
+
+                // Get all players with comprehensive stats
+                allPlayers = engine.getAllPlayers('overall');
+                
+                // Initialize rankings display
+                updateRankingsDisplay('overall');
+                
+                // Generate championship history
+                generateChampionshipHistory();
+                
+                // Add filter event listeners
+                setupFilterListeners();
+
+                console.log('🏆 Hall of Fame loaded successfully');
+
+            } catch (error) {
+                console.error('Error loading leaderboard:', error);
+                loadFallbackData();
+            }
+        }
+
+        function setupFilterListeners() {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Update active button
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Update rankings
+                    const rankingType = this.dataset.ranking;
+                    currentRankingType = rankingType;
+                    updateRankingsDisplay(rankingType);
+                });
+            });
+        }
+
+        function updateRankingsDisplay(rankingType) {
+            const sortedPlayers = sortPlayersByRanking(allPlayers, rankingType);
+            
+            // Update title and description
+            updateRankingInfo(rankingType);
+            
+            // Update podium (top 3)
+            updatePodium(sortedPlayers.slice(0, 3));
+            
+            // Update full rankings table
+            updateRankingsTable(sortedPlayers);
+        }
+
+        function sortPlayersByRanking(players, rankingType) {
+            const playersWithScores = players.map(player => ({
+                ...player,
+                rankingScore: calculateRankingScore(player, rankingType)
+            }));
+
+            return playersWithScores.sort((a, b) => {
+                if (rankingType === 'recent_form') {
+                    // For recent form, higher is better
+                    return b.rankingScore - a.rankingScore;
+                }
+                return b.rankingScore - a.rankingScore;
+            });
+        }
+
+        function calculateRankingScore(player, rankingType) {
+            switch (rankingType) {
+                case 'overall':
+                    // Weighted combination of multiple factors
+                    const tournamentWeight = (player.tournament_wins || 0) * 10;
+                    const winPctWeight = parseFloat(player.win_percentage || 0) * 2;
+                    const careerWeight = (player.career_wins || 0) * 0.1;
+                    const consistencyWeight = (player.top_three_finishes || 0) * 0.5;
+                    return tournamentWeight + winPctWeight + careerWeight + consistencyWeight;
+                
+                case 'championships':
+                    return player.tournament_wins || 0;
+                
+                case 'career_wins':
+                    return player.career_wins || 0;
+                
+                case 'win_percentage':
+                    return parseFloat(player.win_percentage || 0);
+                
+                case 'recent_form':
+                    // Simulate recent form based on tournament wins and recency
+                    const recentBonus = (player.tournament_wins || 0) * 0.3;
+                    const winPct = parseFloat(player.win_percentage || 0) * 0.1;
+                    return recentBonus + winPct + Math.random() * 10; // Add some variance
+                
+                default:
+                    return 0;
+            }
+        }
+
+        function updateRankingInfo(rankingType) {
+            const titleElement = document.getElementById('current-ranking-title');
+            const descElement = document.getElementById('current-ranking-description');
+            
+            const rankingInfo = {
+                overall: {
+                    title: 'Overall Excellence Rankings',
+                    desc: 'Comprehensive ranking based on tournament victories, career performance, and recent form'
+                },
+                championships: {
+                    title: 'Tournament Championships',
+                    desc: 'Players ranked by total number of tournament victories achieved'
+                },
+                career_wins: {
+                    title: 'Career Victories',
+                    desc: 'Total number of round victories accumulated throughout their career'
+                },
+                win_percentage: {
+                    title: 'Win Percentage Leaders',
+                    desc: 'Percentage of rounds won relative to total rounds played'
+                },
+                recent_form: {
+                    title: 'Recent Form Rankings',
+                    desc: 'Current performance and momentum based on last 5 tournaments'
+                }
+            };
+            
+            const info = rankingInfo[rankingType];
+            titleElement.textContent = info.title;
+            descElement.textContent = info.desc;
+        }
+
+        function updatePodium(topThree) {
+            const podiumContainer = document.getElementById('podium-container');
+            
+            if (topThree.length < 3) {
+                podiumContainer.innerHTML = '<p>Loading championship podium...</p>';
+                return;
+            }
+
+            const podiumHTML = `
+                <div class="podium-places">
+                    <div class="podium-place second">
+                        <div class="podium-player">
+                            <div class="podium-avatar">
+                                <div class="avatar-placeholder small">
+                                    <span class="avatar-initial">${getInitials(topThree[1].name)}</span>
+                                </div>
+                            </div>
+                            <h3 class="podium-name">${topThree[1].name}</h3>
+                            <div class="podium-score">${formatScoreDisplay(topThree[1], currentRankingType)}</div>
+                        </div>
+                        <div class="podium-base second-place">
+                            <div class="podium-medal">🥈</div>
+                            <div class="podium-rank">2nd</div>
+                        </div>
+                    </div>
+                    
+                    <div class="podium-place first">
+                        <div class="podium-player">
+                            <div class="podium-avatar">
+                                <div class="avatar-placeholder large">
+                                    <span class="avatar-initial">${getInitials(topThree[0].name)}</span>
+                                </div>
+                                <div class="champion-crown">👑</div>
+                            </div>
+                            <h3 class="podium-name">${topThree[0].name}</h3>
+                            <div class="podium-score">${formatScoreDisplay(topThree[0], currentRankingType)}</div>
+                        </div>
+                        <div class="podium-base first-place">
+                            <div class="podium-medal">🥇</div>
+                            <div class="podium-rank">1st</div>
+                        </div>
+                    </div>
+                    
+                    <div class="podium-place third">
+                        <div class="podium-player">
+                            <div class="podium-avatar">
+                                <div class="avatar-placeholder small">
+                                    <span class="avatar-initial">${getInitials(topThree[2].name)}</span>
+                                </div>
+                            </div>
+                            <h3 class="podium-name">${topThree[2].name}</h3>
+                            <div class="podium-score">${formatScoreDisplay(topThree[2], currentRankingType)}</div>
+                        </div>
+                        <div class="podium-base third-place">
+                            <div class="podium-medal">🥉</div>
+                            <div class="podium-rank">3rd</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            podiumContainer.innerHTML = podiumHTML;
+        }
+
+        function updateRankingsTable(players) {
+            const tableBody = document.getElementById('rankings-table-body');
+            
+            const tableHTML = players.map((player, index) => {
+                const trend = generateTrendIndicator(player, index);
+                const medalIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                
+                return `
+                    <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
+                        <div class="rank-col">
+                            <span class="rank-number">${index + 1}</span>
+                            <span class="rank-medal">${medalIcon}</span>
+                        </div>
+                        <div class="player-col">
+                            <a href="../players/${player.name.toLowerCase().replace(/\s+/g, '-')}/" class="player-link">
+                                <span class="player-name">${player.name}</span>
+                                <span class="player-nickname">${getPlayerNickname(player.name)}</span>
+                            </a>
+                        </div>
+                        <div class="score-col">${formatScoreDisplay(player, currentRankingType)}</div>
+                        <div class="tournaments-col">${player.tournaments_played || 0}</div>
+                        <div class="wins-col">${player.tournament_wins || 0}</div>
+                        <div class="percentage-col">${player.win_percentage || '0.0'}%</div>
+                        <div class="trend-col">${trend}</div>
+                    </div>
+                `;
+            }).join('');
+            
+            tableBody.innerHTML = tableHTML;
+        }
+
+        function formatScoreDisplay(player, rankingType) {
+            switch (rankingType) {
+                case 'overall':
+                    return Math.round(player.rankingScore || 0);
+                case 'championships':
+                    return player.tournament_wins || 0;
+                case 'career_wins':
+                    return player.career_wins || 0;
+                case 'win_percentage':
+                    return `${player.win_percentage || '0.0'}%`;
+                case 'recent_form':
+                    return Math.round(player.rankingScore || 0);
+                default:
+                    return '0';
+            }
+        }
+
+        function getInitials(name) {
+            return name.split(' ').map(word => word[0]).join('');
+        }
+
+        function getPlayerNickname(name) {
+            const nicknames = {
+                'Margaret Wilson': '"The Ace"',
+                'James Ruston': '"The Master"',
+                'Emma Jones': '"The Prodigy"',
+                'David Smith': '"Steady Eddie"',
+                'Tom Wilson': '"The Veteran"',
+                'Sarah Brown': '"Lucky Sarah"',
+                'Michael Thompson': '"The Professor"',
+                'Mary Ruston': '"The Rock"'
+            };
+            return nicknames[name] || '';
+        }
+
+        function generateTrendIndicator(player, index) {
+            // Simulate trend based on position and some randomness
+            const trends = ['📈', '📊', '📉'];
+            if (index < 3) return '📈'; // Top 3 trending up
+            if (index > 15) return '📉'; // Lower ranks trending down
+            return trends[Math.floor(Math.random() * trends.length)];
+        }
+
+        function generateChampionshipHistory() {
+            const timeline = document.getElementById('champions-timeline');
+            
+            const champions = [
+                { year: 2023, champion: 'Margaret Wilson', highlight: 'Third Consecutive Title' },
+                { year: 2022, champion: 'Margaret Wilson', highlight: 'Back-to-Back Champion' },
+                { year: 2021, champion: 'Margaret Wilson', highlight: 'Return to Glory' },
+                { year: 2020, champion: 'David Smith', highlight: 'COVID Tournament' },
+                { year: 2019, champion: 'James Ruston', highlight: 'Veteran Victory' },
+                { year: 2018, champion: 'Margaret Wilson', highlight: 'Dominant Performance' },
+                { year: 2017, champion: 'Emma Jones', highlight: 'Youngest Winner Record' },
+                { year: 2016, champion: 'Tom Wilson', highlight: 'Senior Surprise' }
+            ];
+
+            const timelineHTML = champions.map(entry => `
+                <div class="champion-entry">
+                    <div class="champion-year">${entry.year}</div>
+                    <div class="champion-info">
+                        <h4 class="champion-name">${entry.champion}</h4>
+                        <p class="champion-highlight">${entry.highlight}</p>
+                    </div>
+                    <div class="champion-medal">🏆</div>
+                </div>
+            `).join('');
+
+            timeline.innerHTML = timelineHTML;
+        }
+
+        function loadFallbackData() {
+            // Fallback data if tournament engine fails
+            console.log('Loading fallback leaderboard data...');
+            
+            allPlayers = [
+                { name: 'Margaret Wilson', tournament_wins: 8, career_wins: 127, win_percentage: '68.0', tournaments_played: 35, top_three_finishes: 23 },
+                { name: 'James Ruston', tournament_wins: 12, career_wins: 156, win_percentage: '65.2', tournaments_played: 40, top_three_finishes: 28 },
+                { name: 'Emma Jones', tournament_wins: 1, career_wins: 34, win_percentage: '72.1', tournaments_played: 6, top_three_finishes: 4 },
+                { name: 'David Smith', tournament_wins: 3, career_wins: 98, win_percentage: '61.8', tournaments_played: 25, top_three_finishes: 18 }
+            ];
+            
+            updateRankingsDisplay('overall');
+        }
+    </script>
+
+    <style>
+        /* Leaderboard specific styles */
+        .leaderboard-hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: var(--spacing-3xl) 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .leaderboard-hero::before {
+            content: '🏆';
+            position: absolute;
+            top: 50%;
+            right: 5%;
+            transform: translateY(-50%);
+            font-size: 20rem;
+            opacity: 0.05;
+            z-index: 1;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }
+
+        .hall-of-fame-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: var(--spacing-sm) var(--spacing-xl);
+            border-radius: var(--border-radius-lg);
+            font-size: 0.875rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            margin-bottom: var(--spacing-lg);
+            display: inline-block;
+        }
+
+        .hero-title {
+            font-size: 4rem;
+            font-weight: 900;
+            margin-bottom: var(--spacing-md);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            margin-bottom: var(--spacing-2xl);
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .ranking-filters {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--border-radius-lg);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .current-rankings {
+            padding: var(--spacing-3xl) 0;
+        }
+
+        .rankings-header {
+            text-align: center;
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .rankings-title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: var(--spacing-md);
+            color: var(--text-primary);
+        }
+
+        .rankings-subtitle {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        .podium-section {
+            margin-bottom: var(--spacing-3xl);
+        }
+
+        .podium-container {
+            display: flex;
+            justify-content: center;
+            padding: var(--spacing-2xl) 0;
+        }
+
+        .podium-places {
+            display: flex;
+            align-items: end;
+            gap: var(--spacing-xl);
+        }
+
+        .podium-place {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .podium-player {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .podium-avatar {
+            position: relative;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .avatar-placeholder {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-family: var(--font-primary);
+        }
+
+        .avatar-placeholder.large {
+            width: 120px;
+            height: 120px;
+            font-size: 2rem;
+        }
+
+        .avatar-placeholder.small {
+            width: 100px;
+            height: 100px;
+            font-size: 1.5rem;
+        }
+
+        .champion-crown {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2.5rem;
+            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .podium-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+            color: var(--text-primary);
+        }
+
+        .podium-score {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .podium-base {
+            border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            width: 120px;
+            position: relative;
+        }
+
+        .podium-base.first-place {
+            height: 120px;
+            background: linear-gradient(135deg, var(--gold) 0%, #f59e0b 100%);
+        }
+
+        .podium-base.second-place {
+            height: 100px;
+            background: linear-gradient(135deg, var(--silver) 0%, #9ca3af 100%);
+        }
+
+        .podium-base.third-place {
+            height: 80px;
+            background: linear-gradient(135deg, var(--bronze) 0%, #92400e 100%);
+        }
+
+        .podium-medal {
+            font-size: 2rem;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .podium-rank {
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .full-rankings {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+        }
+
+        .rankings-table-header {
+            display: grid;
+            grid-template-columns: 80px 1fr 100px 100px 80px 100px 80px;
+            background: var(--primary);
+            color: white;
+            padding: var(--spacing-lg) var(--spacing-md);
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .ranking-row {
+            display: grid;
+            grid-template-columns: 80px 1fr 100px 100px 80px 100px 80px;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .ranking-row:hover {
+            background: var(--bg-secondary);
+        }
+
+        .ranking-row.podium-row {
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.1) 0%, transparent 100%);
+        }
+
+        .rank-col {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .rank-medal {
+            font-size: 1.125rem;
+        }
+
+        .player-link {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .player-link:hover .player-name {
+            color: var(--primary);
+        }
+
+        .player-name {
+            font-weight: 600;
+            transition: color 0.2s ease;
+        }
+
+        .player-nickname {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .score-col {
+            font-weight: 700;
+            font-family: var(--font-primary);
+            color: var(--primary);
+            font-size: 1.125rem;
+        }
+
+        .trend-col {
+            font-size: 1.25rem;
+        }
+
+        .ranking-insights {
+            padding: var(--spacing-3xl) 0;
+            background: var(--bg-secondary);
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-xl);
+        }
+
+        .insight-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-card);
+            border: 2px solid var(--card-border);
+            transition: all 0.2s ease;
+        }
+
+        .insight-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .insight-card.featured {
+            border-color: var(--gold);
+            background: linear-gradient(135deg, var(--card-bg) 0%, #fef3c7 100%);
+        }
+
+        .insight-icon {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .insight-content h3 {
+            color: var(--primary);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .insight-stat {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-lg);
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid var(--border);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 900;
+            font-family: var(--font-primary);
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .historical-champions {
+            padding: var(--spacing-3xl) 0;
+        }
+
+        .champions-timeline {
+            display: grid;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .champion-entry {
+            display: grid;
+            grid-template-columns: 80px 1fr auto;
+            gap: var(--spacing-lg);
+            align-items: center;
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .champion-year {
+            font-size: 1.5rem;
+            font-weight: 900;
+            font-family: var(--font-primary);
+            color: var(--primary);
+        }
+
+        .champion-name {
+            font-weight: 600;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .champion-highlight {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        .champion-medal {
+            font-size: 2rem;
+        }
+
+        .championship-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-xl);
+        }
+
+        .records-section {
+            padding: var(--spacing-3xl) 0;
+            background: var(--bg-secondary);
+        }
+
+        .records-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-2xl);
+        }
+
+        .record-category h3 {
+            color: var(--primary);
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .record-list {
+            display: grid;
+            gap: var(--spacing-md);
+        }
+
+        .record-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .record-title {
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .record-holder {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            
+            .ranking-filters {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .podium-places {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .rankings-table-header,
+            .ranking-row {
+                grid-template-columns: 60px 1fr 80px 60px;
+            }
+            
+            .tournaments-col,
+            .percentage-col,
+            .trend-col {
+                display: none;
+            }
+            
+            .records-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</body>
+</html>

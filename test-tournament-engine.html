@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Engine Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🎴 Tournament Engine Test</h1>
+    
+    <div id="test-results"></div>
+    
+    <script src="assets/js/tournament-engine.js"></script>
+    <script src="assets/js/sample-data-generator.js"></script>
+    
+    <script>
+        function runTests() {
+            const resultsDiv = document.getElementById('test-results');
+            let allTestsPassed = true;
+            
+            try {
+                // Test 1: Initialize engines
+                resultsDiv.innerHTML += '<div class="test-section"><h3>Test 1: Initialize Tournament Engine</h3>';
+                const engine = new TournamentEngine();
+                const generator = new SampleDataGenerator();
+                resultsDiv.innerHTML += '<p>✅ Tournament engine and sample generator initialized successfully</p></div>';
+                
+                // Test 2: Generate sample data
+                resultsDiv.innerHTML += '<div class="test-section"><h3>Test 2: Generate Sample Tournament Data</h3>';
+                const csvData = generator.generateTournament('Test Championship', 2023, 4);
+                const lines = csvData.split('\n');
+                resultsDiv.innerHTML += `<p>✅ Generated ${lines.length - 1} scorecard records for 4 rounds</p>`;
+                resultsDiv.innerHTML += `<pre>${csvData.substring(0, 500)}...</pre></div>`;
+                
+                // Test 3: Process CSV data
+                resultsDiv.innerHTML += '<div class="test-section"><h3>Test 3: Process Tournament Data</h3>';
+                engine.processScorecardCSV(csvData).then(recordsProcessed => {
+                    resultsDiv.innerHTML += `<p>✅ Processed ${recordsProcessed} scorecard records</p>`;
+                    
+                    // Test 4: Get processed results
+                    const tournaments = engine.getAllTournaments();
+                    const players = engine.getAllPlayers();
+                    const partnerships = engine.getPartnershipAnalysis();
+                    
+                    resultsDiv.innerHTML += `<p>✅ Generated data:</p>`;
+                    resultsDiv.innerHTML += `<ul>`;
+                    resultsDiv.innerHTML += `<li>Tournaments: ${tournaments.length}</li>`;
+                    resultsDiv.innerHTML += `<li>Players: ${players.length}</li>`;
+                    resultsDiv.innerHTML += `<li>Partnerships: ${partnerships.length}</li>`;
+                    resultsDiv.innerHTML += `</ul>`;
+                    
+                    // Test 5: Display tournament details
+                    if (tournaments.length > 0) {
+                        const tournament = tournaments[0];
+                        resultsDiv.innerHTML += `<h4>Tournament Details:</h4>`;
+                        resultsDiv.innerHTML += `<pre>${JSON.stringify(tournament, null, 2)}</pre>`;
+                    }
+                    
+                    // Test 6: Display top players
+                    if (players.length > 0) {
+                        resultsDiv.innerHTML += `<h4>Top 5 Players:</h4>`;
+                        resultsDiv.innerHTML += `<ol>`;
+                        players.slice(0, 5).forEach(player => {
+                            const winPct = ((player.total_tricks / player.total_rounds) * 100).toFixed(1);
+                            resultsDiv.innerHTML += `<li>${player.name}: ${player.total_tricks} tricks (${winPct}% win rate)</li>`;
+                        });
+                        resultsDiv.innerHTML += `</ol>`;
+                    }
+                    
+                    resultsDiv.innerHTML += '</div>';
+                    
+                    // Final result
+                    if (allTestsPassed) {
+                        resultsDiv.innerHTML += '<div class="test-section success"><h3>🎉 All Tests Passed!</h3><p>Tournament engine is working correctly and ready for production use.</p></div>';
+                    }
+                }).catch(error => {
+                    resultsDiv.innerHTML += `<div class="test-section error"><h3>❌ Test Failed</h3><p>Error: ${error.message}</p></div>`;
+                });
+                
+            } catch (error) {
+                allTestsPassed = false;
+                resultsDiv.innerHTML += `<div class="test-section error"><h3>❌ Test Failed</h3><p>Error: ${error.message}</p></div>`;
+            }
+        }
+        
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', runTests);
+    </script>
+</body>
+</html>

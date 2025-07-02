@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2023 Christmas Championship - Ruston Family Whist Drive</title>
+    <meta name="description" content="Complete results from the 2023 Christmas Championship - Margaret Wilson claims her third consecutive title">
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits">♠ ♥ ♦ ♣</div>
+                    <h1 class="site-title">Ruston Family Whist Drive</h1>
+                    <p class="site-subtitle">Est. 1984 • The World's Most Elite Family Tournament</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="../../" class="nav-link">Home</a>
+                    <a href="../" class="nav-link active">Tournaments</a>
+                    <a href="../../players/" class="nav-link">Players</a>
+                    <a href="../../leaderboard/" class="nav-link">Hall of Fame</a>
+                    <a href="../../stats/" class="nav-link">Statistics</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="tournament-hero">
+            <div class="container">
+                <div class="tournament-header">
+                    <div class="tournament-badge">🏆 TOURNAMENT RESULTS</div>
+                    <h1 class="tournament-title">2023 Christmas Championship</h1>
+                    <p class="tournament-subtitle">December 25, 2023 • 20 Players • 8 Rounds • Pure Championship Excellence</p>
+                    
+                    <div class="tournament-champion">
+                        <div class="champion-crown">👑</div>
+                        <h2 class="champion-name">Margaret "The Ace" Wilson</h2>
+                        <p class="champion-achievement">Third Consecutive Championship Victory</p>
+                        <div class="champion-stats">
+                            <div class="stat">
+                                <span class="stat-number">112</span>
+                                <span class="stat-label">Total Tricks</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number">14.0</span>
+                                <span class="stat-label">Avg Per Round</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number">3</span>
+                                <span class="stat-label">Consecutive Titles</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="tournament-results">
+            <div class="container">
+                <div class="results-grid">
+                    <div class="final-standings">
+                        <h3 class="section-title">
+                            <span class="title-icon">🥇</span>
+                            Final Championship Standings
+                        </h3>
+                        <div class="standings-table">
+                            <div class="standings-header">
+                                <div class="rank-col">Rank</div>
+                                <div class="player-col">Player</div>
+                                <div class="tricks-col">Tricks</div>
+                                <div class="avg-col">Average</div>
+                                <div class="awards-col">Awards</div>
+                            </div>
+                            <div class="standings-body" id="final-standings">
+                                <!-- Will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tournament-stats">
+                        <h3 class="section-title">
+                            <span class="title-icon">📊</span>
+                            Tournament Highlights
+                        </h3>
+                        <div class="stats-cards">
+                            <div class="stat-card highlight">
+                                <div class="stat-icon">🔥</div>
+                                <div class="stat-content">
+                                    <div class="stat-value">15</div>
+                                    <div class="stat-name">Highest Single Round</div>
+                                    <div class="stat-detail">Michael Thompson, Round 3</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">🎯</div>
+                                <div class="stat-content">
+                                    <div class="stat-value">3</div>
+                                    <div class="stat-name">Perfect Rounds (13 tricks)</div>
+                                    <div class="stat-detail">Margaret Wilson ×2, James Ruston ×1</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">⚡</div>
+                                <div class="stat-content">
+                                    <div class="stat-value">7.5</div>
+                                    <div class="stat-name">Tournament Average</div>
+                                    <div class="stat-detail">Highly competitive field</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">🤝</div>
+                                <div class="stat-content">
+                                    <div class="stat-value">95%</div>
+                                    <div class="stat-name">Partnership Success</div>
+                                    <div class="stat-detail">Margaret-James partnership</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="round-by-round">
+            <div class="container">
+                <h3 class="section-title">
+                    <span class="title-icon">🎴</span>
+                    Round-by-Round Tournament Results
+                </h3>
+                <div class="rounds-container" id="rounds-container">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <section class="photo-gallery-section">
+            <div class="container">
+                <div id="tournament-photos">
+                    <!-- Photo gallery will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <section class="tournament-legacy">
+            <div class="container">
+                <div class="legacy-content">
+                    <h3 class="section-title">Tournament Legacy</h3>
+                    <div class="legacy-grid">
+                        <div class="legacy-card">
+                            <h4>Historic Achievement</h4>
+                            <p>Margaret Wilson's third consecutive championship ties the modern record set by James Ruston Sr. in the 1990s. Her dominance across three years demonstrates exceptional consistency and strategic evolution.</p>
+                        </div>
+                        <div class="legacy-card">
+                            <h4>Competitive Excellence</h4>
+                            <p>The 2023 tournament featured the closest competition in recent memory, with only 8 tricks separating first and third place. Every round mattered in this epic championship battle.</p>
+                        </div>
+                        <div class="legacy-card">
+                            <h4>Family Tradition</h4>
+                            <p>This tournament marked the 40th anniversary of the Ruston Family Whist Drive, celebrating four decades of strategic competition, family bonding, and championship excellence.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Tournament Navigation</h4>
+                    <p><a href="../2022/">2022 Championship</a></p>
+                    <p><a href="../2021/">2021 Championship</a></p>
+                    <p><a href="../">All Tournaments</a></p>
+                </div>
+                <div class="footer-section">
+                    <h4>Champion Profile</h4>
+                    <p><a href="../../players/margaret-wilson">Margaret Wilson</a></p>
+                    <p>Career Achievements</p>
+                    <p>Playing Style Analysis</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Tournament Data</h4>
+                    <p>Official Scorecards</p>
+                    <p>Partnership Statistics</p>
+                    <p>Historical Comparison</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive. Championship excellence since 1984.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../../assets/js/tournament-engine.js"></script>
+    <script src="../../assets/js/sample-data-generator.js"></script>
+    <script src="../../assets/js/photo-gallery.js"></script>
+    <script src="../../assets/js/main.js"></script>
+    
+    <script>
+        // Tournament-specific JavaScript
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTournamentPage();
+        });
+
+        async function initializeTournamentPage() {
+            try {
+                // Initialize engines
+                const engine = new TournamentEngine();
+                const generator = new SampleDataGenerator();
+                const gallery = new PhotoGallery();
+
+                // Generate and process tournament data
+                const csvData = generator.generateTournament('Christmas Championship', 2023, 8);
+                await engine.processScorecardCSV(csvData);
+
+                // Get tournament data
+                const tournament = engine.getTournament('Christmas Championship_2023');
+                
+                if (tournament) {
+                    // Populate final standings
+                    populateFinalStandings(tournament.final_standings);
+                    
+                    // Populate round-by-round results
+                    populateRoundByRound(tournament.rounds);
+                }
+
+                // Load photo gallery
+                await gallery.loadTournamentPhotos(2023);
+                gallery.createGalleryHTML(2023, '#tournament-photos');
+
+                console.log('🏆 Tournament page loaded successfully');
+
+            } catch (error) {
+                console.error('Error loading tournament page:', error);
+            }
+        }
+
+        function populateFinalStandings(standings) {
+            const container = document.getElementById('final-standings');
+            if (!container || !standings) return;
+
+            const standingsHTML = standings.map((standing, index) => {
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                const awards = getPlayerAwards(standing, index);
+                
+                return `
+                    <div class="standings-row ${index < 3 ? 'podium' : ''}">
+                        <div class="rank-col">
+                            <span class="rank-number">${standing.position}</span>
+                            <span class="rank-medal">${medal}</span>
+                        </div>
+                        <div class="player-col">
+                            <span class="player-name">${standing.player}</span>
+                        </div>
+                        <div class="tricks-col">${standing.total_tricks}</div>
+                        <div class="avg-col">${standing.average_tricks}</div>
+                        <div class="awards-col">${awards}</div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = standingsHTML;
+        }
+
+        function getPlayerAwards(standing, position) {
+            const awards = [];
+            
+            if (position === 0) awards.push('<span class="award champion">Champion</span>');
+            if (position === 1) awards.push('<span class="award runner-up">Runner-up</span>');
+            if (position === 2) awards.push('<span class="award third">Third Place</span>');
+            if (standing.total_tricks >= 110) awards.push('<span class="award high-scorer">High Scorer</span>');
+            if (parseFloat(standing.average_tricks) >= 14) awards.push('<span class="award consistent">Consistent</span>');
+            
+            return awards.join(' ');
+        }
+
+        function populateRoundByRound(rounds) {
+            const container = document.getElementById('rounds-container');
+            if (!container || !rounds) return;
+
+            const roundsHTML = rounds.map(round => {
+                return `
+                    <div class="round-card">
+                        <div class="round-header">
+                            <h4 class="round-title">Round ${round.round}</h4>
+                            <div class="trump-suit ${round.trump_suit.toLowerCase()}">${getTrumpSymbol(round.trump_suit)} ${round.trump_suit}</div>
+                        </div>
+                        <div class="tables-grid">
+                            ${round.tables.map((table, index) => `
+                                <div class="table-card">
+                                    <h5 class="table-title">Table ${index + 1}</h5>
+                                    <div class="partnerships">
+                                        ${table.partnerships.map(partnership => `
+                                            <div class="partnership">
+                                                <div class="partnership-players">
+                                                    ${partnership.players.join(' & ')}
+                                                </div>
+                                                <div class="partnership-score">${partnership.tricks} tricks</div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = roundsHTML;
+        }
+
+        function getTrumpSymbol(suit) {
+            const symbols = {
+                'Hearts': '♥',
+                'Diamonds': '♦',
+                'Spades': '♠',
+                'Clubs': '♣'
+            };
+            return symbols[suit] || '🎴';
+        }
+    </script>
+
+    <style>
+        /* Tournament-specific styles */
+        .tournament-hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: var(--spacing-3xl) 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tournament-hero::before {
+            content: '🏆';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20rem;
+            opacity: 0.05;
+            z-index: 1;
+        }
+
+        .tournament-header {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }
+
+        .tournament-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--border-radius);
+            font-size: 0.875rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            margin-bottom: var(--spacing-lg);
+            display: inline-block;
+        }
+
+        .tournament-title {
+            font-size: 4rem;
+            font-weight: 900;
+            margin-bottom: var(--spacing-md);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .tournament-subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .tournament-champion {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius-xl);
+            padding: var(--spacing-2xl);
+        }
+
+        .champion-crown {
+            font-size: 4rem;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .champion-name {
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .champion-achievement {
+            font-size: 1.125rem;
+            opacity: 0.9;
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .champion-stats {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-xl);
+        }
+
+        .champion-stats .stat {
+            text-align: center;
+        }
+
+        .champion-stats .stat-number {
+            display: block;
+            font-size: 2rem;
+            font-weight: 900;
+            font-family: var(--font-primary);
+        }
+
+        .champion-stats .stat-label {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        .tournament-results {
+            padding: var(--spacing-3xl) 0;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: var(--spacing-2xl);
+        }
+
+        .standings-table {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-card);
+        }
+
+        .standings-header {
+            display: grid;
+            grid-template-columns: 80px 1fr 80px 80px 150px;
+            background: var(--primary);
+            color: white;
+            padding: var(--spacing-md);
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .standings-row {
+            display: grid;
+            grid-template-columns: 80px 1fr 80px 80px 150px;
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+        }
+
+        .standings-row.podium {
+            background: linear-gradient(90deg, var(--gold) 0%, transparent 100%);
+            background-size: 200% 100%;
+            background-position: 100% 0;
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        .rank-col {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .rank-medal {
+            font-size: 1.25rem;
+        }
+
+        .player-name {
+            font-weight: 600;
+        }
+
+        .award {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--border-radius);
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-right: var(--spacing-xs);
+        }
+
+        .award.champion { background: var(--gold); color: white; }
+        .award.runner-up { background: var(--silver); color: white; }
+        .award.third { background: var(--bronze); color: white; }
+        .award.high-scorer { background: var(--secondary); color: white; }
+        .award.consistent { background: var(--primary); color: white; }
+
+        .stats-cards {
+            display: grid;
+            gap: var(--spacing-lg);
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-lg);
+            border: 2px solid var(--card-border);
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .stat-card.highlight {
+            border-color: var(--gold);
+            background: linear-gradient(135deg, var(--card-bg) 0%, #fef3c7 100%);
+        }
+
+        .round-by-round {
+            padding: var(--spacing-3xl) 0;
+            background: var(--bg-secondary);
+        }
+
+        .rounds-container {
+            display: grid;
+            gap: var(--spacing-xl);
+        }
+
+        .round-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-card);
+        }
+
+        .round-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .trump-suit {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+
+        .trump-suit.hearts { background: var(--red-suit); color: white; }
+        .trump-suit.diamonds { background: var(--red-suit); color: white; }
+        .trump-suit.spades { background: var(--black-suit); color: white; }
+        .trump-suit.clubs { background: var(--black-suit); color: white; }
+
+        .tables-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .table-card {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-md);
+        }
+
+        .table-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-md);
+            text-align: center;
+        }
+
+        .partnership {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-sm);
+            margin-bottom: var(--spacing-sm);
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+        }
+
+        .partnership-players {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .partnership-score {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .tournament-legacy {
+            padding: var(--spacing-3xl) 0;
+        }
+
+        .legacy-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-xl);
+        }
+
+        .legacy-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-card);
+            border-left: 4px solid var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            .tournament-title {
+                font-size: 2.5rem;
+            }
+            
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .standings-header,
+            .standings-row {
+                grid-template-columns: 60px 1fr 60px 60px;
+            }
+            
+            .awards-col {
+                display: none;
+            }
+            
+            .champion-stats {
+                flex-direction: column;
+                gap: var(--spacing-md);
+            }
+            
+            .tables-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</body>
+</html>

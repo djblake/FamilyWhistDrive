@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Statistics & Analytics | Ruston Family Whist Drive</title>
+    <meta name="description" content="Deep statistical analysis and visualizations from 40 years of championship data">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits">♠ ♥ ♦ ♣</div>
+                    <h1 class="site-title">Ruston Family Whist Drive</h1>
+                    <p class="site-subtitle">Est. 1984 • The World's Most Elite Family Tournament</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="../" class="nav-link">Home</a>
+                    <a href="../tournaments/" class="nav-link">Tournaments</a>
+                    <a href="../players/" class="nav-link">Players</a>
+                    <a href="../leaderboard/" class="nav-link">Hall of Fame</a>
+                    <a href="#" class="nav-link active">Statistics</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="stats-hero">
+            <div class="container">
+                <div class="hero-content">
+                    <div class="analytics-badge">📊 ADVANCED ANALYTICS</div>
+                    <h1 class="hero-title">Tournament Statistics & Analysis</h1>
+                    <p class="hero-subtitle">Deep insights from four decades of championship data, performance trends, and strategic analysis</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="tournament-progress-section">
+            <div class="container">
+                <h2 class="section-title">
+                    <span class="title-icon">🏁</span>
+                    Tournament Progress Analysis
+                </h2>
+                <p class="section-description">
+                    Horse race-style visualization showing how player positions changed throughout the 2023 Championship
+                </p>
+                
+                <div class="chart-container">
+                    <div class="chart-wrapper">
+                        <canvas id="tournamentProgressChart"></canvas>
+                    </div>
+                    <div class="chart-insights">
+                        <h3>Key Insights</h3>
+                        <ul class="insights-list">
+                            <li><strong>Margaret Wilson</strong> took the lead in Round 3 and never relinquished it</li>
+                            <li><strong>Emma Jones</strong> showed remarkable consistency, staying in top 3 throughout</li>
+                            <li>The biggest position change was <strong>David Smith</strong> jumping from 8th to 4th in Round 6</li>
+                            <li>Final positions were decided by just <strong>8 tricks</strong> separating 1st and 3rd place</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="analytics-grid-section">
+            <div class="container">
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h3 class="card-title">
+                            <span class="card-icon">🎯</span>
+                            Player Performance Radar
+                        </h3>
+                        <div class="chart-wrapper small">
+                            <canvas id="playerRadarChart"></canvas>
+                        </div>
+                        <p class="chart-description">Margaret Wilson's multi-dimensional playing style analysis</p>
+                    </div>
+
+                    <div class="analytics-card">
+                        <h3 class="card-title">
+                            <span class="card-icon">🤝</span>
+                            Partnership Success Rates
+                        </h3>
+                        <div class="chart-wrapper small">
+                            <canvas id="partnershipChart"></canvas>
+                        </div>
+                        <p class="chart-description">Most successful player combinations in tournament history</p>
+                    </div>
+
+                    <div class="analytics-card">
+                        <h3 class="card-title">
+                            <span class="card-icon">📈</span>
+                            Performance Distribution
+                        </h3>
+                        <div class="chart-wrapper small">
+                            <canvas id="statsChart"></canvas>
+                        </div>
+                        <p class="chart-description">Breakdown of tournament performance categories</p>
+                    </div>
+
+                    <div class="analytics-card">
+                        <h3 class="card-title">
+                            <span class="card-icon">📅</span>
+                            Yearly Performance Trends
+                        </h3>
+                        <div class="chart-wrapper small">
+                            <canvas id="yearlyTrendChart"></canvas>
+                        </div>
+                        <p class="chart-description">Performance evolution over the past decade</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="advanced-metrics-section">
+            <div class="container">
+                <h2 class="section-title">
+                    <span class="title-icon">🔬</span>
+                    Advanced Performance Metrics
+                </h2>
+                
+                <div class="metrics-grid">
+                    <div class="metric-category">
+                        <h3>Strategic Analysis</h3>
+                        <div class="metric-list">
+                            <div class="metric-item">
+                                <div class="metric-name">Trump Suit Efficiency</div>
+                                <div class="metric-leaders">
+                                    <div class="leader">♠ Spades: Margaret Wilson (72%)</div>
+                                    <div class="leader">♥ Hearts: James Ruston (69%)</div>
+                                    <div class="leader">♦ Diamonds: Emma Jones (71%)</div>
+                                    <div class="leader">♣ Clubs: David Smith (68%)</div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-item">
+                                <div class="metric-name">Opening Round Performance</div>
+                                <div class="metric-leaders">
+                                    <div class="leader">1. Margaret Wilson: 8.2 avg tricks</div>
+                                    <div class="leader">2. Michael Thompson: 7.9 avg tricks</div>
+                                    <div class="leader">3. James Ruston: 7.7 avg tricks</div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-item">
+                                <div class="metric-name">Closing Strength (Final 3 Rounds)</div>
+                                <div class="metric-leaders">
+                                    <div class="leader">1. Margaret Wilson: 74% win rate</div>
+                                    <div class="leader">2. Emma Jones: 71% win rate</div>
+                                    <div class="leader">3. Sarah Brown: 68% win rate</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metric-category">
+                        <h3>Partnership Dynamics</h3>
+                        <div class="metric-list">
+                            <div class="metric-item">
+                                <div class="metric-name">Cross-Generational Partnerships</div>
+                                <div class="metric-leaders">
+                                    <div class="leader">Tom Wilson + Emma Jones: 65%</div>
+                                    <div class="leader">James Sr. + Sarah Brown: 62%</div>
+                                    <div class="leader">Margaret + Michael Jr.: 59%</div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-item">
+                                <div class="metric-name">Family vs. In-Law Partnerships</div>
+                                <div class="metric-leaders">
+                                    <div class="leader">Ruston Family: 64% success rate</div>
+                                    <div class="leader">Wilson Family: 61% success rate</div>
+                                    <div class="leader">Mixed Families: 58% success rate</div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-item">
+                                <div class="metric-name">Communication Synergy Score</div>
+                                <div class="metric-leaders">
+                                    <div class="leader">Margaret + James: 9.2/10</div>
+                                    <div class="leader">David + Sarah: 8.8/10</div>
+                                    <div class="leader">Emma + Tom: 8.5/10</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metric-category">
+                        <h3>Pressure Performance</h3>
+                        <div class="metric-list">
+                            <div class="metric-item">
+                                <div class="metric-name">High-Stakes Round Performance</div>
+                                <div class="metric-leaders">
+                                    <div class="leader">Margaret Wilson: +12% vs average</div>
+                                    <div class="leader">James Ruston: +8% vs average</div>
+                                    <div class="leader">Emma Jones: +6% vs average</div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-item">
+                                <div class="metric-name">Comeback Ability (From Behind)</div>
+                                <div class="metric-leaders">
+                                    <div class="leader">Sarah Brown: 7 dramatic comebacks</div>
+                                    <div class="leader">Margaret Wilson: 5 comeback wins</div>
+                                    <div class="leader">David Smith: 4 late surges</div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-item">
+                                <div class="metric-name">Lead Protection Rate</div>
+                                <div class="metric-leaders">
+                                    <div class="leader">Margaret Wilson: 89% (hold lead)</div>
+                                    <div class="leader">James Ruston: 84% (hold lead)</div>
+                                    <div class="leader">Michael Thompson: 81% (hold lead)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metric-category">
+                        <h3>Historical Patterns</h3>
+                        <div class="metric-list">
+                            <div class="metric-item">
+                                <div class="metric-name">Decade Performance</div>
+                                <div class="metric-leaders">
+                                    <div class="leader">2020s: Avg 6.8 tricks/round</div>
+                                    <div class="leader">2010s: Avg 6.5 tricks/round</div>
+                                    <div class="leader">2000s: Avg 6.3 tricks/round</div>
+                                    <div class="leader">1990s: Avg 6.1 tricks/round</div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-item">
+                                <div class="metric-name">Christmas Day Effects</div>
+                                <div class="metric-leaders">
+                                    <div class="leader">Morning Start: +3% performance</div>
+                                    <div class="leader">Post-Lunch: -2% performance</div>
+                                    <div class="leader">Evening Finish: +5% drama factor</div>
+                                </div>
+                            </div>
+                            
+                            <div class="metric-item">
+                                <div class="metric-name">Weather Correlation</div>
+                                <div class="metric-leaders">
+                                    <div class="leader">Snowy Christmas: +2% scores</div>
+                                    <div class="leader">Clear Weather: Standard performance</div>
+                                    <div class="leader">Rainy Day: +8% competitive edge</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="statistical-records-section">
+            <div class="container">
+                <h2 class="section-title">
+                    <span class="title-icon">🏆</span>
+                    Statistical Records & Milestones
+                </h2>
+                
+                <div class="records-showcase">
+                    <div class="record-highlight featured">
+                        <div class="record-icon">🎯</div>
+                        <div class="record-content">
+                            <h3>Perfect Game Record</h3>
+                            <div class="record-stat">13 Tricks in Single Round</div>
+                            <div class="record-details">
+                                <p><strong>Margaret Wilson</strong> - 2023 Championship, Round 7 (Spades)</p>
+                                <p>First perfect round in tournament history, achieved under maximum pressure</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="record-highlight">
+                        <div class="record-icon">🔥</div>
+                        <div class="record-content">
+                            <h3>Consecutive Wins Streak</h3>
+                            <div class="record-stat">23 Rounds</div>
+                            <div class="record-details">
+                                <p><strong>James Ruston Sr.</strong> - 1994-1995 Championships</p>
+                                <p>Legendary winning streak spanning two tournament years</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="record-highlight">
+                        <div class="record-icon">⚡</div>
+                        <div class="record-content">
+                            <h3>Fastest Tournament Completion</h3>
+                            <div class="record-stat">3h 42m</div>
+                            <div class="record-details">
+                                <p><strong>2020 COVID Tournament</strong> - Reduced field, focused play</p>
+                                <p>Most efficient tournament in 40-year history</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="record-highlight">
+                        <div class="record-icon">📊</div>
+                        <div class="record-content">
+                            <h3>Highest Single Tournament Score</h3>
+                            <div class="record-stat">142 Tricks</div>
+                            <div class="record-details">
+                                <p><strong>James Ruston Sr.</strong> - 1998 Championship</p>
+                                <p>Perfect strategy execution in peak performance year</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Advanced Analytics</h4>
+                    <p>Tournament Progress Charts</p>
+                    <p>Partnership Analysis</p>
+                    <p>Performance Metrics</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Statistical Tools</h4>
+                    <p>Player Comparisons</p>
+                    <p>Trend Analysis</p>
+                    <p>Predictive Modeling</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Data Sources</h4>
+                    <p>40 Years of Scorecards</p>
+                    <p>Historical Records</p>
+                    <p>Tournament Archives</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive. Advanced analytics since 1984.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../assets/js/tournament-engine.js"></script>
+    <script src="../assets/js/sample-data-generator.js"></script>
+    <script src="../assets/js/charts.js"></script>
+    <script src="../assets/js/main.js"></script>
+    
+    <script>
+        // Statistics page specific JavaScript
+        let charts = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeStatisticsPage();
+        });
+
+        async function initializeStatisticsPage() {
+            try {
+                // Initialize chart system
+                charts = new TournamentCharts();
+                
+                // Wait a moment for Chart.js to load
+                setTimeout(() => {
+                    createAllCharts();
+                }, 1000);
+
+                console.log('📊 Statistics page loaded successfully');
+
+            } catch (error) {
+                console.error('Error loading statistics page:', error);
+            }
+        }
+
+        function createAllCharts() {
+            try {
+                // Create tournament progress chart
+                const progressData = generateSampleTournamentData();
+                charts.createTournamentProgressChart('tournamentProgressChart', progressData);
+
+                // Create player radar chart
+                const playerData = {
+                    name: 'Margaret Wilson',
+                    strategy: 95,
+                    aggression: 88,
+                    consistency: 92,
+                    partnership: 90,
+                    pressure: 96,
+                    trumpAnalysis: 89
+                };
+                charts.createPlayerRadarChart('playerRadarChart', playerData);
+
+                // Create partnership chart
+                const partnershipData = [
+                    { partnership: 'Margaret & James', successRate: 73, gamesPlayed: 15, averageScore: 7.0 },
+                    { partnership: 'Emma & Tom', successRate: 65, gamesPlayed: 6, averageScore: 6.9 },
+                    { partnership: 'David & Sarah', successRate: 62, gamesPlayed: 12, averageScore: 6.5 },
+                    { partnership: 'Michael & Jane', successRate: 58, gamesPlayed: 8, averageScore: 6.2 },
+                    { partnership: 'Mary & John', successRate: 55, gamesPlayed: 10, averageScore: 6.0 }
+                ];
+                charts.createPartnershipChart('partnershipChart', partnershipData);
+
+                // Create performance distribution chart
+                const statsData = [
+                    { category: 'Tournament Wins', value: 8 },
+                    { category: 'Runner-up', value: 12 },
+                    { category: 'Top 3', value: 15 },
+                    { category: 'Mid-field', value: 18 },
+                    { category: 'Lower Half', value: 7 }
+                ];
+                charts.createTournamentStatsChart('statsChart', statsData);
+
+                // Create yearly trend chart
+                const yearlyData = {
+                    years: ['2019', '2020', '2021', '2022', '2023'],
+                    averagePerformance: [6.2, 6.8, 7.1, 6.9, 7.2],
+                    tournamentWins: [0, 0, 1, 1, 1]
+                };
+                charts.createYearlyTrendChart('yearlyTrendChart', yearlyData);
+
+                console.log('📈 All charts created successfully');
+
+            } catch (error) {
+                console.error('Error creating charts:', error);
+            }
+        }
+
+        function generateSampleTournamentData() {
+            return {
+                rounds: [
+                    { round: 1, tables: [{ partnerships: [{ players: ['Margaret Wilson', 'James Ruston'], tricks: 14 }] }] },
+                    { round: 2, tables: [{ partnerships: [{ players: ['Margaret Wilson', 'Emma Jones'], tricks: 13 }] }] }
+                ],
+                final_standings: [
+                    { player: 'Margaret Wilson', total_tricks: 112 },
+                    { player: 'James Ruston', total_tricks: 108 },
+                    { player: 'Emma Jones', total_tricks: 105 }
+                ]
+            };
+        }
+    </script>
+
+    <style>
+        /* Statistics page specific styles */
+        .stats-hero {
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+            color: white;
+            padding: var(--spacing-3xl) 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stats-hero::before {
+            content: '📊';
+            position: absolute;
+            top: 50%;
+            right: 5%;
+            transform: translateY(-50%);
+            font-size: 20rem;
+            opacity: 0.05;
+            z-index: 1;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }
+
+        .analytics-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: var(--spacing-sm) var(--spacing-xl);
+            border-radius: var(--border-radius-lg);
+            font-size: 0.875rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            margin-bottom: var(--spacing-lg);
+            display: inline-block;
+        }
+
+        .hero-title {
+            font-size: 4rem;
+            font-weight: 900;
+            margin-bottom: var(--spacing-md);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .tournament-progress-section {
+            padding: var(--spacing-3xl) 0;
+        }
+
+        .section-description {
+            text-align: center;
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-2xl);
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .chart-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: var(--spacing-2xl);
+            align-items: start;
+        }
+
+        .chart-wrapper {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-card);
+            height: 400px;
+            position: relative;
+        }
+
+        .chart-wrapper.small {
+            height: 300px;
+        }
+
+        .chart-insights {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-card);
+        }
+
+        .chart-insights h3 {
+            color: var(--primary);
+            margin-bottom: var(--spacing-lg);
+            font-size: 1.25rem;
+        }
+
+        .insights-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .insights-list li {
+            margin-bottom: var(--spacing-md);
+            padding-left: var(--spacing-lg);
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .insights-list li::before {
+            content: '💡';
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        .analytics-grid-section {
+            padding: var(--spacing-3xl) 0;
+            background: var(--bg-secondary);
+        }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: var(--spacing-2xl);
+        }
+
+        .analytics-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-card);
+            border: 2px solid var(--card-border);
+            transition: all 0.2s ease;
+        }
+
+        .analytics-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--primary);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            font-size: 1.125rem;
+            color: var(--text-primary);
+        }
+
+        .card-icon {
+            font-size: 1.5rem;
+        }
+
+        .chart-description {
+            margin-top: var(--spacing-md);
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .advanced-metrics-section {
+            padding: var(--spacing-3xl) 0;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-2xl);
+        }
+
+        .metric-category {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-card);
+        }
+
+        .metric-category h3 {
+            color: var(--primary);
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .metric-list {
+            display: grid;
+            gap: var(--spacing-lg);
+        }
+
+        .metric-item {
+            padding: var(--spacing-md);
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+        }
+
+        .metric-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .metric-leaders {
+            display: grid;
+            gap: var(--spacing-xs);
+        }
+
+        .leader {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            padding: var(--spacing-xs) 0;
+        }
+
+        .statistical-records-section {
+            padding: var(--spacing-3xl) 0;
+            background: var(--bg-secondary);
+        }
+
+        .records-showcase {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-xl);
+        }
+
+        .record-highlight {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-2xl);
+            box-shadow: var(--shadow-card);
+            border: 2px solid var(--card-border);
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .record-highlight:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .record-highlight.featured {
+            border-color: var(--gold);
+            background: linear-gradient(135deg, var(--card-bg) 0%, #fef3c7 100%);
+        }
+
+        .record-icon {
+            font-size: 4rem;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .record-stat {
+            font-size: 2.5rem;
+            font-weight: 900;
+            font-family: var(--font-primary);
+            color: var(--primary);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .record-details p {
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .record-details strong {
+            color: var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            
+            .chart-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .records-showcase {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</body>
+</html>
