@@ -210,7 +210,7 @@ class TournamentEngine {
         console.log('🎯 Using smart detection strategy...');
         
         // First, try common sheet names that might work
-        const commonNames = ['Players', 'WhistGame_2021', 'WhistGame_2022', 'WhistGame_2023', 'WhistGame_2024'];
+        const commonNames = ['Players', 'WhistGame_2020', 'WhistGame_2021', 'WhistGame_2022', 'WhistGame_2023', 'WhistGame_2024'];
         
         for (const name of commonNames) {
             try {
@@ -249,16 +249,14 @@ class TournamentEngine {
      */
     async detectSheetType(sheetId, sheet) {
         try {
-            // First, try name-based detection for efficiency
+            // First, try name-based detection for efficiency (but not for WhistGame_ sheets)
             if (sheet.name) {
-                if (sheet.name.startsWith('WhistGame_')) {
-                    console.log(`🎯 Sheet "${sheet.name}" detected as tournament (name pattern)`);
-                    return 'tournament';
-                }
-                if (sheet.name.toLowerCase().includes('players')) {
+                if (sheet.name.toLowerCase().includes('players') && !sheet.name.startsWith('WhistGame_')) {
                     console.log(`👥 Sheet "${sheet.name}" detected as players (name pattern)`);
                     return 'players';
                 }
+                // Don't auto-classify WhistGame_ sheets - need to examine content
+                // Some might be player rosters, others might be scorecard data
             }
             
             // Fallback to content analysis if name doesn't match patterns
@@ -295,23 +293,33 @@ class TournamentEngine {
             let headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
             
             // Check for players sheet characteristics
-            if (headers.includes('player_id') || headers.includes('id') || headers.includes('player name') || headers.includes('playername')) {
-                // Additional check: should not have tournament-specific columns
-                const hasTournamentColumns = headers.some(h => 
-                    h.includes('tricks') || h.includes('round') || h.includes('table') || h.includes('trump')
-                );
-                if (!hasTournamentColumns) {
-                    console.log(`👥 Sheet "${sheet.name}" detected as players (column analysis)`);
-                    return 'players';
-                }
+            const hasPlayerRosterColumns = (
+                (headers.includes('id') || headers.includes('player_id')) &&
+                (headers.includes('firstname') || headers.includes('lastname') || 
+                 headers.includes('player name') || headers.includes('playername'))
+            );
+            
+            // Check for tournament scorecard characteristics
+            const hasTournamentColumns = headers.some(h => 
+                h.includes('tricks') || h.includes('round') || h.includes('table') || 
+                h.includes('trump') || h.includes('tournament')
+            );
+            
+            // If it has player roster columns but NO tournament columns, it's a player roster
+            if (hasPlayerRosterColumns && !hasTournamentColumns) {
+                console.log(`👥 Sheet "${sheet.name}" detected as players (roster analysis)`);
+                return 'players';
             }
             
             // Check for tournament sheet characteristics
             if (headers.includes('tricks_won') || headers.includes('tricksWon') || 
                 headers.includes('round') || headers.includes('table') ||
                 headers.includes('trump') || headers.includes('partnership') ||
-                headers.includes('player_1') || headers.includes('player_2')) {
-                console.log(`🏆 Sheet "${sheet.name}" detected as tournament (column analysis)`);
+                headers.includes('player_1') || headers.includes('player_2') ||
+                headers.includes('player1') || headers.includes('player2') ||
+                headers.includes('opponent1') || headers.includes('opponent2') ||
+                headers.includes('tournament')) {
+                console.log(`🏆 Sheet "${sheet.name}" detected as tournament (scorecard analysis)`);
                 return 'tournament';
             }
             
