@@ -18,7 +18,8 @@
       "Bash(node:*)",
       "Bash(npx serve:*)",
       "Bash(grep:*)",
-      "WebFetch(domain:rustonwhistdrive.pages.dev)"
+      "WebFetch(domain:rustonwhistdrive.pages.dev)",
+      "Bash(npm install:*)"
     ],
     "deny": []
   }
