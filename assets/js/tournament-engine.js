@@ -111,7 +111,7 @@ class TournamentEngine {
             const playersSheet = sheets.find(s => s.name === 'Players');
             if (playersSheet) {
                 console.log('👥 Players sheet found, loading player data...');
-                await this.loadPlayersData(sheetId, playersSheet.gid);
+                await this.loadPlayersData(sheetId, playersSheet);
             } else {
                 console.log('⚠️  No Players sheet found. Will use player names directly from tournament data.');
                 this.playersLookup = new Map(); // Initialize empty lookup
@@ -123,7 +123,7 @@ class TournamentEngine {
             
             let totalScorecards = 0;
             for (const sheet of tournamentSheets) {
-                const count = await this.loadTournamentSheet(sheetId, sheet.gid, sheet.name);
+                const count = await this.loadTournamentSheet(sheetId, sheet, sheet.name);
                 totalScorecards += count;
             }
             
@@ -180,8 +180,38 @@ class TournamentEngine {
     async detectSheetsManually(sheetId) {
         const sheets = [];
         
-        // Try common patterns for tournament sheets (including GID 0)
-        const commonGids = ['0', '1', '2', '3', '4', '5'];
+        // Try known sheet names directly first
+        const knownSheets = [
+            { name: 'Players', types: ['players'] },
+            { name: 'WhistGame_2000', types: ['tournament'] },
+            { name: 'WhistGame_2001', types: ['tournament'] }
+        ];
+        
+        // Try accessing sheets by name using sheet name in URL
+        for (const knownSheet of knownSheets) {
+            try {
+                // Try accessing by sheet name (URL encoded)
+                const encodedName = encodeURIComponent(knownSheet.name);
+                const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodedName}`;
+                
+                console.log(`🔍 Trying to access sheet "${knownSheet.name}" by name...`);
+                const response = await fetch(csvUrl);
+                if (response.ok) {
+                    const csvData = await response.text();
+                    const lines = csvData.trim().split('\n');
+                    if (lines.length > 1) {
+                        console.log(`✅ Found sheet "${knownSheet.name}" by name`);
+                        sheets.push({ name: knownSheet.name, gid: `name:${knownSheet.name}`, url: csvUrl });
+                        continue;
+                    }
+                }
+            } catch (e) {
+                // Ignore errors for this method
+            }
+        }
+        
+        // Fallback: Try common GIDs for any remaining sheets
+        const commonGids = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
         for (const gid of commonGids) {
             try {
                 const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
@@ -192,13 +222,27 @@ class TournamentEngine {
                     if (lines.length > 1) {
                         const headers = lines[0].toLowerCase();
                         
-                        // Check if it's a Players sheet
+                        // Determine sheet type and name
+                        let sheetName = `Sheet_${gid}`;
                         if (headers.includes('firstname') && headers.includes('lastname')) {
-                            sheets.push({ name: 'Players', gid: gid });
+                            sheetName = 'Players';
+                        } else if (headers.includes('tournament') || headers.includes('round') || headers.includes('trump')) {
+                            // Try to determine tournament year from data
+                            if (lines.length > 1) {
+                                const firstDataRow = lines[1].split(',');
+                                const yearIndex = headers.split(',').findIndex(h => h.trim() === 'year');
+                                if (yearIndex >= 0 && firstDataRow[yearIndex]) {
+                                    const year = firstDataRow[yearIndex].trim();
+                                    sheetName = `WhistGame_${year}`;
+                                } else {
+                                    sheetName = `WhistGame_${gid}`;
+                                }
+                            }
                         }
-                        // Check if it's tournament data
-                        else if (headers.includes('tournament') || headers.includes('round') || headers.includes('trump')) {
-                            sheets.push({ name: `WhistGame_${gid}`, gid: gid });
+                        
+                        // Only add if we don't already have this sheet by name
+                        if (!sheets.find(s => s.name === sheetName)) {
+                            sheets.push({ name: sheetName, gid: gid, url: csvUrl });
                         }
                     }
                 }
@@ -207,16 +251,24 @@ class TournamentEngine {
             }
         }
         
+        console.log(`📋 Manual detection found ${sheets.length} sheets:`, sheets.map(s => s.name));
         return sheets;
     }
 
     /**
      * Load players data from Players sheet
      */
-    async loadPlayersData(sheetId, gid) {
+    async loadPlayersData(sheetId, sheetInfo) {
         try {
-            const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
-            console.log(`👥 Loading players data from GID: ${gid}`);
+            // Use custom URL if provided, otherwise construct from GID
+            let csvUrl;
+            if (sheetInfo.url) {
+                csvUrl = sheetInfo.url;
+            } else {
+                csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${sheetInfo.gid || sheetInfo}`;
+            }
+            
+            console.log(`👥 Loading players data from: ${sheetInfo.gid || sheetInfo}`);
             
             const response = await fetch(csvUrl);
             if (!response.ok) {
@@ -256,10 +308,17 @@ class TournamentEngine {
     /**
      * Load a specific tournament sheet
      */
-    async loadTournamentSheet(sheetId, gid, sheetName) {
+    async loadTournamentSheet(sheetId, sheetInfo, sheetName) {
         try {
-            const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
-            console.log(`🏆 Loading tournament data from ${sheetName} (GID: ${gid})`);
+            // Use custom URL if provided, otherwise construct from GID
+            let csvUrl;
+            if (sheetInfo.url) {
+                csvUrl = sheetInfo.url;
+            } else {
+                csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${sheetInfo.gid || sheetInfo}`;
+            }
+            
+            console.log(`🏆 Loading tournament data from ${sheetName} (${sheetInfo.gid || sheetInfo})`);
             
             const response = await fetch(csvUrl);
             if (!response.ok) {
