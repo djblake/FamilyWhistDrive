@@ -107,8 +107,22 @@ class TournamentEngine {
             const sheets = await this.getSheetsList(sheetId);
             console.log(`📋 Found ${sheets.length} sheets:`, sheets.map(s => s.name));
             
-            // Try to load players data if available
-            const playersSheet = sheets.find(s => s.name === 'Players');
+            // Auto-detect sheet types by examining their content
+            let playersSheet = null;
+            const tournamentSheets = [];
+            
+            for (const sheet of sheets) {
+                const sheetType = await this.detectSheetType(sheetId, sheet);
+                console.log(`🔍 Sheet "${sheet.name}" detected as: ${sheetType}`);
+                
+                if (sheetType === 'players') {
+                    playersSheet = sheet;
+                } else if (sheetType === 'tournament') {
+                    tournamentSheets.push(sheet);
+                }
+            }
+            
+            // Load players data if available
             if (playersSheet) {
                 console.log('👥 Players sheet found, loading player data...');
                 await this.loadPlayersData(sheetId, playersSheet);
@@ -117,8 +131,6 @@ class TournamentEngine {
                 this.playersLookup = new Map(); // Initialize empty lookup
             }
             
-            // Load all tournament sheets (those starting with "WhistGame_")
-            const tournamentSheets = sheets.filter(s => s.name.startsWith('WhistGame_'));
             console.log(`🏆 Found ${tournamentSheets.length} tournament sheets`);
             
             let totalScorecards = 0;
@@ -175,83 +187,149 @@ class TournamentEngine {
     }
 
     /**
+     * Detect the type of a sheet by examining its content
+     * @param {string} sheetId - The Google Sheets ID
+     * @param {object} sheet - Sheet information with name and gid
+     * @returns {string} - 'players', 'tournament', or 'unknown'
+     */
+    async detectSheetType(sheetId, sheet) {
+        try {
+            // Try to get the first few rows to examine headers
+            let csvUrl;
+            
+            // Try accessing by sheet name first
+            if (sheet.name) {
+                const encodedName = encodeURIComponent(sheet.name);
+                csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodedName}`;
+            } else if (sheet.gid) {
+                csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${sheet.gid}`;
+            } else {
+                return 'unknown';
+            }
+            
+            const response = await fetch(csvUrl);
+            if (!response.ok) {
+                console.warn(`Could not access sheet "${sheet.name}" for type detection`);
+                return 'unknown';
+            }
+            
+            const csvData = await response.text();
+            if (!csvData || csvData.trim().length === 0) {
+                return 'unknown';
+            }
+            
+            // Parse just the header row to check columns
+            const lines = csvData.split('\n');
+            if (lines.length < 1) {
+                return 'unknown';
+            }
+            
+            // Clean and parse the header row
+            let headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+            
+            // Check for players sheet characteristics
+            if (headers.includes('player_id') || headers.includes('id') || headers.includes('player name') || headers.includes('playername')) {
+                // Additional check: should not have tournament-specific columns
+                const hasTournamentColumns = headers.some(h => 
+                    h.includes('tricks') || h.includes('round') || h.includes('table') || h.includes('trump')
+                );
+                if (!hasTournamentColumns) {
+                    return 'players';
+                }
+            }
+            
+            // Check for tournament sheet characteristics
+            if (headers.includes('tricks_won') || headers.includes('tricksWon') || 
+                headers.includes('round') || headers.includes('table') ||
+                headers.includes('trump') || headers.includes('partnership') ||
+                headers.includes('player_1') || headers.includes('player_2')) {
+                return 'tournament';
+            }
+            
+            // If we have player columns and trick data, it's likely a tournament sheet
+            const hasPlayerColumns = headers.some(h => 
+                h.includes('player') || h.includes('partnership')
+            );
+            const hasTrickData = headers.some(h => 
+                h.includes('trick') || h.includes('score')
+            );
+            
+            if (hasPlayerColumns && hasTrickData) {
+                return 'tournament';
+            }
+            
+            console.log(`⚠️  Could not determine type for sheet "${sheet.name}" with headers:`, headers);
+            return 'unknown';
+            
+        } catch (error) {
+            console.warn(`Error detecting type for sheet "${sheet.name}":`, error);
+            return 'unknown';
+        }
+    }
+
+    /**
      * Fallback method to detect sheets manually
      */
     async detectSheetsManually(sheetId) {
         const sheets = [];
         
-        // Try known sheet names directly first
-        const knownSheets = [
-            { name: 'Players', types: ['players'] },
-            { name: 'WhistGame_2000', types: ['tournament'] },
-            { name: 'WhistGame_2001', types: ['tournament'] }
-        ];
+        console.log('🔍 Trying GID-based discovery for all sheets...');
         
-        // Try accessing sheets by name using sheet name in URL
-        for (const knownSheet of knownSheets) {
-            try {
-                // Try accessing by sheet name (URL encoded)
-                const encodedName = encodeURIComponent(knownSheet.name);
-                const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodedName}`;
-                
-                console.log(`🔍 Trying to access sheet "${knownSheet.name}" by name...`);
-                const response = await fetch(csvUrl);
-                if (response.ok) {
-                    const csvData = await response.text();
-                    const lines = csvData.trim().split('\n');
-                    if (lines.length > 1) {
-                        console.log(`✅ Found sheet "${knownSheet.name}" by name`);
-                        sheets.push({ name: knownSheet.name, gid: `name:${knownSheet.name}`, url: csvUrl });
-                        continue;
-                    }
-                }
-            } catch (e) {
-                // Ignore errors for this method
-            }
-        }
+        // Try a range of GIDs to discover all sheets
+        const maxGid = 20; // Try first 20 possible GIDs
         
-        // Fallback: Try common GIDs for any remaining sheets
-        const commonGids = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
-        for (const gid of commonGids) {
+        for (let gid = 0; gid <= maxGid; gid++) {
             try {
                 const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
                 const response = await fetch(csvUrl);
+                
                 if (response.ok) {
                     const csvData = await response.text();
-                    const lines = csvData.trim().split('\n');
-                    if (lines.length > 1) {
-                        const headers = lines[0].toLowerCase();
-                        
-                        // Determine sheet type and name
-                        let sheetName = `Sheet_${gid}`;
-                        if (headers.includes('firstname') && headers.includes('lastname')) {
-                            sheetName = 'Players';
-                        } else if (headers.includes('tournament') || headers.includes('round') || headers.includes('trump')) {
-                            // Try to determine tournament year from data
-                            if (lines.length > 1) {
-                                const firstDataRow = lines[1].split(',');
-                                const yearIndex = headers.split(',').findIndex(h => h.trim() === 'year');
-                                if (yearIndex >= 0 && firstDataRow[yearIndex]) {
-                                    const year = firstDataRow[yearIndex].trim();
-                                    sheetName = `WhistGame_${year}`;
+                    
+                    // Check if this is actual sheet content (not an error page)
+                    if (csvData && csvData.trim().length > 0 && !csvData.includes('<!DOCTYPE html>')) {
+                        const lines = csvData.trim().split('\n');
+                        if (lines.length > 0) {
+                            // Try to determine a meaningful name from the content
+                            const headers = lines[0].toLowerCase();
+                            let sheetName = `Sheet_${gid}`;
+                            
+                            // Look for clues about the sheet type in headers
+                            if (headers.includes('firstname') || headers.includes('lastname') || 
+                                headers.includes('player_id') || headers.includes('player name')) {
+                                sheetName = `Players_${gid}`;
+                            } else if (headers.includes('tricks') || headers.includes('round') || 
+                                     headers.includes('table') || headers.includes('trump') ||
+                                     headers.includes('partnership')) {
+                                // Try to extract year from data if possible
+                                if (lines.length > 1) {
+                                    const firstDataRow = lines[1];
+                                    // Look for 4-digit years in the data
+                                    const yearMatch = firstDataRow.match(/20\d{2}/);
+                                    if (yearMatch) {
+                                        sheetName = `Tournament_${yearMatch[0]}_${gid}`;
+                                    } else {
+                                        sheetName = `Tournament_${gid}`;
+                                    }
                                 } else {
-                                    sheetName = `WhistGame_${gid}`;
+                                    sheetName = `Tournament_${gid}`;
                                 }
                             }
-                        }
-                        
-                        // Only add if we don't already have this sheet by name
-                        if (!sheets.find(s => s.name === sheetName)) {
-                            sheets.push({ name: sheetName, gid: gid, url: csvUrl });
+                            
+                            console.log(`✅ Found sheet at GID ${gid} (named: ${sheetName})`);
+                            sheets.push({
+                                name: sheetName,
+                                gid: gid
+                            });
                         }
                     }
                 }
-            } catch (e) {
-                // Ignore errors, sheet probably doesn't exist
+            } catch (error) {
+                // GID doesn't exist or is not accessible, continue silently
             }
         }
         
-        console.log(`📋 Manual detection found ${sheets.length} sheets:`, sheets.map(s => s.name));
+        console.log(`📋 Manual discovery found ${sheets.length} sheets`);
         return sheets;
     }
 
