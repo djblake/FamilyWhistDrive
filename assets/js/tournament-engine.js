@@ -220,10 +220,21 @@ class TournamentEngine {
                 
                 if (response.ok) {
                     const csvData = await response.text();
+                    console.log(`🔍 DEBUG: Response for ${name}:`, {
+                        status: response.status,
+                        contentLength: csvData.length,
+                        firstLine: csvData.split('\n')[0],
+                        totalLines: csvData.split('\n').length
+                    });
+                    
                     if (csvData && csvData.trim().length > 0 && !csvData.includes('<!DOCTYPE html>')) {
                         console.log(`✅ Found sheet by name: ${name}`);
                         sheets.push({ name: name, gid: `name:${name}` });
+                    } else {
+                        console.log(`❌ Invalid content for ${name}: likely doesn't exist`);
                     }
+                } else {
+                    console.log(`❌ Failed to fetch ${name}: ${response.status} ${response.statusText}`);
                 }
             } catch (error) {
                 // Continue to next name
@@ -291,6 +302,12 @@ class TournamentEngine {
             
             // Clean and parse the header row
             let headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+            
+            console.log(`🔍 DEBUG: Sheet "${sheet.name}" content analysis:`, {
+                totalLines: lines.length,
+                headers: headers,
+                firstDataRow: lines.length > 1 ? lines[1] : 'No data rows'
+            });
             
             // Check for players sheet characteristics
             const hasPlayerRosterColumns = (
