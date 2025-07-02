@@ -158,32 +158,87 @@ class TournamentEngine {
      * Get list of all sheets in the Google Sheets document
      */
     async getSheetsList(sheetId) {
+        // Try multiple methods to get the sheet list
+        
+        // Method 1: Google Sheets API feed
         try {
-            // Use the Sheets API feed to get sheet information
             const feedUrl = `https://spreadsheets.google.com/feeds/worksheets/${sheetId}/public/basic?alt=json`;
             const response = await fetch(feedUrl);
             
-            if (!response.ok) {
-                // Fallback: try to detect sheets manually by attempting common GIDs
-                console.warn('Could not fetch sheet list, using fallback detection');
-                return await this.detectSheetsManually(sheetId);
+            if (response.ok) {
+                const data = await response.json();
+                const sheets = data.feed.entry.map(entry => {
+                    const id = entry.id.$t;
+                    const gid = id.substring(id.lastIndexOf('/') + 1);
+                    return {
+                        name: entry.title.$t,
+                        gid: gid
+                    };
+                });
+                
+                console.log(`✅ Successfully retrieved ${sheets.length} sheets via API feed`);
+                return sheets;
             }
-            
-            const data = await response.json();
-            const sheets = data.feed.entry.map(entry => {
-                const id = entry.id.$t;
-                const gid = id.substring(id.lastIndexOf('/') + 1);
-                return {
-                    name: entry.title.$t,
-                    gid: gid
-                };
-            });
-            
-            return sheets;
         } catch (error) {
-            console.warn('Error getting sheets list, using manual detection:', error);
-            return await this.detectSheetsManually(sheetId);
+            console.warn('Method 1 (API feed) failed:', error.message);
         }
+        
+        // Method 2: Try to access GID 0 to see if sheet is accessible, then scan more intelligently
+        try {
+            const testUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=0`;
+            const testResponse = await fetch(testUrl);
+            
+            if (testResponse.ok) {
+                console.log('✅ Sheet is accessible, using smart GID detection');
+                return await this.detectSheetsSmartly(sheetId);
+            }
+        } catch (error) {
+            console.warn('Method 2 (GID test) failed:', error.message);
+        }
+        
+        // Method 3: Fallback to manual detection
+        console.warn('All methods failed, using fallback detection');
+        return await this.detectSheetsManually(sheetId);
+    }
+
+    /**
+     * Smart sheet detection - try common patterns first
+     */
+    async detectSheetsSmartly(sheetId) {
+        const sheets = [];
+        
+        console.log('🎯 Using smart detection strategy...');
+        
+        // First, try common sheet names that might work
+        const commonNames = ['Players', 'WhistGame_2021', 'WhistGame_2022', 'WhistGame_2023', 'WhistGame_2024'];
+        
+        for (const name of commonNames) {
+            try {
+                const encodedName = encodeURIComponent(name);
+                const csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodedName}`;
+                const response = await fetch(csvUrl);
+                
+                if (response.ok) {
+                    const csvData = await response.text();
+                    if (csvData && csvData.trim().length > 0 && !csvData.includes('<!DOCTYPE html>')) {
+                        console.log(`✅ Found sheet by name: ${name}`);
+                        sheets.push({ name: name, gid: `name:${name}` });
+                    }
+                }
+            } catch (error) {
+                // Continue to next name
+            }
+        }
+        
+        // If we found sheets by name, return them
+        if (sheets.length > 0) {
+            console.log(`📋 Smart detection found ${sheets.length} sheets by name`);
+            return sheets;
+        }
+        
+        // If no names worked, fall back to GID scanning
+        console.log('📋 No sheets found by name, falling back to GID scanning');
+        return await this.detectSheetsManually(sheetId);
     }
 
     /**
@@ -290,8 +345,10 @@ class TournamentEngine {
         
         console.log('🔍 Trying GID-based discovery for all sheets...');
         
-        // Try a range of GIDs to discover all sheets
-        const maxGid = 80; // Try first 80 possible GIDs to handle 40+ years of tournaments
+        // Try a reasonable range of GIDs with early termination
+        const maxGid = 50; // Upper limit for safety
+        let consecutiveFailures = 0;
+        const maxConsecutiveFailures = 5; // Stop after 5 consecutive failures
         
         for (let gid = 0; gid <= maxGid; gid++) {
             try {
@@ -305,6 +362,9 @@ class TournamentEngine {
                     if (csvData && csvData.trim().length > 0 && !csvData.includes('<!DOCTYPE html>')) {
                         const lines = csvData.trim().split('\n');
                         if (lines.length > 0) {
+                            // Reset consecutive failures counter on success
+                            consecutiveFailures = 0;
+                            
                             // Try to determine a meaningful name from the content
                             const headers = lines[0].toLowerCase();
                             let sheetName = `Sheet_${gid}`;
@@ -322,12 +382,12 @@ class TournamentEngine {
                                     // Look for 4-digit years in the data
                                     const yearMatch = firstDataRow.match(/20\d{2}/);
                                     if (yearMatch) {
-                                        sheetName = `Tournament_${yearMatch[0]}_${gid}`;
+                                        sheetName = `WhistGame_${yearMatch[0]}`;
                                     } else {
-                                        sheetName = `Tournament_${gid}`;
+                                        sheetName = `WhistGame_${gid}`;
                                     }
                                 } else {
-                                    sheetName = `Tournament_${gid}`;
+                                    sheetName = `WhistGame_${gid}`;
                                 }
                             }
                             
@@ -336,11 +396,41 @@ class TournamentEngine {
                                 name: sheetName,
                                 gid: gid
                             });
+                        } else {
+                            consecutiveFailures++;
+                        }
+                    } else {
+                        consecutiveFailures++;
+                    }
+                } else {
+                    // 400/404 errors indicate non-existent sheets
+                    consecutiveFailures++;
+                    if (response.status === 400 || response.status === 404) {
+                        // Don't log every 400/404 error to avoid spam
+                        if (gid <= 10) {
+                            console.log(`⚠️  GID ${gid} not found (${response.status})`);
                         }
                     }
                 }
+                
+                // Early termination if we hit too many consecutive failures
+                if (consecutiveFailures >= maxConsecutiveFailures) {
+                    console.log(`🛑 Stopping discovery after ${maxConsecutiveFailures} consecutive failures at GID ${gid}`);
+                    break;
+                }
+                
             } catch (error) {
-                // GID doesn't exist or is not accessible, continue silently
+                consecutiveFailures++;
+                // Only log errors for the first few GIDs to avoid spam
+                if (gid <= 10) {
+                    console.log(`❌ Error accessing GID ${gid}:`, error.message);
+                }
+                
+                // Early termination on consecutive errors
+                if (consecutiveFailures >= maxConsecutiveFailures) {
+                    console.log(`🛑 Stopping discovery after ${maxConsecutiveFailures} consecutive errors at GID ${gid}`);
+                    break;
+                }
             }
         }
         
