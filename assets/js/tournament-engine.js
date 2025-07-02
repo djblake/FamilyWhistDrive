@@ -211,6 +211,7 @@ class TournamentEngine {
         
         // First, try common sheet names that might work
         const commonNames = ['Players', 'WhistGame_2020', 'WhistGame_2021', 'WhistGame_2022', 'WhistGame_2023', 'WhistGame_2024'];
+        const seenContent = new Set(); // Track content to detect Google Sheets fallback behavior
         
         for (const name of commonNames) {
             try {
@@ -228,7 +229,23 @@ class TournamentEngine {
                     });
                     
                     if (csvData && csvData.trim().length > 0 && !csvData.includes('<!DOCTYPE html>')) {
-                        console.log(`✅ Found sheet by name: ${name}`);
+                        // Check for "not found" indicator in the first sheet fallback
+                        const firstLine = csvData.split('\n')[0].toLowerCase();
+                        if (firstLine.includes('not found') || firstLine.includes('invalid') || firstLine.includes('sheet not found')) {
+                            console.log(`⚠️  Sheet ${name} returned "not found" indicator - sheet doesn't exist`);
+                            continue; // Skip this non-existent sheet
+                        }
+                        
+                        // Create a content signature to detect other fallback patterns
+                        const contentSignature = csvData.substring(0, 200); // First 200 chars
+                        
+                        if (seenContent.has(contentSignature)) {
+                            console.log(`⚠️  Sheet ${name} returns same content as previous sheet - likely Google Sheets fallback behavior`);
+                            continue; // Skip this duplicate/fallback content
+                        }
+                        
+                        seenContent.add(contentSignature);
+                        console.log(`✅ Found unique sheet by name: ${name}`);
                         sheets.push({ name: name, gid: `name:${name}` });
                     } else {
                         console.log(`❌ Invalid content for ${name}: likely doesn't exist`);
