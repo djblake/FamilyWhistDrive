@@ -1136,13 +1136,36 @@ class TournamentEngine {
         const sortedTables = Array.from(tables.entries()).sort((a, b) => a[0] - b[0]);
         
         for (const [tableNum, tableCards] of sortedTables) {
+            const partnerships = [];
+            
+            // Each scorecard represents one game with two partnerships
+            // We need to create both partnerships from each scorecard row
+            for (const card of tableCards) {
+                const player1 = card.Player1Name || card.Player1;
+                const player2 = card.Player2Name || card.Player2;
+                const opponent1 = card.Opponent1Name || card.Opponent1;
+                const opponent2 = card.Opponent2Name || card.Opponent2;
+                const tricksWon = parseInt(card.Tricks_Won);
+                const opponentTricks = parseInt(card.Opponent_Tricks || (13 - tricksWon));
+                
+                // Partnership A: Player1 + Player2
+                partnerships.push({
+                    players: [player1, player2],
+                    tricks: tricksWon,
+                    opponents: [opponent1, opponent2]
+                });
+                
+                // Partnership B: Opponent1 + Opponent2  
+                partnerships.push({
+                    players: [opponent1, opponent2],
+                    tricks: opponentTricks,
+                    opponents: [player1, player2]
+                });
+            }
+            
             const tableData = {
                 table: tableNum,
-                partnerships: tableCards.map(card => ({
-                    players: [card.Player1Name || card.Player1, card.Player2Name || card.Player2],
-                    tricks: parseInt(card.Tricks_Won),
-                    opponents: [card.Opponent1Name || card.Opponent1, card.Opponent2Name || card.Opponent2]
-                }))
+                partnerships: partnerships
             };
             
             processedTables.push(tableData);
