@@ -182,9 +182,8 @@
                     throw new Error(`Tournament for year ${params.year} not found`);
                 }
 
-                const playerStanding = tournament.final_standings.find(
-                    standing => standing.player.toLowerCase() === params.player.toLowerCase()
-                );
+                // Use the new method to get individual player data (handles partnerships)
+                const playerStanding = engine.getIndividualPlayerData(tournament, params.player);
 
                 if (!playerStanding) {
                     throw new Error(`Player ${params.player} not found in ${params.year} tournament`);
@@ -211,7 +210,13 @@
 
             // Update player header
             document.getElementById('player-name').textContent = playerName;
-            document.getElementById('tournament-context').textContent = `${tournament.name} • ${tournament.year}`;
+            
+            // Show partnership information if applicable
+            let contextText = `${tournament.name} • ${tournament.year}`;
+            if (playerStanding.is_partnership_member) {
+                contextText += ` • Partnership: ${playerStanding.partnership_name}`;
+            }
+            document.getElementById('tournament-context').textContent = contextText;
             
             // Update back link  
             document.getElementById('back-to-tournament').href = `../tournaments/#${params.year}`;
@@ -223,8 +228,13 @@
                            `#${playerStanding.position}`;
             
             document.getElementById('player-rank').textContent = rankText;
-            document.getElementById('performance-summary').textContent = 
-                `${playerStanding.total_tricks} tricks in ${playerStanding.rounds_played} rounds`;
+            
+            // Update performance summary with partnership info
+            let performanceText = `${playerStanding.total_tricks} tricks in ${playerStanding.rounds_played} rounds`;
+            if (playerStanding.is_partnership_member) {
+                performanceText += ` (as partnership)`;
+            }
+            document.getElementById('performance-summary').textContent = performanceText;
 
             // Update summary stats
             document.getElementById('total-tricks').textContent = playerStanding.total_tricks;
@@ -246,12 +256,35 @@
             for (const round of tournament.rounds) {
                 for (const table of round.tables) {
                     for (const partnership of table.partnerships) {
+                        // Check if player is directly in partnership or part of a partnership name
+                        let playerMatch = false;
+                        let actualPartnership = partnership;
+                        let partnerName = null;
+                        
                         if (partnership.players.includes(playerName)) {
+                            // Direct match
+                            playerMatch = true;
+                            partnerName = partnership.players.find(p => p !== playerName);
+                        } else {
+                            // Check if player is part of a partnership name (e.g., "Paul + Marci")
+                            for (const partnershipPlayer of partnership.players) {
+                                if (partnershipPlayer.includes('+')) {
+                                    const partnershipMembers = partnershipPlayer.split('+').map(name => name.trim());
+                                    if (partnershipMembers.some(member => member.toLowerCase() === playerName.toLowerCase())) {
+                                        playerMatch = true;
+                                        partnerName = partnershipMembers.filter(member => member.toLowerCase() !== playerName.toLowerCase()).join(' + ');
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (playerMatch) {
                             playerRounds.push({
                                 round: round.round,
                                 trump: round.trump_suit,
                                 table: table.table,
-                                partner: partnership.players.find(p => p !== playerName),
+                                partner: partnerName || partnership.players.find(p => p !== playerName) || 'Partnership',
                                 opponents: partnership.opponents,
                                 tricks: partnership.tricks,
                                 opponentTricks: 13 - partnership.tricks,

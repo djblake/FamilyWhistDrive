@@ -1191,7 +1191,8 @@ class TournamentEngine {
     }
 
     /**
-     * Update cumulative player scores with shared hand support
+     * Update cumulative player scores with partnership support
+     * Creates both partnership entries and individual player tracking
      */
     updatePlayerScores(playerScores, roundData) {
         for (const table of roundData.tables) {
@@ -1199,9 +1200,54 @@ class TournamentEngine {
                 for (const playerName of partnership.players) {
                     const parsedPlayer = this.parseSharedHand(playerName);
                     
-                    for (const actualPlayer of parsedPlayer.players) {
-                        if (!playerScores.has(actualPlayer)) {
-                            playerScores.set(actualPlayer, { 
+                    if (parsedPlayer.isShared) {
+                        // For partnerships, create a single entry with the full partnership name
+                        if (!playerScores.has(playerName)) {
+                            playerScores.set(playerName, { 
+                                total_tricks: 0, 
+                                rounds_played: 0,
+                                individual_tricks: 0,
+                                individual_rounds: 0,
+                                shared_tricks: 0,
+                                shared_rounds: 0,
+                                is_partnership: true,
+                                partnership_players: parsedPlayer.players
+                            });
+                        }
+                        
+                        const partnershipData = playerScores.get(playerName);
+                        partnershipData.total_tricks += partnership.tricks;
+                        partnershipData.shared_tricks += partnership.tricks;
+                        partnershipData.shared_rounds += 1;
+                        partnershipData.rounds_played += 1;
+                        
+                        // Also track individual participation for personal scorecards
+                        for (const actualPlayer of parsedPlayer.players) {
+                            const individualKey = `__individual_${actualPlayer}`;
+                            if (!playerScores.has(individualKey)) {
+                                playerScores.set(individualKey, { 
+                                    total_tricks: 0, 
+                                    rounds_played: 0,
+                                    individual_tricks: 0,
+                                    individual_rounds: 0,
+                                    shared_tricks: 0,
+                                    shared_rounds: 0,
+                                    is_individual_tracker: true,
+                                    actual_player_name: actualPlayer
+                                });
+                            }
+                            
+                            const individualData = playerScores.get(individualKey);
+                            const splitTricks = partnership.tricks / parsedPlayer.players.length;
+                            individualData.total_tricks += partnership.tricks; // Full credit for averages
+                            individualData.shared_tricks += splitTricks; // Split credit for sums
+                            individualData.shared_rounds += 1;
+                            individualData.rounds_played += 1;
+                        }
+                    } else {
+                        // Individual player
+                        if (!playerScores.has(playerName)) {
+                            playerScores.set(playerName, { 
                                 total_tricks: 0, 
                                 rounds_played: 0,
                                 individual_tricks: 0,
@@ -1211,20 +1257,10 @@ class TournamentEngine {
                             });
                         }
                         
-                        const playerData = playerScores.get(actualPlayer);
-                        
-                        if (parsedPlayer.isShared) {
-                            // Split tricks equally among shared players
-                            const splitTricks = partnership.tricks / parsedPlayer.players.length;
-                            playerData.total_tricks += partnership.tricks; // Full credit for averages
-                            playerData.shared_tricks += splitTricks; // Split credit for sums
-                            playerData.shared_rounds += 1;
-                        } else {
-                            playerData.total_tricks += partnership.tricks;
-                            playerData.individual_tricks += partnership.tricks;
-                            playerData.individual_rounds += 1;
-                        }
-                        
+                        const playerData = playerScores.get(playerName);
+                        playerData.total_tricks += partnership.tricks;
+                        playerData.individual_tricks += partnership.tricks;
+                        playerData.individual_rounds += 1;
                         playerData.rounds_played += 1;
                     }
                 }
@@ -1234,11 +1270,17 @@ class TournamentEngine {
 
     /**
      * Calculate final tournament standings
+     * Only includes actual tournament entries (partnerships and individuals), not individual trackers
      */
     calculateFinalStandings(playerScores) {
         const standings = [];
         
         for (const [player, data] of playerScores) {
+            // Skip individual tracker entries (these are for personal scorecards only)
+            if (data.is_individual_tracker) {
+                continue;
+            }
+            
             // Use combined tricks for tournament standings (individual + split shared)
             const combinedTricks = data.individual_tricks + data.shared_tricks;
             
@@ -1250,7 +1292,9 @@ class TournamentEngine {
                 individual_tricks: data.individual_tricks || 0,
                 shared_tricks: data.shared_tricks || 0,
                 individual_rounds: data.individual_rounds || 0,
-                shared_rounds: data.shared_rounds || 0
+                shared_rounds: data.shared_rounds || 0,
+                is_partnership: data.is_partnership || false,
+                partnership_players: data.partnership_players || [player]
             });
         }
         
@@ -1347,6 +1391,49 @@ class TournamentEngine {
             data.individual.average_tricks = data.individual.total_rounds > 0 ? 
                 (data.individual.total_tricks / data.individual.total_rounds).toFixed(2) : 0;
         }
+    }
+
+    /**
+     * Get individual player data from a tournament (for personal scorecards)
+     * This looks for both direct entries and partnership participation
+     */
+    getIndividualPlayerData(tournament, playerName) {
+        // First check if they have a direct entry
+        let playerStanding = tournament.final_standings.find(
+            standing => standing.player.toLowerCase() === playerName.toLowerCase()
+        );
+        
+        if (playerStanding) {
+            return playerStanding;
+        }
+        
+        // Check if they're part of a partnership
+        for (const standing of tournament.final_standings) {
+            if (standing.is_partnership && standing.partnership_players) {
+                const partnershipMatch = standing.partnership_players.find(
+                    partner => partner.toLowerCase() === playerName.toLowerCase()
+                );
+                if (partnershipMatch) {
+                    // Create individual data based on partnership performance
+                    return {
+                        player: playerName,
+                        total_tricks: standing.total_tricks, // Full partnership tricks for display
+                        rounds_played: standing.rounds_played,
+                        average_tricks: standing.average_tricks,
+                        individual_tricks: 0,
+                        shared_tricks: standing.shared_tricks,
+                        individual_rounds: 0,
+                        shared_rounds: standing.shared_rounds,
+                        position: standing.position,
+                        is_partnership_member: true,
+                        partnership_name: standing.player,
+                        partnership_players: standing.partnership_players
+                    };
+                }
+            }
+        }
+        
+        return null;
     }
 
     /**
