@@ -187,14 +187,26 @@ class TournamentEngine {
     }
 
     /**
-     * Detect the type of a sheet by examining its content
+     * Detect the type of a sheet by examining its name and content
      * @param {string} sheetId - The Google Sheets ID
      * @param {object} sheet - Sheet information with name and gid
      * @returns {string} - 'players', 'tournament', or 'unknown'
      */
     async detectSheetType(sheetId, sheet) {
         try {
-            // Try to get the first few rows to examine headers
+            // First, try name-based detection for efficiency
+            if (sheet.name) {
+                if (sheet.name.startsWith('WhistGame_')) {
+                    console.log(`🎯 Sheet "${sheet.name}" detected as tournament (name pattern)`);
+                    return 'tournament';
+                }
+                if (sheet.name.toLowerCase().includes('players')) {
+                    console.log(`👥 Sheet "${sheet.name}" detected as players (name pattern)`);
+                    return 'players';
+                }
+            }
+            
+            // Fallback to content analysis if name doesn't match patterns
             let csvUrl;
             
             // Try accessing by sheet name first
@@ -234,6 +246,7 @@ class TournamentEngine {
                     h.includes('tricks') || h.includes('round') || h.includes('table') || h.includes('trump')
                 );
                 if (!hasTournamentColumns) {
+                    console.log(`👥 Sheet "${sheet.name}" detected as players (column analysis)`);
                     return 'players';
                 }
             }
@@ -243,6 +256,7 @@ class TournamentEngine {
                 headers.includes('round') || headers.includes('table') ||
                 headers.includes('trump') || headers.includes('partnership') ||
                 headers.includes('player_1') || headers.includes('player_2')) {
+                console.log(`🏆 Sheet "${sheet.name}" detected as tournament (column analysis)`);
                 return 'tournament';
             }
             
@@ -255,6 +269,7 @@ class TournamentEngine {
             );
             
             if (hasPlayerColumns && hasTrickData) {
+                console.log(`🏆 Sheet "${sheet.name}" detected as tournament (pattern analysis)`);
                 return 'tournament';
             }
             
@@ -276,7 +291,7 @@ class TournamentEngine {
         console.log('🔍 Trying GID-based discovery for all sheets...');
         
         // Try a range of GIDs to discover all sheets
-        const maxGid = 20; // Try first 20 possible GIDs
+        const maxGid = 80; // Try first 80 possible GIDs to handle 40+ years of tournaments
         
         for (let gid = 0; gid <= maxGid; gid++) {
             try {
