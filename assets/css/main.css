@@ -5,38 +5,43 @@
 
 /* CSS Custom Properties */
 :root {
-    /* New Color Palette */
-    --deep-teal: #071E22;      /* Dark base */
-    --teal-primary: #1D7874;   /* Primary teal */
-    --teal-light: #679289;     /* Light teal */
-    --warm-cream: #F4C095;     /* Warm accent */
-    --coral-red: #EE2E31;      /* Bold accent */
+    /* Classic Card Game Palette */
+    --card-black: #1a1a1a;        /* Deep black for suits and text */
+    --card-red: #dc2626;          /* Classic playing card red */
+    --poker-green: #0f2419;       /* Dark poker table green */
+    --poker-green-light: #1e4d2b; /* Lighter poker green */
+    --championship-gold: #fbbf24; /* Gold for winners */
+    --silver-gray: #9ca3af;       /* Silver accents */
+    --cream-white: #fefefe;       /* Card background */
     
     /* Card Theme Colors */
-    --red-suit: #EE2E31;
-    --black-suit: #071E22;
-    --card-bg: #ffffff;
-    --card-border: #679289;
+    --red-suit: #dc2626;          /* Classic red for visibility */
+    --black-suit: #f8fafc;        /* Soft white for black suits */
+    --card-bg: #fefefe;           /* Warm white card backgrounds */
+    --card-border: #22c55e;       /* Harmonious green borders */
     
     /* Championship Colors */
-    --gold: #F4C095;
-    --silver: #679289;
-    --bronze: #1D7874;
-    --champion-crown: #F4C095;
+    --gold: #d4af37;              /* Muted gold */
+    --silver: #cbd5e1;            /* Warm silver */
+    --bronze: #a16207;            /* Warm bronze */
+    --champion-crown: #d4af37;    /* Consistent gold */
     
     /* Base Colors */
-    --primary: #1D7874;
-    --primary-dark: #071E22;
-    --secondary: #679289;
-    --accent: #EE2E31;
-    --text-primary: #071E22;
-    --text-secondary: #1D7874;
-    --text-muted: #679289;
-    --bg-primary: #ffffff;
-    --bg-secondary: #f8f9fa;
-    --bg-accent: rgba(103, 146, 137, 0.1);
-    --border: #679289;
-    --border-light: rgba(103, 146, 137, 0.2);
+    --primary: #d4af37;           /* Muted gold for accents */
+    --primary-dark: #0a1a0f;      /* Very dark green instead of black */
+    --secondary: #22c55e;         /* Softer green for highlights */
+    --accent: #dc2626;            /* Softer red for important elements */
+    --text-primary: #f8fafc;      /* Soft white text for dark backgrounds */
+    --text-secondary: #cbd5e1;    /* Warm light gray text for dark backgrounds */
+    --text-muted: #94a3b8;        /* Muted warm gray for dark backgrounds */
+    --text-primary-dark: #1a1a1a; /* Dark text for light backgrounds */
+    --text-secondary-dark: #4b5563; /* Gray text for light backgrounds */
+    --text-muted-dark: #6b7280;   /* Muted gray for light backgrounds */
+    --bg-primary: #0f2419;        /* Poker green main background */
+    --bg-secondary: #1a3a28;      /* Medium poker green */
+    --bg-accent: #245239;         /* Lighter warm green */
+    --border: #22c55e;            /* Softer green borders */
+    --border-light: #16a34a;      /* Medium green borders */
     
     /* Typography */
     --font-primary: 'Playfair Display', serif;
@@ -162,7 +167,7 @@ a:hover {
 
 /* Header */
 .header {
-    background: linear-gradient(135deg, var(--card-bg) 0%, var(--bg-secondary) 100%);
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-accent) 100%);
     border-bottom: 3px solid var(--gold);
     box-shadow: var(--shadow-lg);
     position: sticky;
@@ -174,8 +179,8 @@ a:hover {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: var(--spacing-lg) 0;
-    gap: var(--spacing-lg);
+    padding: var(--spacing-sm) 0;
+    gap: var(--spacing-md);
 }
 
 @media (min-width: 768px) {
@@ -192,9 +197,18 @@ a:hover {
 
 .card-suits {
     font-size: 1.5rem;
-    color: var(--red-suit);
     margin-bottom: var(--spacing-sm);
     letter-spacing: 0.5rem;
+}
+
+.card-suits .heart,
+.card-suits .diamond {
+    color: var(--red-suit);
+}
+
+.card-suits .club,
+.card-suits .spade {
+    color: var(--black-suit);
 }
 
 .site-title {
@@ -262,7 +276,7 @@ a:hover {
 
 /* Hero Section */
 .hero-section {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--primary-dark) 100%);
     color: white;
     padding: var(--spacing-3xl) 0;
     text-align: center;
@@ -363,7 +377,7 @@ a:hover {
     transform: translateX(-50%);
     width: 100px;
     height: 4px;
-    background: linear-gradient(90deg, var(--gold) 0%, var(--primary) 100%);
+    background: linear-gradient(90deg, transparent 0%, var(--gold) 50%, transparent 100%);
     border-radius: 2px;
 }
 
@@ -376,7 +390,7 @@ a:hover {
 .champion-card {
     max-width: 600px;
     margin: 0 auto;
-    background: linear-gradient(135deg, var(--gold) 0%, #f59e0b 100%);
+    background: linear-gradient(135deg, var(--gold) 0%, var(--bronze) 100%);
     color: white;
     padding: var(--spacing-2xl);
     border-radius: var(--border-radius-xl);
@@ -473,7 +487,7 @@ a:hover {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, var(--red-suit) 0%, var(--black-suit) 100%);
+    background: linear-gradient(90deg, var(--gold) 0%, var(--gold) 30%, var(--secondary) 100%);
     border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
 }
 
@@ -484,7 +498,7 @@ a:hover {
 
 .quick-stat-card h3 {
     font-size: 1.125rem;
-    color: var(--text-secondary);
+    color: var(--text-primary-dark);
     margin-bottom: var(--spacing-md);
     text-transform: uppercase;
     font-weight: 600;
@@ -501,7 +515,7 @@ a:hover {
 
 .quick-stat-card p {
     font-size: 0.875rem;
-    color: var(--text-muted);
+    color: var(--text-secondary-dark);
     margin-bottom: var(--spacing-lg);
 }
 
@@ -543,7 +557,7 @@ a:hover {
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, var(--gold) 0%, var(--primary) 100%);
+    background: linear-gradient(90deg, var(--gold) 0%, var(--secondary) 100%);
 }
 
 .tournament-card:hover {
@@ -562,6 +576,7 @@ a:hover {
 .tournament-title {
     font-size: 1.25rem;
     margin-bottom: var(--spacing-md);
+    color: var(--text-primary-dark);
 }
 
 .tournament-winner {
@@ -573,7 +588,7 @@ a:hover {
 
 .tournament-stats {
     font-size: 0.875rem;
-    color: var(--text-muted);
+    color: var(--text-secondary-dark);
     margin-bottom: var(--spacing-lg);
 }
 
@@ -591,8 +606,8 @@ a:hover {
 
 /* Footer */
 .footer {
-    background-color: var(--text-primary);
-    color: white;
+    background-color: var(--primary-dark);
+    color: var(--text-primary);
     padding: var(--spacing-2xl) 0 var(--spacing-lg);
 }
 
@@ -611,7 +626,7 @@ a:hover {
 
 .footer-section p {
     font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--text-secondary);
     margin-bottom: var(--spacing-sm);
 }
 
@@ -623,7 +638,7 @@ a:hover {
 
 .footer-bottom p {
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-muted);
     margin-bottom: 0;
 }
 
