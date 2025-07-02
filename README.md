@@ -199,6 +199,8 @@ See [PROJECT_CHECKLIST.md](PROJECT_CHECKLIST.md) for detailed progress tracking.
 
 ## 🤝 Contributing
 
+<!-- Cache refresh - 2024-12-20 -->
+
 This is a family project, but suggestions are welcome! Key areas:
 - Historical accuracy of tournament data
 - Additional statistical analysis ideas
