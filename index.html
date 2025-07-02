@@ -142,7 +142,9 @@
                     const handKey = `${sc.Tournament}-${sc.Year}-${sc.Round}-${sc.Player1}-${sc.Player2}`;
                     if (!uniqueHands.has(handKey)) {
                         uniqueHands.add(handKey);
-                        return sum + (sc.Tricks_Won || 0);
+                        // Convert string to number to avoid concatenation
+                        const tricks = parseInt(sc.Tricks_Won) || 0;
+                        return sum + tricks;
                     }
                     return sum;
                 }, 0);
