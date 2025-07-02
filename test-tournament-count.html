@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Data Debug</title>
+</head>
+<body>
+    <h1>Tournament Data Debug</h1>
+    <div id="debug-output"></div>
+
+    <script src="assets/js/tournament-engine.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const tournamentEngine = new TournamentEngine();
+            const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+            const output = document.getElementById('debug-output');
+            
+            try {
+                console.log('Loading Google Sheets data...');
+                await tournamentEngine.loadFromGoogleSheets(sheetId);
+                
+                output.innerHTML = `
+                    <h2>Raw Data Summary</h2>
+                    <p><strong>Raw Scorecards:</strong> ${tournamentEngine.rawScorecards.length}</p>
+                    <p><strong>Tournaments Found:</strong> ${tournamentEngine.tournaments.size}</p>
+                    
+                    <h3>Tournament Details:</h3>
+                    ${Array.from(tournamentEngine.tournaments.values()).map(t => `
+                        <div style="border: 1px solid #ccc; margin: 10px; padding: 10px;">
+                            <h4>${t.name} (${t.year})</h4>
+                            <p>Players: ${t.total_players}</p>
+                            <p>Rounds: ${t.total_rounds}</p>
+                            <p>Winner: ${t.winner}</p>
+                            <p>Runner-up: ${t.runner_up}</p>
+                        </div>
+                    `).join('')}
+                    
+                    <h3>Sample Raw Scorecards (first 10):</h3>
+                    <pre>${JSON.stringify(tournamentEngine.rawScorecards.slice(0, 10), null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                output.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                console.error('Error:', error);
+            }
+        });
+    </script>
+</body>
+</html> 

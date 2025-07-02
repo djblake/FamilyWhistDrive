@@ -123,7 +123,7 @@
                 
                 // Generate tournament cards
                 const tournamentsHTML = tournaments.map(tournament => `
-                    <div class="tournament-card ${ tournaments.indexOf(tournament) === 0 ? 'featured' : '' }">
+                    <div class="tournament-card ${ tournaments.indexOf(tournament) === 0 ? 'featured' : '' }" id="tournament-${tournament.year}">
                         <div class="tournament-year">${tournament.year}</div>
                         <div class="tournament-content">
                             <h3 class="tournament-title">${tournament.name}</h3>
@@ -199,6 +199,19 @@
                     }).join('');
                 
                 document.getElementById('decades-grid').innerHTML = decadesHTML;
+                
+                // Handle anchor links for specific tournaments
+                if (window.location.hash) {
+                    const targetYear = window.location.hash.substring(1);
+                    const targetElement = document.getElementById(`tournament-${targetYear}`);
+                    if (targetElement) {
+                        setTimeout(() => {
+                            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            targetElement.style.border = '3px solid var(--gold)';
+                            targetElement.style.boxShadow = '0 0 20px rgba(212, 175, 55, 0.5)';
+                        }, 500);
+                    }
+                }
                 
                 console.log('✅ Tournament archive loaded successfully!');
                 

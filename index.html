@@ -135,7 +135,18 @@
                 // Update hero stats
                 const tournaments = Array.from(tournamentEngine.tournaments.values());
                 const totalRounds = tournaments.reduce((sum, t) => sum + t.total_rounds, 0);
-                const totalTricks = tournamentEngine.rawScorecards.reduce((sum, sc) => sum + (sc.Tricks_Won || 0), 0);
+                
+                // Fix tricks calculation - avoid double counting by only counting unique hands
+                const uniqueHands = new Set();
+                const totalTricks = tournamentEngine.rawScorecards.reduce((sum, sc) => {
+                    const handKey = `${sc.Tournament}-${sc.Year}-${sc.Round}-${sc.Player1}-${sc.Player2}`;
+                    if (!uniqueHands.has(handKey)) {
+                        uniqueHands.add(handKey);
+                        return sum + (sc.Tricks_Won || 0);
+                    }
+                    return sum;
+                }, 0);
+                
                 const totalPlayers = new Set();
                 tournaments.forEach(t => t.final_standings.forEach(s => totalPlayers.add(s.player)));
                 
@@ -159,7 +170,7 @@
                         <h3>Tournament Results</h3>
                         <div class="stat-value">${tournament.name}</div>
                         <p>${tournament.total_players} Players • ${tournament.total_rounds} Rounds • Year ${tournament.year}</p>
-                        <a href="tournaments/${tournament.year}">View Results</a>
+                        <a href="tournaments/#${tournament.year}">View Results</a>
                     </div>
                     <div class="quick-stat-card">
                         <h3>Champion</h3>
@@ -189,7 +200,7 @@
                         <h3 class="tournament-title">${tournament.name}</h3>
                         <div class="tournament-winner">Champion: ${tournament.winner}</div>
                         <div class="tournament-stats">${tournament.total_players} Players • ${tournament.final_standings.reduce((sum, s) => sum + s.total_tricks, 0)} Total Tricks</div>
-                        <a href="tournaments/${tournament.year}" class="tournament-link">Full Results</a>
+                        <a href="tournaments/#${tournament.year}" class="tournament-link">Full Results</a>
                     </div>
                 `).join('');
                 document.getElementById('tournament-grid').innerHTML = tournamentGridHTML;
