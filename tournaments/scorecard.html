@@ -107,8 +107,8 @@
                                     <th>Table</th>
                                     <th>Partner</th>
                                     <th>Our Tricks</th>
-                                    <th>Opponents</th>
                                     <th>Their Tricks</th>
+                                    <th>Opponents</th>
                                     <th>Result</th>
                                 </tr>
                             </thead>
@@ -344,8 +344,8 @@
                         <td class="table-number">${round.table}</td>
                         <td class="partner-name">${round.partner || 'Unknown'}</td>
                         <td class="our-tricks">${round.tricks}</td>
-                        <td class="opponents-names">${round.opponents.join(' & ')}</td>
                         <td class="their-tricks">${round.opponentTricks}</td>
+                        <td class="opponents-names">${round.opponents.join(' & ')}</td>
                         <td class="result ${resultClass}">${resultText}</td>
                     </tr>
                 `;
