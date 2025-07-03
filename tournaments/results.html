@@ -205,14 +205,23 @@
                     const roundScores = Object.values(player.round_scores || {});
                     const bestRound = roundScores.length > 0 ? Math.max(...roundScores) : 0;
                     const worstRound = roundScores.length > 0 ? Math.min(...roundScores) : 0;
+                    const isLastPlace = index === tournament.final_standings.length - 1;
+                    
+                    let rowClass = '';
+                    if (index < 3) {
+                        rowClass = 'podium-row';
+                    } else if (isLastPlace && tournament.final_standings.length > 3) {
+                        rowClass = 'booby-row';
+                    }
                     
                     return `
-                        <tr class="${index < 3 ? 'podium-row' : ''}">
+                        <tr class="${rowClass}">
                             <td class="rank-cell">
                                 <span class="rank-number">${index + 1}</span>
                                 ${index === 0 ? '<span class="medal">🥇</span>' : ''}
                                 ${index === 1 ? '<span class="medal">🥈</span>' : ''}
                                 ${index === 2 ? '<span class="medal">🥉</span>' : ''}
+                                ${isLastPlace && tournament.final_standings.length > 3 ? '<span class="medal">🎭</span>' : ''}
                             </td>
                             <td class="player-cell">
                                 <strong>${player.player}</strong>
@@ -374,6 +383,11 @@
 
         .podium-row {
             background: linear-gradient(135deg, #fef3c7 0%, #fff 100%);
+        }
+
+        .booby-row {
+            background: linear-gradient(135deg, #fef2f2 0%, #fff 100%);
+            border-left: 4px solid #dc2626;
         }
 
         .rank-cell {
