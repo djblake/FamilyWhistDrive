@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Results | Ruston Family Whist Drive</title>
+    <meta name="description" content="Detailed results and player rankings for Ruston Family Whist Drive tournament">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
+                    <h1 class="site-title">Ruston Family Whist Drive</h1>
+                    <p class="site-subtitle">Est. 1984 • The World's Most Elite Family Tournament</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="../" class="nav-link">Home</a>
+                    <a href="../tournaments/" class="nav-link">Tournaments</a>
+                    <a href="../players/" class="nav-link">Players</a>
+                    <a href="../leaderboard/" class="nav-link">Hall of Fame</a>
+                    <a href="../stats/" class="nav-link">Statistics</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="tournament-hero" id="tournament-hero">
+            <div class="container">
+                <div class="hero-content">
+                    <div class="tournament-badge" id="tournament-badge">🏆 TOURNAMENT RESULTS</div>
+                    <h1 class="hero-title" id="tournament-title">Loading Tournament...</h1>
+                    <p class="hero-subtitle" id="tournament-subtitle">Loading details...</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="tournament-summary">
+            <div class="container">
+                <div class="summary-grid" id="summary-grid">
+                    <!-- Tournament summary will be loaded dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <section class="tournament-rankings">
+            <div class="container">
+                <h2 class="section-title">
+                    <span class="title-icon">🏅</span>
+                    Final Rankings
+                </h2>
+                
+                <div class="rankings-table-container">
+                    <table class="rankings-table" id="rankings-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Player</th>
+                                <th>Total Tricks</th>
+                                <th>Average per Round</th>
+                                <th>Best Score</th>
+                                <th>Worst Score</th>
+                                <th>Rounds Won</th>
+                                <th>Scorecard</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rankings-tbody">
+                            <!-- Rankings will be loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="tournament-rounds">
+            <div class="container">
+                <h2 class="section-title">
+                    <span class="title-icon">📊</span>
+                    Round by Round
+                </h2>
+                
+                <div class="rounds-grid" id="rounds-grid">
+                    <!-- Round details will be loaded dynamically -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Tournament Navigation</h4>
+                    <p><a href="../tournaments/">All Tournaments</a></p>
+                    <p><a href="../leaderboard/">Hall of Fame</a></p>
+                    <p><a href="../stats/">Statistics</a></p>
+                </div>
+                <div class="footer-section">
+                    <h4>Data Source</h4>
+                    <p>Real Family Tournament Data</p>
+                    <p>Google Sheets Integration</p>
+                    <p><a href="../google-sheets-example.html">View Data Details</a></p>
+                </div>
+                <div class="footer-section">
+                    <h4>Archives</h4>
+                    <p><a href="../stats/">Tournament Statistics</a></p>
+                    <p><a href="../leaderboard/">Hall of Fame</a></p>
+                    <p>Historical Records</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive. 40 years of championship tradition.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../assets/js/tournament-engine.js"></script>
+    
+    <script>
+        // Helper function to extract individual round scores for a player
+        function extractPlayerRoundScores(tournament, playerName) {
+            const scores = [];
+            
+            for (const round of tournament.rounds) {
+                for (const table of round.tables) {
+                    for (const partnership of table.partnerships) {
+                        // Check if player is directly in partnership
+                        if (partnership.players.includes(playerName)) {
+                            scores.push(partnership.tricks);
+                            break; // Found the player in this round, move to next round
+                        }
+                        
+                        // Check if player is part of a partnership name (e.g., "Paul + Marci")
+                        for (const partnershipPlayer of partnership.players) {
+                            if (partnershipPlayer.includes('+')) {
+                                const partnershipMembers = partnershipPlayer.split('+').map(name => name.trim());
+                                if (partnershipMembers.some(member => member.toLowerCase() === playerName.toLowerCase())) {
+                                    scores.push(partnership.tricks);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return scores;
+        }
+
+        // Helper function to get display name (partnership name if applicable)
+        function getDisplayPlayerName(tournament, playerName) {
+            // Check if this player is part of a partnership
+            for (const standing of tournament.final_standings) {
+                if (standing.player === playerName && standing.is_partnership_member && standing.partnership_name) {
+                    return standing.partnership_name;
+                }
+            }
+            return playerName;
+        }
+
+        // Load tournament results based on URL parameter
+        document.addEventListener('DOMContentLoaded', async function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const year = urlParams.get('year');
+            
+            if (!year) {
+                // Redirect to tournaments page if no year specified
+                window.location.href = '../tournaments/';
+                return;
+            }
+            
+            const tournamentEngine = new TournamentEngine();
+            const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+            
+            try {
+                console.log(`🏆 Loading tournament results for ${year}...`);
+                await tournamentEngine.loadFromGoogleSheets(sheetId);
+                
+                // Find the tournament for the specified year
+                const tournament = Array.from(tournamentEngine.tournaments.values())
+                    .find(t => t.year.toString() === year);
+                
+                if (!tournament) {
+                    document.getElementById('tournament-title').textContent = `Tournament ${year} Not Found`;
+                    document.getElementById('tournament-subtitle').textContent = 'This tournament was not found in our records.';
+                    return;
+                }
+                
+                // Update page title and meta
+                document.title = `${tournament.name} (${year}) | Ruston Family Whist Drive`;
+                
+                // Update hero section
+                document.getElementById('tournament-title').textContent = tournament.name;
+                document.getElementById('tournament-subtitle').textContent = 
+                    `Champion: ${tournament.winner} • ${tournament.total_players} players • ${tournament.total_rounds} rounds`;
+                
+                // Generate tournament summary with champion, 2nd, 3rd, and booby prize
+                const lastPlace = tournament.final_standings[tournament.final_standings.length - 1];
+                const thirdPlace = tournament.final_standings.length >= 3 ? tournament.final_standings[2] : null;
+                
+                const summaryHTML = `
+                    <div class="summary-card champion-card">
+                        <div class="summary-icon">🏆</div>
+                        <div class="summary-content">
+                            <h3>Champion</h3>
+                            <p class="summary-value">${getDisplayPlayerName(tournament, tournament.final_standings[0].player)}</p>
+                            <p class="summary-detail">${tournament.final_standings[0].total_tricks} tricks</p>
+                        </div>
+                    </div>
+                    <div class="summary-card runner-up-card">
+                        <div class="summary-icon">🥈</div>
+                        <div class="summary-content">
+                            <h3>Runner-up</h3>
+                            <p class="summary-value">${getDisplayPlayerName(tournament, tournament.final_standings[1].player)}</p>
+                            <p class="summary-detail">${tournament.final_standings[1].total_tricks} tricks</p>
+                        </div>
+                    </div>
+                    <div class="summary-card third-place-card">
+                        <div class="summary-icon">🥉</div>
+                        <div class="summary-content">
+                            <h3>Third Place</h3>
+                            <p class="summary-value">${thirdPlace ? getDisplayPlayerName(tournament, thirdPlace.player) : 'N/A'}</p>
+                            <p class="summary-detail">${thirdPlace ? thirdPlace.total_tricks + ' tricks' : ''}</p>
+                        </div>
+                    </div>
+                    <div class="summary-card booby-card">
+                        <div class="summary-icon">🎭</div>
+                        <div class="summary-content">
+                            <h3>Booby Prize</h3>
+                            <p class="summary-value">${getDisplayPlayerName(tournament, lastPlace.player)}</p>
+                            <p class="summary-detail">${lastPlace.total_tricks} tricks</p>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('summary-grid').innerHTML = summaryHTML;
+                
+                // Generate rankings table
+                const rankingsHTML = tournament.final_standings.map((player, index) => {
+                    const playerStats = tournamentEngine.getPlayerStats(player.player);
+                    
+                    // Extract individual round scores from tournament rounds data
+                    const roundScores = extractPlayerRoundScores(tournament, player.player);
+                    const bestScore = roundScores.length > 0 ? Math.max(...roundScores) : 0;
+                    const worstScore = roundScores.length > 0 ? Math.min(...roundScores) : 0;
+                    const roundsWon = roundScores.filter(score => score >= 7).length;
+                    
+                    // Count occurrences of best and worst scores
+                    const bestScoreCount = roundScores.filter(score => score === bestScore).length;
+                    const worstScoreCount = roundScores.filter(score => score === worstScore).length;
+                    
+                    // Format with occurrence counts
+                    const bestScoreDisplay = bestScore + (bestScoreCount > 1 ? ` <span class="score-count">(x${bestScoreCount})</span>` : '');
+                    const worstScoreDisplay = worstScore + (worstScoreCount > 1 ? ` <span class="score-count">(x${worstScoreCount})</span>` : '');
+                    const isLastPlace = index === tournament.final_standings.length - 1;
+                    
+                    let rowClass = '';
+                    if (index === 0) {
+                        rowClass = 'podium-row first-place';
+                    } else if (index === 1) {
+                        rowClass = 'podium-row second-place';
+                    } else if (index === 2) {
+                        rowClass = 'podium-row third-place';
+                    } else if (isLastPlace && tournament.final_standings.length > 3) {
+                        rowClass = 'booby-row';
+                    }
+                    
+                    return `
+                        <tr class="${rowClass}">
+                            <td class="rank-cell">
+                                <span class="rank-number">${index + 1}</span>
+                                ${index === 0 ? '<span class="medal">🥇</span>' : ''}
+                                ${index === 1 ? '<span class="medal">🥈</span>' : ''}
+                                ${index === 2 ? '<span class="medal">🥉</span>' : ''}
+                                ${isLastPlace && tournament.final_standings.length > 3 ? '<span class="medal">🎭</span>' : ''}
+                            </td>
+                            <td class="player-cell">
+                                <strong>${getDisplayPlayerName(tournament, player.player)}</strong>
+                            </td>
+                            <td class="tricks-cell">${player.total_tricks}</td>
+                            <td>${(player.total_tricks / tournament.total_rounds).toFixed(1)}</td>
+                            <td class="best-round">${bestScoreDisplay}</td>
+                            <td class="worst-round">${worstScoreDisplay}</td>
+                            <td>${roundsWon}</td>
+                            <td>
+                                <a href="scorecard.html?year=${year}&player=${encodeURIComponent(player.player)}" 
+                                   class="scorecard-btn">See Scorecard</a>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+                
+                document.getElementById('rankings-tbody').innerHTML = rankingsHTML;
+                
+                // Generate round by round analysis
+                const roundsHTML = Object.entries(tournament.rounds || {}).map(([roundNum, roundData]) => `
+                    <div class="round-card">
+                        <h3 class="round-title">Round ${roundNum}</h3>
+                        <div class="round-winner">
+                            <span class="winner-icon">🎯</span>
+                            Round Winner: <strong>${roundData.winner || 'Unknown'}</strong>
+                        </div>
+                        <div class="round-stats">
+                            <div class="round-stat">
+                                <span class="stat-label">Highest Score</span>
+                                <span class="stat-value">${roundData.highest_score || 'N/A'}</span>
+                            </div>
+                            <div class="round-stat">
+                                <span class="stat-label">Lowest Score</span>
+                                <span class="stat-value">${roundData.lowest_score || 'N/A'}</span>
+                            </div>
+                            <div class="round-stat">
+                                <span class="stat-label">Average</span>
+                                <span class="stat-value">${roundData.average_score ? roundData.average_score.toFixed(1) : 'N/A'}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                document.getElementById('rounds-grid').innerHTML = roundsHTML || '<p>Round details not available</p>';
+                
+                console.log(`✅ Tournament results for ${year} loaded successfully!`);
+                
+            } catch (error) {
+                console.error('❌ Error loading tournament results:', error);
+                document.getElementById('tournament-title').textContent = 'Error Loading Tournament';
+                document.getElementById('tournament-subtitle').textContent = 'Please try refreshing the page.';
+            }
+        });
+    </script>
+    
+    <style>
+        /* Tournament Results Specific Styles */
+        .tournament-hero {
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--primary-dark) 100%);
+            color: var(--text-primary);
+            padding: var(--spacing-3xl) 0;
+        }
+
+        .tournament-summary {
+            padding: var(--spacing-2xl) 0;
+            background: white;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .summary-card {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            text-align: center;
+            border: 2px solid var(--border-light);
+        }
+
+        .summary-card.champion-card {
+            background: linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%);
+            color: var(--primary-dark);
+            border-color: var(--gold);
+        }
+
+        .summary-card.runner-up-card {
+            background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%);
+            color: var(--primary-dark);
+            border-color: #94a3b8;
+        }
+
+        .summary-card.third-place-card {
+            background: linear-gradient(135deg, #fef3e2 0%, #d97706 100%);
+            color: var(--primary-dark);
+            border-color: #d97706;
+        }
+
+        .summary-card.booby-card {
+            background: linear-gradient(135deg, #fef2f2 0%, #dc2626 100%);
+            color: white;
+            border-color: #dc2626;
+        }
+
+        .summary-card.booby-card .summary-detail {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .summary-icon {
+            font-size: 2rem;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .summary-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .summary-detail {
+            color: var(--text-secondary-dark);
+            font-size: 0.875rem;
+        }
+
+        .tournament-rankings {
+            padding: var(--spacing-3xl) 0;
+            background: var(--bg-primary);
+        }
+
+        .rankings-table-container {
+            overflow-x: auto;
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .rankings-table {
+            width: 100%;
+            background: white;
+            border-collapse: collapse;
+            color: #1f2937; /* Ensure all table text is dark */
+        }
+
+        .rankings-table th {
+            background: var(--primary-dark);
+            color: white;
+            padding: var(--spacing-md);
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .rankings-table td {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid var(--border-light);
+            color: #1f2937; /* Ensure dark text on white background */
+        }
+
+        .podium-row {
+            background: linear-gradient(135deg, #fef3c7 0%, #fff 100%);
+        }
+
+        .podium-row.first-place {
+            border-left: 4px solid #fbbf24; /* Gold */
+        }
+
+        .podium-row.second-place {
+            border-left: 4px solid #94a3b8; /* Silver */
+        }
+
+        .podium-row.third-place {
+            border-left: 4px solid #d97706; /* Bronze */
+        }
+
+        .booby-row {
+            background: linear-gradient(135deg, #fef2f2 0%, #fff 100%);
+            border-left: 4px solid #dc2626;
+        }
+
+        .rank-cell {
+            text-align: center;
+            font-weight: 700;
+            color: #1f2937; /* Ensure rank numbers are dark */
+        }
+
+        .player-cell strong {
+            color: #1f2937; /* Ensure player names are dark */
+        }
+
+        .tricks-cell, .best-round, .worst-round {
+            color: #1f2937; /* Ensure numeric values are dark */
+            font-weight: 600;
+        }
+
+        .medal {
+            margin-left: var(--spacing-sm);
+        }
+
+        .scorecard-btn {
+            background: var(--secondary);
+            color: white;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--border-radius);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .scorecard-btn:hover {
+            background: #1f2937; /* Darker blue-gray for better contrast */
+            color: white;
+        }
+
+        .score-count {
+            font-size: 0.75rem;
+            color: #6b7280; /* Lighter gray color */
+            font-weight: 400;
+        }
+
+        .tournament-rounds {
+            padding: var(--spacing-3xl) 0;
+            background: white;
+        }
+
+        .rounds-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .round-card {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            border: 2px solid var(--border-light);
+        }
+
+        .round-title {
+            color: var(--primary-dark);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .round-winner {
+            color: var(--gold);
+            font-weight: 600;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .round-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-md);
+        }
+
+        .round-stat {
+            text-align: center;
+            padding: var(--spacing-sm);
+            background: white;
+            border-radius: var(--border-radius);
+        }
+
+        .round-stat .stat-label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-secondary-dark);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .round-stat .stat-value {
+            display: block;
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+
+        @media (max-width: 768px) {
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .rankings-table {
+                font-size: 0.875rem;
+            }
+            
+            .rounds-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</body>
+</html> 

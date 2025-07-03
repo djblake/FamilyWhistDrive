@@ -646,11 +646,15 @@ class TournamentEngine {
                 scorecard.Opponent1Names = this.parseSharedPlayers(scorecard.Opponent1);
                 scorecard.Opponent2Names = this.parseSharedPlayers(scorecard.Opponent2);
                 
-                // Create display names (primary name for compatibility)
-                scorecard.Player1Name = scorecard.Player1Names.names[0];
-                scorecard.Player2Name = scorecard.Player2Names.names[0];
-                scorecard.Opponent1Name = scorecard.Opponent1Names.names[0];
-                scorecard.Opponent2Name = scorecard.Opponent2Names.names[0];
+                // Create display names - preserve hand sharing format when applicable
+                scorecard.Player1Name = scorecard.Player1Names.isShared ? 
+                    scorecard.Player1Names.names.join(' + ') : scorecard.Player1Names.names[0];
+                scorecard.Player2Name = scorecard.Player2Names.isShared ? 
+                    scorecard.Player2Names.names.join(' + ') : scorecard.Player2Names.names[0];
+                scorecard.Opponent1Name = scorecard.Opponent1Names.isShared ? 
+                    scorecard.Opponent1Names.names.join(' + ') : scorecard.Opponent1Names.names[0];
+                scorecard.Opponent2Name = scorecard.Opponent2Names.isShared ? 
+                    scorecard.Opponent2Names.names.join(' + ') : scorecard.Opponent2Names.names[0];
                 
                 // Validate scorecard data
                 if (this.validateTournamentScorecard(scorecard, i + 1, sheetName)) {
@@ -709,11 +713,15 @@ class TournamentEngine {
             scorecard.Opponent1Names = this.parseSharedPlayersLegacy(scorecard.Opponent1);
             scorecard.Opponent2Names = this.parseSharedPlayersLegacy(scorecard.Opponent2);
             
-            // Use primary names for compatibility
-            scorecard.Player1Name = scorecard.Player1Names.names[0];
-            scorecard.Player2Name = scorecard.Player2Names.names[0];
-            scorecard.Opponent1Name = scorecard.Opponent1Names.names[0];
-            scorecard.Opponent2Name = scorecard.Opponent2Names.names[0];
+            // Preserve hand sharing format when applicable
+            scorecard.Player1Name = scorecard.Player1Names.isShared ? 
+                scorecard.Player1Names.names.join(' + ') : scorecard.Player1Names.names[0];
+            scorecard.Player2Name = scorecard.Player2Names.isShared ? 
+                scorecard.Player2Names.names.join(' + ') : scorecard.Player2Names.names[0];
+            scorecard.Opponent1Name = scorecard.Opponent1Names.isShared ? 
+                scorecard.Opponent1Names.names.join(' + ') : scorecard.Opponent1Names.names[0];
+            scorecard.Opponent2Name = scorecard.Opponent2Names.isShared ? 
+                scorecard.Opponent2Names.names.join(' + ') : scorecard.Opponent2Names.names[0];
             
             // Validate scorecard data
             if (this.validateScorecard(scorecard)) {
@@ -1188,15 +1196,27 @@ class TournamentEngine {
     }
 
     /**
-     * Parse shared hands from player names containing "+"
-     * Returns { players: [array], isShared: boolean }
+     * Parse shared hands from player names containing "+", "/", or "&"
+     * Returns { players: [array], isShared: boolean, displayName: string }
      */
     parseSharedHand(playerName) {
-        if (playerName.includes('+')) {
-            const players = playerName.split('+').map(name => name.trim());
-            return { players, isShared: true };
+        const delimiters = ['+', '/', '&'];
+        let foundDelimiter = null;
+        
+        for (const delimiter of delimiters) {
+            if (playerName.includes(delimiter)) {
+                foundDelimiter = delimiter;
+                break;
+            }
         }
-        return { players: [playerName], isShared: false };
+        
+        if (foundDelimiter) {
+            const players = playerName.split(foundDelimiter).map(name => name.trim());
+            // Always display with "/" for hand sharing partnerships
+            const displayName = players.join('/');
+            return { players, isShared: true, displayName };
+        }
+        return { players: [playerName], isShared: false, displayName: playerName };
     }
 
     /**
@@ -1206,13 +1226,25 @@ class TournamentEngine {
     updatePlayerScores(playerScores, roundData) {
         for (const table of roundData.tables) {
             for (const partnership of table.partnerships) {
+                // Process partnership as a whole rather than individual players
+                // This prevents double-counting when we have hand sharing partnerships
+                
+                const processedPlayers = new Set(); // Track which hand sharing partnerships we've already processed
+                
                 for (const playerName of partnership.players) {
                     const parsedPlayer = this.parseSharedHand(playerName);
                     
                     if (parsedPlayer.isShared) {
-                        // For partnerships, create a single entry with the full partnership name
-                        if (!playerScores.has(playerName)) {
-                            playerScores.set(playerName, { 
+                        // For hand sharing partnerships, only process once per partnership
+                        const displayKey = parsedPlayer.displayName;
+                        
+                        if (processedPlayers.has(displayKey)) {
+                            continue; // Skip if we've already processed this hand sharing partnership
+                        }
+                        processedPlayers.add(displayKey);
+                        
+                        if (!playerScores.has(displayKey)) {
+                            playerScores.set(displayKey, { 
                                 total_tricks: 0, 
                                 rounds_played: 0,
                                 individual_tricks: 0,
@@ -1224,7 +1256,7 @@ class TournamentEngine {
                             });
                         }
                         
-                        const partnershipData = playerScores.get(playerName);
+                        const partnershipData = playerScores.get(displayKey);
                         partnershipData.total_tricks += partnership.tricks;
                         partnershipData.shared_tricks += partnership.tricks;
                         partnershipData.shared_rounds += 1;
@@ -1672,6 +1704,246 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
         });
         
         return true;
+    }
+
+    // =========================
+    // Player Statistics Methods (Designed for Caching)
+    // =========================
+
+    /**
+     * Calculate total victories for a player
+     * @param {string} playerName - Name of the player
+     * @returns {number} Number of tournament victories
+     */
+    getPlayerVictoryCount(playerName) {
+        return Array.from(this.tournaments.values())
+            .filter(tournament => tournament.winner === playerName)
+            .length;
+    }
+
+    /**
+     * Calculate top 3 finishes for a player
+     * @param {string} playerName - Name of the player
+     * @returns {number} Number of top 3 finishes
+     */
+    getPlayerTop3Count(playerName) {
+        return Array.from(this.tournaments.values())
+            .filter(tournament => {
+                const ranking = tournament.final_standings.findIndex(s => s.player === playerName) + 1;
+                return ranking <= 3 && ranking > 0;
+            })
+            .length;
+    }
+
+    /**
+     * Calculate win rate for a player
+     * @param {string} playerName - Name of the player
+     * @returns {number} Win rate as percentage
+     */
+    getPlayerWinRate(playerName) {
+        const player = this.players.get(playerName);
+        if (!player || player.tournaments_played === 0) return 0;
+        
+        const victories = this.getPlayerVictoryCount(playerName);
+        return (victories / player.tournaments_played) * 100;
+    }
+
+    /**
+     * Get player's total tricks in a specific tournament
+     * @param {string} playerName - Name of the player
+     * @param {Object} tournament - Tournament object
+     * @returns {number} Total tricks scored in that tournament
+     */
+    getPlayerTricksInTournament(playerName, tournament) {
+        const playerStanding = tournament.final_standings.find(s => s.player === playerName);
+        return playerStanding ? playerStanding.total_tricks : 0;
+    }
+
+    /**
+     * Get actual number of rounds played in a tournament
+     * @param {Object} tournament - Tournament object
+     * @returns {number} Number of rounds actually played
+     */
+    getTournamentRoundsCount(tournament) {
+        // Check if tournament has round data
+        if (tournament.rounds && tournament.rounds.length > 0) {
+            return tournament.rounds.length;
+        }
+        
+        // If we have detailed results, count unique round numbers
+        if (tournament.detailed_results && tournament.detailed_results.length > 0) {
+            const roundNumbers = new Set();
+            tournament.detailed_results.forEach(result => {
+                if (result.round) roundNumbers.add(result.round);
+            });
+            if (roundNumbers.size > 0) return roundNumbers.size;
+        }
+        
+        // Default fallback (13 rounds is standard)
+        return 13;
+    }
+
+    /**
+     * Calculate average tricks per round for a player in a specific tournament
+     * @param {string} playerName - Name of the player
+     * @param {Object} tournament - Tournament object
+     * @returns {number} Average tricks per round
+     */
+    getPlayerAverageTricksPerRound(playerName, tournament) {
+        const totalTricks = this.getPlayerTricksInTournament(playerName, tournament);
+        const rounds = this.getTournamentRoundsCount(tournament);
+        
+        return totalTricks > 0 ? totalTricks / rounds : 0;
+    }
+
+    /**
+     * Get position emoji for tournament ranking
+     * @param {number} position - Player's position (1-based)
+     * @param {number} totalPlayers - Total number of players
+     * @returns {string} Appropriate emoji for the position
+     */
+    getPositionEmoji(position, totalPlayers) {
+        if (position === 1) return '🥇';
+        if (position === 2) return '🥈';
+        if (position === 3) return '🥉';
+        if (position === totalPlayers) return '🎭'; // Booby prize
+        return '🎯';
+    }
+
+    /**
+     * Get ordinal suffix for numbers (1st, 2nd, 3rd, etc.)
+     * @param {number} num - The number
+     * @returns {string} Ordinal suffix
+     */
+    getOrdinalSuffix(num) {
+        const j = num % 10;
+        const k = num % 100;
+        if (j == 1 && k != 11) return "st";
+        if (j == 2 && k != 12) return "nd";
+        if (j == 3 && k != 13) return "rd";
+        return "th";
+    }
+
+    /**
+     * Get all individual players, splitting partnerships into separate entries
+     * For partnerships, each player gets:
+     * - tricks = total_tricks / number_of_partners (rounded down)
+     * - rounds = total_rounds / number_of_partners  
+     * - average_tricks = total_tricks / total_rounds (not divided)
+     * - career stats sum the individual contributions
+     */
+    getAllIndividualPlayers(sortBy = 'total_tricks') {
+        const individualPlayers = new Map();
+        
+        // Process each tournament to build individual player statistics
+        for (const [tournamentKey, tournament] of this.tournaments) {
+            for (const standing of tournament.final_standings) {
+                const parsedPlayer = this.parseSharedHand(standing.player);
+                
+                if (parsedPlayer.isShared) {
+                    // Split partnership into individual players
+                    const numPartners = parsedPlayer.players.length;
+                    const tricksPerPlayer = Math.floor(standing.total_tricks / numPartners);
+                    const roundsPerPlayer = Math.floor(standing.rounds_played / numPartners);
+                    
+                    for (const individualName of parsedPlayer.players) {
+                        if (!individualPlayers.has(individualName)) {
+                            individualPlayers.set(individualName, {
+                                name: individualName,
+                                tournaments_played: 0,
+                                total_tricks: 0,
+                                total_rounds: 0,
+                                tournament_wins: 0,
+                                top_three_finishes: 0,
+                                tournament_history: []
+                            });
+                        }
+                        
+                        const playerData = individualPlayers.get(individualName);
+                        playerData.tournaments_played++;
+                        playerData.total_tricks += tricksPerPlayer;
+                        playerData.total_rounds += roundsPerPlayer;
+                        
+                        // Tournament position logic for partnerships
+                        if (standing.position === 1) {
+                            playerData.tournament_wins++;
+                        }
+                        if (standing.position <= 3) {
+                            playerData.top_three_finishes++;
+                        }
+                        
+                        playerData.tournament_history.push({
+                            tournament: tournamentKey,
+                            year: tournament.year,
+                            position: standing.position,
+                            tricks: tricksPerPlayer,
+                            rounds: roundsPerPlayer,
+                            average_tricks: standing.total_tricks / standing.rounds_played, // Original average
+                            was_partnership: true,
+                            partnership_name: standing.player
+                        });
+                    }
+                } else {
+                    // Individual player
+                    const playerName = standing.player;
+                    
+                    if (!individualPlayers.has(playerName)) {
+                        individualPlayers.set(playerName, {
+                            name: playerName,
+                            tournaments_played: 0,
+                            total_tricks: 0,
+                            total_rounds: 0,
+                            tournament_wins: 0,
+                            top_three_finishes: 0,
+                            tournament_history: []
+                        });
+                    }
+                    
+                    const playerData = individualPlayers.get(playerName);
+                    playerData.tournaments_played++;
+                    playerData.total_tricks += standing.total_tricks;
+                    playerData.total_rounds += standing.rounds_played;
+                    
+                    if (standing.position === 1) {
+                        playerData.tournament_wins++;
+                    }
+                    if (standing.position <= 3) {
+                        playerData.top_three_finishes++;
+                    }
+                    
+                    playerData.tournament_history.push({
+                        tournament: tournamentKey,
+                        year: tournament.year,
+                        position: standing.position,
+                        tricks: standing.total_tricks,
+                        rounds: standing.rounds_played,
+                        average_tricks: standing.total_tricks / standing.rounds_played,
+                        was_partnership: false
+                    });
+                }
+            }
+        }
+        
+        // Calculate career averages for each player
+        const players = Array.from(individualPlayers.values()).map(player => {
+            player.average_tricks = player.total_rounds > 0 ? 
+                (player.total_tricks / player.total_rounds).toFixed(2) : '0.00';
+            return player;
+        });
+        
+        // Sort the players
+        switch (sortBy) {
+            case 'tournament_wins':
+                return players.sort((a, b) => b.tournament_wins - a.tournament_wins);
+            case 'win_percentage':
+                return players.sort((a, b) => {
+                    const aWinPct = (a.total_tricks / a.total_rounds) * 100;
+                    const bWinPct = (b.total_tricks / b.total_rounds) * 100;
+                    return bWinPct - aWinPct;
+                });
+            default:
+                return players.sort((a, b) => b.total_tricks - a.total_tricks);
+        }
     }
 }
 

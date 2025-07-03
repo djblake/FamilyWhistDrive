@@ -520,10 +520,21 @@ class TournamentCharts {
             round.tables.forEach(table => {
                 table.partnerships.forEach(partnership => {
                     partnership.players.forEach(player => {
-                        if (playerScores.has(player)) {
-                            const scores = playerScores.get(player);
-                            const previousScore = scores[scores.length - 1] || 0;
-                            scores.push(previousScore + partnership.tricks);
+                        // Handle shared hand partnerships - convert format instead of splitting
+                        let playerToFind = player;
+                        if (player.includes('+')) {
+                            // Convert "David + Jennifer" to "David/Jennifer" format to match final standings
+                            playerToFind = player.replace(/\s*\+\s*/g, '/');
+                            console.log(`    🔗 Converting partnership "${player}" → "${playerToFind}"`);
+                        }
+          
+                        if (roundScores.has(playerToFind)) {
+                            const currentScore = roundScores.get(playerToFind);
+                            const newScore = currentScore + partnership.tricks;
+                            roundScores.set(playerToFind, newScore);
+                        } else {
+                            console.warn(`⚠️  Player "${playerToFind}" from partnership not found in initialized players!`);
+                            console.log(`    Available players (${playerScores.size}):`, Array.from(playerScores.keys()).join(', '));
                         }
                     });
                 });
@@ -563,13 +574,15 @@ class TournamentCharts {
             this.colors.gold,         // #d4af37 - Muted gold
             this.colors.accent,       // #dc2626 - Classic red
             this.colors.secondary,    // #22c55e - Softer green
-            this.colors.cardBlack,    // #f8fafc - Soft white
-            this.colors.silver,       // #cbd5e1 - Warm silver
             this.colors.bronze,       // #a16207 - Warm bronze
             '#059669',               // Forest green
             '#7c3aed',               // Purple
             '#0891b2',               // Teal
-            '#65a30d'                // Olive green
+            '#65a30d',               // Olive green
+            '#c2410c',               // Orange-red
+            '#7c2d12',               // Dark brown
+            '#1e40af',               // Deep blue
+            '#be185d'                // Dark pink
         ];
         
         const color = colors[index % colors.length];
@@ -600,6 +613,469 @@ class TournamentCharts {
         
         const ordinals = ['', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'];
         return ordinals[position] || `${position}th`;
+    }
+
+    /**
+     * Create rank progression chart showing position changes throughout tournament
+     */
+    createRankProgressChart(canvasId, tournamentData, highlightPlayer = null) {
+        console.log(`📈 Creating rank progression chart on canvas '${canvasId}' for player: ${highlightPlayer || 'all players'}`);
+        
+        if (typeof Chart === 'undefined') {
+            console.error('❌ Chart.js not loaded yet');
+            return null;
+        }
+
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) {
+            console.error(`❌ Canvas '${canvasId}' not found`);
+            return null;
+        }
+
+        console.log('✅ Canvas found, Chart.js loaded');
+
+        const ctx = canvas.getContext('2d');
+        
+        // Process tournament data for rank progression
+        const rankData = this.processRankProgression(tournamentData);
+        
+        if (!rankData || !rankData.players || rankData.players.length === 0) {
+            console.error('❌ No rank data generated');
+            return null;
+        }
+
+        console.log(`📊 Creating chart with ${rankData.players.length} players and ${rankData.rounds.length} rounds`);
+        
+        // Register custom plugin for drawing player names grouped by rank
+        const playerNamesPlugin = {
+            id: 'playerNames',
+            afterDraw: (chart) => {
+                const ctx = chart.ctx;
+                const chartArea = chart.chartArea;
+                const yScale = chart.scales.y;
+                
+                // Group players by final rank with their original colors
+                const rankGroups = new Map();
+                chart.data.datasets.forEach((dataset, index) => {
+                    const finalRank = dataset.data[dataset.data.length - 1];
+                    if (!rankGroups.has(finalRank)) {
+                        rankGroups.set(finalRank, []);
+                    }
+                    
+                    // Use the original full-opacity color instead of the potentially faded borderColor
+                    const originalColor = this.getPlayerColor(index);
+                    
+                    rankGroups.get(finalRank).push({
+                        name: dataset.label,
+                        color: originalColor // Use full-opacity color
+                    });
+                });
+                
+                // Adjust font size based on number of rank groups
+                const fontSize = rankGroups.size > 12 ? 10 : 12;
+                const maxWidth = 120; // Maximum width before wrapping (within 140px padding)
+                const lineHeight = fontSize + 4; // Line spacing
+                
+                // Draw grouped labels with text wrapping
+                rankGroups.forEach((players, rank) => {
+                    const baseYPosition = yScale.getPixelForValue(rank);
+                    let xPosition = chartArea.right + 15; // 15px padding from chart edge
+                    
+                    ctx.save();
+                    ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    
+                    // Create ordinal for rank
+                    const ordinal = rank === 1 ? '1st' : 
+                                   rank === 2 ? '2nd' : 
+                                   rank === 3 ? '3rd' : 
+                                   `${rank}th`;
+                    
+                    // Draw the rank prefix in dark gray
+                    ctx.fillStyle = '#374151';
+                    ctx.fillText(`${ordinal}: `, xPosition, baseYPosition);
+                    
+                    // Measure the rank prefix width
+                    const rankPrefixWidth = ctx.measureText(`${ordinal}: `).width;
+                    let currentX = xPosition + rankPrefixWidth;
+                    let currentY = baseYPosition;
+                    let currentLineWidth = rankPrefixWidth;
+                    
+                    // Draw each player name with wrapping
+                    players.forEach((player, index) => {
+                        ctx.fillStyle = player.color;
+                        const separator = index > 0 ? ', ' : '';
+                        const text = separator + player.name;
+                        const textWidth = ctx.measureText(text).width;
+                        
+                        // Check if we need to wrap to next line
+                        if (currentLineWidth + textWidth > maxWidth && index > 0) {
+                            currentY += lineHeight;
+                            currentX = xPosition + rankPrefixWidth;
+                            currentLineWidth = rankPrefixWidth;
+                            
+                            // Remove separator for first item on new line
+                            const wrappedText = player.name;
+                            ctx.fillText(wrappedText, currentX, currentY);
+                            currentX += ctx.measureText(wrappedText).width;
+                            currentLineWidth += ctx.measureText(wrappedText).width;
+                        } else {
+                            ctx.fillText(text, currentX, currentY);
+                            currentX += textWidth;
+                            currentLineWidth += textWidth;
+                        }
+                    });
+                    
+                    ctx.restore();
+                });
+            }
+        };
+
+        const chart = new Chart(ctx, {
+            type: 'line',
+            plugins: [playerNamesPlugin],
+            data: {
+                labels: rankData.rounds,
+                datasets: (() => {
+                    // Show all players when no one is highlighted (tournament overview)
+                    // Only limit when there's a highlighted player (individual scorecard)
+                    let playersToShow = rankData.players;
+                    
+                    if (highlightPlayer && rankData.players.length > 10) {
+                        // When highlighting a specific player, show top 10 + highlighted player for readability
+                        const finalRanks = rankData.players.map(p => ({ 
+                            name: p.name, 
+                            finalRank: p.ranks[p.ranks.length - 1] || 999,
+                            data: p
+                        })).sort((a, b) => a.finalRank - b.finalRank);
+                        
+                        playersToShow = finalRanks.slice(0, 10).map(p => p.data);
+                        console.log(`📊 Limited to top 10 players for individual scorecard:`, playersToShow.map(p => p.name));
+                    } else if (!highlightPlayer) {
+                        console.log(`📊 Showing all ${rankData.players.length} players for tournament overview`);
+                    }
+                    
+                    const datasets = playersToShow.map((player, index) => {
+                        const isHighlighted = highlightPlayer && player.name === highlightPlayer;
+                        const baseColor = this.getPlayerColor(index);
+                        
+                        return {
+                            label: player.name,
+                            data: player.ranks,
+                            scores: player.scores, // Add scores for tooltip access
+                            borderColor: isHighlighted ? '#dc2626' : (highlightPlayer ? this.fadeColor(baseColor, 0.3) : baseColor),
+                            backgroundColor: isHighlighted ? 'rgba(220, 38, 38, 0.1)' : (highlightPlayer ? this.fadeColor(baseColor, 0.1) : this.getPlayerColor(index, 0.1)),
+                            borderWidth: isHighlighted ? 5 : (highlightPlayer ? 2 : 3),
+                            pointRadius: isHighlighted ? 6 : (highlightPlayer ? 3 : 4),
+                            pointHoverRadius: isHighlighted ? 8 : 6,
+                            tension: 0.1,
+                            fill: false,
+                            pointStyle: this.getPointStyle(index),
+                            pointBorderWidth: isHighlighted ? 3 : 2,
+                            pointBackgroundColor: isHighlighted ? '#dc2626' : baseColor,
+                            pointBorderColor: isHighlighted ? '#ffffff' : baseColor,
+                            stepped: false
+                        };
+                    });
+                    
+                    // If we have a highlighted player not in the top performers, add them
+                    if (highlightPlayer && !playersToShow.find(p => p.name === highlightPlayer)) {
+                        const highlightedPlayer = rankData.players.find(p => p.name === highlightPlayer);
+                        if (highlightedPlayer) {
+                            datasets.push({
+                                label: highlightedPlayer.name,
+                                data: highlightedPlayer.ranks,
+                                scores: highlightedPlayer.scores, // Add scores for tooltip access
+                                borderColor: '#dc2626',
+                                backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                                borderWidth: 5,
+                                pointRadius: 6,
+                                pointHoverRadius: 8,
+                                tension: 0.1,
+                                fill: false,
+                                pointStyle: 'circle',
+                                pointBorderWidth: 3,
+                                pointBackgroundColor: '#dc2626',
+                                pointBorderColor: '#ffffff',
+                                stepped: false
+                            });
+                            console.log(`➕ Added highlighted player ${highlightPlayer} to chart`);
+                        }
+                    }
+                    
+                    return datasets;
+                })()
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        right: !highlightPlayer && rankData.players.length > 12 ? 160 : 140 // Extra padding for tournament overview with many players
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: highlightPlayer ? `Rank Progression - ${highlightPlayer} vs Field` : 'Tournament Rank Progression',
+                        font: {
+                            size: 18,
+                            weight: 'bold',
+                            family: 'Playfair Display'
+                        },
+                        color: '#1a1a1a'
+                    },
+                    legend: {
+                        display: false // Disable legend as we'll show names on the right
+                    },
+                    playerNames: {}, // Enable our custom plugin
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: 'white',
+                        bodyColor: 'white',
+                        borderColor: '#e5e7eb',
+                        borderWidth: 1,
+                        filter: function(tooltipItem) {
+                            return true; // Show all items, we'll sort them instead
+                        },
+                        itemSort: function(a, b) {
+                            // Sort tooltip items by rank (ascending - best rank first)
+                            return a.parsed.y - b.parsed.y;
+                        },
+                        callbacks: {
+                            title: function(context) {
+                                return `After Round ${context[0].label}`;
+                            },
+                            label: function(context) {
+                                const player = context.dataset.label;
+                                const rank = context.parsed.y;
+                                const roundIndex = context.dataIndex;
+                                const tricks = context.dataset.scores ? context.dataset.scores[roundIndex] : 0;
+                                
+                                const ordinal = rank === 1 ? '1st' : 
+                                              rank === 2 ? '2nd' : 
+                                              rank === 3 ? '3rd' : 
+                                              `${rank}th`;
+                                return `    ${player}: ${ordinal} (${tricks} tricks)`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Tournament Rounds',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            color: '#374151'
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Rank Position',
+                            font: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            color: '#374151'
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        reverse: true, // 1st place at top
+                        min: 0, // Add padding at top for 1st place
+                        max: rankData.players.length + 1, // Add padding at bottom for last place
+                        ticks: {
+                            stepSize: 1, // Show all ticks
+                            callback: function(value) {
+                                // Hide 0th and last+1 positions, show only valid ranks
+                                if (value <= 0 || value > rankData.players.length) {
+                                    return '';
+                                }
+                                // Show ordinal numbers
+                                return value === 1 ? '1st' : 
+                                       value === 2 ? '2nd' : 
+                                       value === 3 ? '3rd' : 
+                                       `${value}th`;
+                            }
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        hoverBorderWidth: 3
+                    }
+                }
+            }
+        });
+
+        console.log(`✅ Chart created successfully for ${canvasId}`);
+        this.charts.set(canvasId, chart);
+        return chart;
+    }
+
+    /**
+     * Process tournament data for rank progression with proper tie handling
+     */
+    processRankProgression(tournamentData) {
+        console.log('🔍 Processing rank progression data:', tournamentData);
+        
+        if (!tournamentData || !tournamentData.rounds) {
+            console.warn('⚠️ No tournament data or rounds found, using sample data');
+            return this.generateSampleRankData();
+        }
+
+        console.log(`📊 Tournament has ${tournamentData.rounds.length} rounds, ${tournamentData.final_standings.length} players`);
+
+        const rounds = Array.from({length: tournamentData.rounds.length}, (_, i) => i + 1);
+        const playerScores = new Map();
+
+        // Initialize player scores tracking
+        tournamentData.final_standings.forEach(standing => {
+            playerScores.set(standing.player, [0]); // Start with 0 tricks before round 1
+        });
+
+        console.log(`🎯 Initialized ${playerScores.size} players:`, Array.from(playerScores.keys()).join(', '));
+
+        // Calculate cumulative scores after each round
+        tournamentData.rounds.forEach((round, roundIndex) => {
+            console.log(`🎮 Processing round ${round.round} (index ${roundIndex}):`, round);
+            
+            // Create a copy of current scores for this round
+            const roundScores = new Map();
+            playerScores.forEach((scores, player) => {
+                roundScores.set(player, scores[scores.length - 1] || 0);
+            });
+
+            // Add this round's tricks
+            let roundTricksAdded = 0;
+            round.tables.forEach(table => {
+                table.partnerships.forEach(partnership => {
+                    const tricks = partnership.tricks || 0;
+                    console.log(`    Partnership [${partnership.players.join(', ')}]: ${tricks} tricks`);
+                    
+                    partnership.players.forEach(player => {
+                        // Handle shared hand partnerships - convert format instead of splitting
+                        let playerToFind = player;
+                        if (player.includes('+')) {
+                            // Convert "David + Jennifer" to "David/Jennifer" format to match final standings
+                            playerToFind = player.replace(/\s*\+\s*/g, '/');
+                            console.log(`    🔗 Converting partnership "${player}" → "${playerToFind}"`);
+                        }
+          
+                        if (roundScores.has(playerToFind)) {
+                            const currentScore = roundScores.get(playerToFind);
+                            const newScore = currentScore + tricks;
+                            roundScores.set(playerToFind, newScore);
+                            roundTricksAdded += tricks;
+                        } else {
+                            console.warn(`⚠️  Player "${playerToFind}" from partnership not found in initialized players!`);
+                            console.log(`    Available players (${playerScores.size}):`, Array.from(playerScores.keys()).join(', '));
+                        }
+                    });
+                });
+            });
+
+            console.log(`  ✅ Round ${round.round}: Added ${roundTricksAdded} total tricks`);
+
+            // Update player scores tracking
+            roundScores.forEach((score, player) => {
+                playerScores.get(player).push(score);
+            });
+        });
+
+        // Convert scores to ranks for each round
+        const playerRanks = new Map();
+        
+        // Initialize rank tracking
+        playerScores.forEach((scores, player) => {
+            playerRanks.set(player, []);
+        });
+
+        // Calculate ranks for each round
+        for (let roundIndex = 1; roundIndex <= rounds.length; roundIndex++) {
+            const roundScores = [];
+            
+            // Collect all scores for this round
+            playerScores.forEach((scores, player) => {
+                roundScores.push({
+                    player: player,
+                    score: scores[roundIndex] || 0
+                });
+            });
+
+            // Sort by score (highest first) and assign ranks with tie handling
+            roundScores.sort((a, b) => b.score - a.score);
+            
+            let currentRank = 1;
+            for (let i = 0; i < roundScores.length; i++) {
+                if (i > 0 && roundScores[i].score < roundScores[i-1].score) {
+                    currentRank = i + 1; // Skip ranks for ties
+                }
+                playerRanks.get(roundScores[i].player).push(currentRank);
+            }
+            
+            if (roundIndex <= 3) { // Log first few rounds for debugging
+                console.log(`📊 Round ${roundIndex} ranks:`, roundScores.slice(0, 5).map(p => `${p.player}: ${p.score} (rank ${playerRanks.get(p.player)[playerRanks.get(p.player).length - 1]})`));
+            }
+        }
+
+        // Convert to chart format
+        const players = Array.from(playerRanks.entries()).map(([name, ranks]) => ({
+            name: name,
+            ranks: ranks,
+            scores: playerScores.get(name).slice(1) // Remove initial 0, keep scores after each round
+        }));
+
+        console.log('✅ Final rank progression data:', { rounds, players: players.slice(0, 3) });
+        return { rounds, players };
+    }
+
+    /**
+     * Generate sample rank progression data
+     */
+    generateSampleRankData() {
+        const rounds = [1, 2, 3, 4, 5, 6, 7, 8];
+        const players = [
+            { name: 'Margaret Wilson', ranks: [2, 1, 1, 1, 1, 1, 1, 1], scores: [8, 15, 23, 31, 39, 47, 55, 63] },
+            { name: 'James Ruston', ranks: [5, 4, 3, 2, 2, 2, 2, 2], scores: [6, 13, 22, 30, 38, 46, 54, 61] },
+            { name: 'Emma Jones', ranks: [3, 2, 2, 3, 3, 3, 3, 3], scores: [7, 14, 21, 28, 36, 44, 52, 59] },
+            { name: 'David Smith', ranks: [1, 3, 4, 4, 4, 4, 4, 4], scores: [9, 12, 20, 27, 35, 43, 51, 58] },
+            { name: 'Sarah Brown', ranks: [4, 5, 5, 5, 5, 5, 5, 5], scores: [5, 11, 19, 26, 34, 42, 50, 57] }
+        ];
+
+        return { rounds, players };
+    }
+
+    /**
+     * Get point style for differentiation when lines overlap
+     */
+    getPointStyle(index) {
+        const styles = ['circle', 'triangle', 'rectRot', 'rectRounded', 'cross', 'crossRot', 'star', 'circle', 'triangle', 'rectRot'];
+        return styles[index % styles.length];
+    }
+
+    /**
+     * Fade a color to given opacity
+     */
+    fadeColor(color, alpha) {
+        // Convert hex to rgba with specified alpha
+        const r = parseInt(color.slice(1, 3), 16);
+        const g = parseInt(color.slice(3, 5), 16);
+        const b = parseInt(color.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
 
     /**

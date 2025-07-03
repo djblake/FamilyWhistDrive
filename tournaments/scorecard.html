@@ -92,6 +92,9 @@
                     </div>
                 </div>
 
+                <!-- Data Error Summary (hidden by default) -->
+                <div id="data-error-summary" style="display: none;"></div>
+
                 <!-- Complete Round-by-Round Scorecard -->
                 <div class="scorecard-section">
                     <h2 class="section-title">
@@ -119,6 +122,18 @@
                     </div>
                 </div>
 
+                <!-- Rank Progression Chart -->
+                <div class="chart-section">
+                    <h2 class="section-title">
+                        <span class="title-icon">📈</span>
+                        Rank Progression Throughout Tournament
+                    </h2>
+                    <p class="chart-description">Watch how <span id="chart-player-name">this player's</span> ranking changed after each round compared to all other players.</p>
+                    <div class="chart-container" style="width: 100%; height: 600px; position: relative;">
+                        <canvas id="rank-progression-chart"></canvas>
+                    </div>
+                </div>
+
                 <!-- Photo Upload Section -->
                 <div class="photo-section">
                     <h3>Scorecard Verification</h3>
@@ -135,17 +150,49 @@
         </section>
     </main>
 
-    <script src="../assets/js/tournament-engine.js"></script>
+    <!-- Load Chart.js first -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../assets/js/tournament-engine.js?v=26"></script>
+            <script src="../assets/js/charts.js?v=20"></script>
     <script src="../assets/js/photo-gallery.js"></script>
 </body>
 </html>
     <script>
-        // Parse URL parameters
+        // Normalize hand sharing partnership display format
+        function normalizeHandSharingDisplay(playerName) {
+            if (!playerName) return playerName;
+            
+            // Convert any hand sharing delimiter to "/" format (no spaces)
+            const delimiters = ['+', '&'];
+            for (const delimiter of delimiters) {
+                if (playerName.includes(delimiter)) {
+                    return playerName.split(delimiter).map(name => name.trim()).join('/');
+                }
+            }
+            
+            return playerName;
+        }
+
+        // Check if a name represents a hand sharing partnership
+        function isHandSharingPartnership(playerName) {
+            if (!playerName) return false;
+            const delimiters = ['+', '/', '&'];
+            return delimiters.some(delimiter => playerName.includes(delimiter));
+        }
+
+        // Parse URL parameters with proper handling of hand sharing partnerships
         function parseURLParameters() {
             const urlParams = new URLSearchParams(window.location.search);
+            let player = urlParams.get('player');
+            
+            // Additional normalization: trim extra whitespace
+            if (player) {
+                player = player.trim();
+            }
+            
             return {
                 year: urlParams.get('year'),
-                player: urlParams.get('player')
+                player: player
             };
         }
 
@@ -208,16 +255,18 @@
         async function generatePlayerScorecard(tournament, playerStanding, params) {
             const playerName = playerStanding.player;
 
-            // Update player header - show partnership name if applicable
-            const displayName = playerStanding.is_partnership_member && playerStanding.partnership_name 
+            // Update player header - show partnership name if applicable (normalized format)
+            let displayName = playerStanding.is_partnership_member && playerStanding.partnership_name 
                 ? playerStanding.partnership_name 
                 : playerName;
+            displayName = normalizeHandSharingDisplay(displayName);
             document.getElementById('player-name').textContent = displayName;
             
-            // Show partnership information if applicable
+            // Show partnership information if applicable (normalized format)
             let contextText = `${tournament.name} • ${tournament.year}`;
-            if (playerStanding.is_partnership_member) {
-                contextText += ` • Partnership: ${playerStanding.partnership_name}`;
+            if (playerStanding.is_partnership_member || isHandSharingPartnership(params.player)) {
+                const partnershipName = normalizeHandSharingDisplay(playerStanding.partnership_name || params.player);
+                contextText += ` • Hand sharing partnership: ${partnershipName}`;
             }
             document.getElementById('tournament-context').textContent = contextText;
             
@@ -234,8 +283,8 @@
             
             // Update performance summary with partnership info
             let performanceText = `${playerStanding.total_tricks} tricks in ${playerStanding.rounds_played} rounds`;
-            if (playerStanding.is_partnership_member) {
-                performanceText += ` (as partnership)`;
+            if (playerStanding.is_partnership_member || isHandSharingPartnership(params.player)) {
+                performanceText += ` (as hand sharing partnership)`;
             }
             document.getElementById('performance-summary').textContent = performanceText;
 
@@ -262,6 +311,9 @@
 
             // Generate scorecard table
             generateScorecardTable(playerRounds);
+            
+            // Create rank progression chart
+            createRankProgressionChart(tournament, displayName);
         }
 
         function getPlayerRounds(tournament, playerName) {
@@ -280,39 +332,132 @@
                         
                         // Check each player slot in the partnership
                         for (const partnershipPlayer of partnership.players) {
-                            // Case 1: Direct exact match
-                            if (partnershipPlayer.toLowerCase() === playerName.toLowerCase()) {
+                            // Normalize both names for comparison (handle spacing issues)
+                            const normalizePlayerName = (name) => name.toLowerCase().replace(/\s+/g, ' ').trim();
+                            const normalizedPlayerName = normalizePlayerName(playerName);
+                            const normalizedPartnershipPlayer = normalizePlayerName(partnershipPlayer);
+                            
+                            // Case 1: Direct exact match (handles both "Paul" and "Paul + Marci")
+                            if (normalizedPartnershipPlayer === normalizedPlayerName) {
                                 playerMatch = true;
-                                partnerName = partnership.players.find(p => p.toLowerCase() !== playerName.toLowerCase()) || 'Unknown';
+                                
+                                // Always find the actual whist partner (person sitting across)
+                                partnerName = partnership.players.find(p => normalizePlayerName(p) !== normalizedPlayerName) || 'Unknown';
                                 console.log(`    ✓ Direct match found! Partner: ${partnerName}`);
                                 break;
                             }
                             
-                            // Case 2: Player is part of a combined name (e.g., "Paul + Marci")
-                            if (partnershipPlayer.includes('+')) {
-                                const partnershipMembers = partnershipPlayer.split('+').map(name => name.trim());
-                                console.log(`    Checking combined name "${partnershipPlayer}" -> [${partnershipMembers.join(', ')}]`);
+                            // Case 2: Individual player is part of a combined name (e.g., searching "Paul" but data has "Paul + Marci")
+                            if (isHandSharingPartnership(partnershipPlayer) && !isHandSharingPartnership(playerName)) {
+                                // Split using any hand sharing delimiter
+                                const delimiters = ['+', '/', '&'];
+                                let foundDelimiter = null;
                                 
-                                if (partnershipMembers.some(member => member.toLowerCase() === playerName.toLowerCase())) {
+                                for (const delimiter of delimiters) {
+                                    if (partnershipPlayer.includes(delimiter)) {
+                                        foundDelimiter = delimiter;
+                                        break;
+                                    }
+                                }
+                                
+                                if (foundDelimiter) {
+                                    const partnershipMembers = partnershipPlayer.split(foundDelimiter).map(name => name.trim());
+                                    console.log(`    Checking combined name "${partnershipPlayer}" -> [${partnershipMembers.join(', ')}]`);
+                                    
+                                    if (partnershipMembers.some(member => normalizePlayerName(member) === normalizedPlayerName)) {
+                                        playerMatch = true;
+                                        // Find the actual whist partner (person sitting across from this partnership)
+                                        partnerName = partnership.players.find(p => normalizePlayerName(p) !== normalizedPartnershipPlayer) || 'Unknown';
+                                        console.log(`    ✓ Found in combined name! Whist partner: ${partnerName}`);
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            // Case 3: Searching for hand sharing name but need fuzzy matching (handle spacing differences)
+                            if (isHandSharingPartnership(playerName) && isHandSharingPartnership(partnershipPlayer)) {
+                                // Extract members from both names using any delimiter
+                                const getMembers = (name) => {
+                                    const delimiters = ['+', '/', '&'];
+                                    for (const delimiter of delimiters) {
+                                        if (name.includes(delimiter)) {
+                                            return name.split(delimiter).map(n => normalizePlayerName(n)).sort();
+                                        }
+                                    }
+                                    return [normalizePlayerName(name)];
+                                };
+                                
+                                const searchMembers = getMembers(playerName);
+                                const dataMembers = getMembers(partnershipPlayer);
+                                
+                                if (searchMembers.length === dataMembers.length && 
+                                    searchMembers.every((member, index) => member === dataMembers[index])) {
                                     playerMatch = true;
-                                    partnerName = partnershipMembers
-                                        .filter(member => member.toLowerCase() !== playerName.toLowerCase())
-                                        .join(' + ');
-                                    console.log(`    ✓ Found in combined name! Partner: ${partnerName}`);
+                                    // Find the actual whist partner (person sitting across)
+                                    partnerName = partnership.players.find(p => normalizePlayerName(p) !== normalizedPartnershipPlayer) || 'Unknown';
+                                    console.log(`    ✓ Fuzzy match for hand sharing: "${playerName}" matches "${partnershipPlayer}". Partner: ${partnerName}`);
                                     break;
                                 }
                             }
+                            
+
                         }
                         
                         if (playerMatch) {
+                            // Normalize partner and opponent names for consistent display
+                            const normalizedPartner = partnerName ? normalizeHandSharingDisplay(partnerName) : 'Unknown';
+                            const normalizedOpponents = partnership.opponents 
+                                ? partnership.opponents.map(opp => normalizeHandSharingDisplay(opp)) 
+                                : [];
+                            
+                            // Get actual opponent partnership data from the same table
+                            let actualOpponentTricks = 13 - partnership.tricks; // Default fallback
+                            
+                            // Find the opponent partnership in the same table/round
+                            for (const otherPartnership of table.partnerships) {
+                                if (otherPartnership !== partnership) {
+                                    // Check if this partnership contains our opponents
+                                    const opponentNames = partnership.opponents.map(name => name.toLowerCase().trim());
+                                    const otherNames = otherPartnership.players.map(name => name.toLowerCase().trim());
+                                    
+                                    // Check if any opponent matches any player in the other partnership
+                                    const hasMatchingOpponent = opponentNames.some(oppName => 
+                                        otherNames.some(otherName => {
+                                            // Handle both direct matches and hand sharing names
+                                            if (oppName === otherName) return true;
+                                            if (oppName.includes('/') || oppName.includes('+')) {
+                                                const oppParts = oppName.split(/[\/+]/).map(p => p.trim().toLowerCase());
+                                                return oppParts.includes(otherName);
+                                            }
+                                            if (otherName.includes('/') || otherName.includes('+')) {
+                                                const otherParts = otherName.split(/[\/+]/).map(p => p.trim().toLowerCase());
+                                                return otherParts.includes(oppName);
+                                            }
+                                            return false;
+                                        })
+                                    );
+                                    
+                                    if (hasMatchingOpponent) {
+                                        actualOpponentTricks = otherPartnership.tricks;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            // Check for data quality issues
+                            const totalTricks = partnership.tricks + actualOpponentTricks;
+                            const isDataError = totalTricks !== 13;
+                            
                             playerRounds.push({
                                 round: round.round,
                                 trump: partnership.trump_suit || round.trump_suit,
                                 table: table.table,
-                                partner: partnerName || 'Unknown',
-                                opponents: partnership.opponents,
+                                partner: normalizedPartner,
+                                opponents: normalizedOpponents,
                                 tricks: partnership.tricks,
-                                opponentTricks: 13 - partnership.tricks,
+                                opponentTricks: actualOpponentTricks,
+                                totalTricks: totalTricks,
+                                isDataError: isDataError,
                                 won: partnership.tricks > 6
                             });
                             foundInRound = true;
@@ -342,23 +487,53 @@
                 const ourTricksClass = round.tricks >= 7 ? 'our-tricks tricks-majority' : 'our-tricks';
                 const theirTricksClass = round.opponentTricks >= 7 ? 'their-tricks tricks-majority' : 'their-tricks';
 
+                // Add data error highlighting
+                const rowClass = round.isDataError ? 'round-row data-error' : 'round-row';
+                const errorWarning = round.isDataError ? 
+                    `<span class="data-error-icon" title="Data error: Total tricks = ${round.totalTricks} (should be 13)">⚠️</span>` : '';
+
                 return `
-                    <tr class="round-row ${resultClass}">
-                        <td class="round-number">${round.round}</td>
+                    <tr class="${rowClass} ${resultClass}">
+                        <td class="round-number">${round.round}${errorWarning}</td>
                         <td class="trump-suit">
                             <span class="trump-symbol ${round.trump.toLowerCase()}">${trumpSymbol}</span>
                         </td>
                         <td class="table-number">${round.table}</td>
-                        <td class="partner-name">${round.partner || 'Unknown'}</td>
+                        <td class="partner-name">
+                            ${round.partner && round.partner !== 'Unknown' ? 
+                                `<a href="../players/profile.html?player=${encodeURIComponent(round.partner)}" class="player-name-link">${round.partner}</a>` : 
+                                'Unknown'
+                            }
+                        </td>
                         <td class="${ourTricksClass}">${round.tricks}</td>
                         <td class="${theirTricksClass}">${round.opponentTricks}</td>
-                        <td class="opponents-names">${round.opponents.join(' & ')}</td>
+                        <td class="opponents-names">
+                            ${round.opponents.map(opponent => 
+                                `<a href="../players/profile.html?player=${encodeURIComponent(opponent)}" class="player-name-link">${opponent}</a>`
+                            ).join(' & ')}
+                        </td>
                         <td class="result ${resultClass}">${resultText}</td>
                     </tr>
                 `;
             }).join('');
 
             tbody.innerHTML = html;
+            
+            // Show summary if there are data errors
+            const errorCount = playerRounds.filter(round => round.isDataError).length;
+            if (errorCount > 0) {
+                const summaryElement = document.getElementById('data-error-summary');
+                if (summaryElement) {
+                    summaryElement.innerHTML = `
+                        <div class="data-error-banner">
+                            ⚠️ <strong>Data Quality Warning:</strong> ${errorCount} round${errorCount === 1 ? '' : 's'} 
+                            ${errorCount === 1 ? 'has' : 'have'} trick counts that don't add up to 13. 
+                            These may be data entry errors from the original scorecards.
+                        </div>
+                    `;
+                    summaryElement.style.display = 'block';
+                }
+            }
         }
 
         function getTrumpSymbol(suit) {
@@ -390,6 +565,50 @@
             document.getElementById('loading-section').style.display = 'none';
             document.getElementById('error-section').style.display = 'block';
             document.getElementById('error-message').textContent = message;
+        }
+
+        function createRankProgressionChart(tournament, playerName, retryCount = 0) {
+            console.log(`🎯 createRankProgressionChart called for player: ${playerName} (attempt ${retryCount + 1})`);
+            console.log('📋 Tournament data:', tournament);
+            
+            try {
+                // Update chart player name in description
+                document.getElementById('chart-player-name').textContent = playerName + "'s";
+                
+                // Wait for libraries to load with timeout
+                if (typeof Chart === 'undefined' || typeof TournamentCharts === 'undefined') {
+                    if (retryCount < 10) { // Max 10 retries = 5 seconds
+                        console.log(`⏳ Waiting for Chart.js and TournamentCharts to load... (attempt ${retryCount + 1}/10)`);
+                        setTimeout(() => createRankProgressionChart(tournament, playerName, retryCount + 1), 500);
+                        return;
+                    } else {
+                        console.error('❌ Chart.js failed to load after 5 seconds. Hiding chart section.');
+                        const chartSection = document.querySelector('.chart-section');
+                        if (chartSection) {
+                            chartSection.style.display = 'none';
+                        }
+                        return;
+                    }
+                }
+                
+                console.log('✅ Libraries loaded, creating chart...');
+                
+                // Initialize charts instance
+                const charts = new TournamentCharts();
+                
+                // Create the rank progression chart with player highlighting
+                charts.createRankProgressChart('rank-progression-chart', tournament, playerName);
+                
+                console.log(`✅ Created rank progression chart for ${playerName}`);
+            } catch (error) {
+                console.error('❌ Error creating rank progression chart:', error);
+                console.error(error.stack);
+                // Hide the chart section if there's an error
+                const chartSection = document.querySelector('.chart-section');
+                if (chartSection) {
+                    chartSection.style.display = 'none';
+                }
+            }
         }
     </script>
 
@@ -509,6 +728,34 @@
             box-shadow: var(--shadow-lg);
             margin-bottom: var(--spacing-2xl);
             color: #1f2937; /* Ensure dark text on white background */
+        }
+
+        /* Chart Section */
+        .chart-section {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-2xl);
+            box-shadow: var(--shadow-lg);
+            margin-bottom: var(--spacing-2xl);
+            color: #1f2937;
+        }
+
+        .chart-description {
+            font-size: 1rem;
+            color: #6b7280;
+            margin-bottom: var(--spacing-xl);
+            text-align: center;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: var(--spacing-xl) 0;
+        }
+
+        .chart-container canvas {
+            width: 100% !important;
+            height: 100% !important;
         }
 
         .scorecard-section .section-title {
@@ -762,5 +1009,60 @@
             .scorecard-placeholder {
                 height: 150px;
             }
+        }
+
+        /* Data Error Styling */
+        .data-error-banner {
+            background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%);
+            border: 1px solid #f59e0b;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            color: #92400e;
+            font-weight: 500;
+            box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.1);
+        }
+
+        .data-error {
+            background-color: #fef3c7 !important;
+        }
+
+        .data-error-icon {
+            color: #f59e0b;
+            margin-left: var(--spacing-xs);
+            font-size: 0.875rem;
+            cursor: help;
+        }
+
+        .round-row.data-error:hover {
+            background-color: #fde68a !important;
+        }
+
+        /* Player name link styles for scorecard */
+        .player-name-link {
+            color: inherit;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-radius: 4px;
+            padding: 2px 4px;
+            margin: -2px -4px;
+        }
+
+        .player-name-link:hover {
+            color: var(--primary-color);
+            background-color: rgba(79, 70, 229, 0.1);
+            text-decoration: none;
+        }
+
+        /* Partner and opponent name styling */
+        .partner-name .player-name-link,
+        .opponents-names .player-name-link {
+            color: var(--text-primary-dark);
+        }
+
+        .partner-name .player-name-link:hover,
+        .opponents-names .player-name-link:hover {
+            color: var(--primary-color);
+            background-color: rgba(79, 70, 229, 0.1);
         }
     </style>

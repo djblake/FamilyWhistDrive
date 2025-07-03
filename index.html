@@ -121,7 +121,7 @@
         </div>
     </footer>
 
-    <script src="assets/js/tournament-engine.js"></script>
+    <script src="assets/js/tournament-engine.js?v=36"></script>
     <script>
         // Load real tournament data from Google Sheets
         document.addEventListener('DOMContentLoaded', async function() {
@@ -132,8 +132,8 @@
                 console.log('🏆 Loading real tournament data...');
                 await tournamentEngine.loadFromGoogleSheets(sheetId);
                 
-                // Update hero stats
-                const tournaments = Array.from(tournamentEngine.tournaments.values());
+                // Update hero stats - get tournaments sorted by year (most recent first)
+                const tournaments = tournamentEngine.getAllTournaments();
                 const totalRounds = tournaments.reduce((sum, t) => sum + t.total_rounds, 0);
                 
                 // Fix tricks calculation - avoid double counting by only counting unique hands
@@ -159,11 +159,11 @@
                 
                 // Update current champion (latest tournament winner)
                 if (tournaments.length > 0) {
-                    const latestTournament = tournaments[0]; // Assuming first is latest
+                    const latestTournament = tournaments[0]; // First tournament is most recent (sorted by year desc)
                     document.getElementById('current-champion').textContent = latestTournament.winner;
                     document.getElementById('champion-year').textContent = `${latestTournament.name} ${latestTournament.year} Champion`;
                     document.getElementById('champion-record').textContent = `${latestTournament.final_standings[0].total_tricks} Total Tricks • Tournament Victory`;
-                    document.getElementById('champion-link').href = `players/${latestTournament.winner.toLowerCase().replace(/\s+/g, '-')}/`;
+                    document.getElementById('champion-link').href = `players/profile.html?player=${encodeURIComponent(latestTournament.winner)}`;
                 }
                 
                 // Update quick stats
@@ -178,13 +178,13 @@
                         <h3>Champion</h3>
                         <div class="stat-value">${tournament.winner}</div>
                         <p>${tournament.final_standings[0].total_tricks} Total Tricks • ${tournament.final_standings[0].average_tricks} Average</p>
-                        <a href="players/${tournament.winner.toLowerCase().replace(/\s+/g, '-')}/">View Profile</a>
+                        <a href="players/profile.html?player=${encodeURIComponent(tournament.winner)}">View Profile</a>
                     </div>
                     <div class="quick-stat-card">
                         <h3>Runner-up</h3>
                         <div class="stat-value">${tournament.runner_up}</div>
                         <p>${tournament.final_standings[1].total_tricks} Total Tricks • Close Competition</p>
-                        <a href="players/${tournament.runner_up.toLowerCase().replace(/\s+/g, '-')}/">View Profile</a>
+                        <a href="players/profile.html?player=${encodeURIComponent(tournament.runner_up)}">View Profile</a>
                     </div>
                     <div class="quick-stat-card">
                         <h3>Data Quality</h3>

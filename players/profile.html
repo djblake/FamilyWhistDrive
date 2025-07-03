@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Profile | Ruston Family Whist Drive</title>
+    <meta name="description" content="Complete career statistics and achievements for a championship Whist player">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
+                    <h1 class="site-title">Ruston Family Whist Drive</h1>
+                    <p class="site-subtitle">Est. 1984 • The World's Most Elite Family Tournament</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="../" class="nav-link">Home</a>
+                    <a href="../tournaments/" class="nav-link">Tournaments</a>
+                    <a href="./" class="nav-link active">Players</a>
+                    <a href="../leaderboard/" class="nav-link">Hall of Fame</a>
+                    <a href="../stats/" class="nav-link">Statistics</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="player-hero">
+            <div class="container">
+                <div class="player-profile">
+                    <div class="player-avatar">
+                        <div class="avatar-placeholder">
+                            <div class="avatar-icon" id="player-icon">🎯</div>
+                            <div class="avatar-initial" id="player-initial">--</div>
+                        </div>
+                        <div class="champion-badge" id="champion-badge" style="display: none;">Champion</div>
+                    </div>
+                    
+                    <div class="player-info">
+                        <div class="player-header">
+                            <h1 class="player-name" id="player-name">Loading...</h1>
+                            <div class="player-nickname" id="player-nickname" style="display: none;"></div>
+                            <div class="player-title" id="player-title">Tournament Player</div>
+                        </div>
+                        
+                        <div class="player-meta" id="player-meta">
+                            <div class="meta-item">
+                                <span class="meta-label">First Tournament</span>
+                                <span class="meta-value" id="first-tournament">-</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Years Active</span>
+                                <span class="meta-value" id="years-active">-</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Total Tournaments</span>
+                                <span class="meta-value" id="total-tournaments">-</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Current Ranking</span>
+                                <span class="meta-value" id="current-ranking">-</span>
+                            </div>
+                        </div>
+
+                        <div class="family-tree-link">
+                            <a href="../families/" class="family-tree-btn">
+                                <span class="tree-icon">🌳</span>
+                                View in Family Tree
+                            </a>
+                        </div>
+
+                        <div class="career-highlights" id="career-highlights">
+                            <div class="highlight-card primary">
+                                <div class="highlight-icon">🏆</div>
+                                <div class="highlight-content">
+                                    <div class="highlight-number" id="tournament-victories">-</div>
+                                    <div class="highlight-label">Tournament Victories</div>
+                                </div>
+                            </div>
+                            <div class="highlight-card">
+                                <div class="highlight-icon">🎯</div>
+                                <div class="highlight-content">
+                                    <div class="highlight-number" id="total-tricks">-</div>
+                                    <div class="highlight-label">Total Tricks</div>
+                                </div>
+                            </div>
+                            <div class="highlight-card">
+                                <div class="highlight-icon">📊</div>
+                                <div class="highlight-content">
+                                    <div class="highlight-number" id="avg-tricks">-</div>
+                                    <div class="highlight-label">Avg Tricks/Round</div>
+                                </div>
+                            </div>
+                            <div class="highlight-card">
+                                <div class="highlight-icon">🥉</div>
+                                <div class="highlight-content">
+                                    <div class="highlight-number" id="top-finishes">-</div>
+                                    <div class="highlight-label">Top 3 Finishes</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="player-stats">
+            <div class="container">
+                <div class="stats-grid">
+                    <div class="stats-section">
+                        <h3 class="section-title">
+                            <span class="title-icon">📈</span>
+                            Career Statistics
+                        </h3>
+                        <div class="stats-table" id="career-stats">
+                            <div class="loading-message">Loading career statistics...</div>
+                        </div>
+                    </div>
+
+                    <!-- Rank progression chart removed as requested -->
+
+                    <div class="stats-section full-width">
+                        <h3 class="section-title">
+                            <span class="title-icon">🏆</span>
+                            Tournament History
+                        </h3>
+                        <div class="tournament-timeline" id="tournament-timeline">
+                            <div class="loading-message">Loading tournament history...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Featured Players</h4>
+                    <p><a href="margaret-wilson/">Margaret Wilson</a></p>
+                    <p><a href="./">All Players</a></p>
+                </div>
+                <div class="footer-section">
+                    <h4>Player Stats</h4>
+                    <p><a href="../leaderboard/">Rankings</a></p>
+                    <p><a href="../stats/">Advanced Analytics</a></p>
+                </div>
+                <div class="footer-section">
+                    <h4>Tournaments</h4>
+                    <p><a href="../tournaments/">Tournament Archive</a></p>
+                    <p><a href="../tournaments/scorecard.html">Scorecards</a></p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive. Player profiles and statistics.</p>
+            </div>
+        </div>
+    </footer>
+
+            <script src="../assets/js/tournament-engine.js?v=19"></script>
+    <script src="../assets/js/charts.js?v=24"></script>
+    
+    <script>
+        // Get player name from URL parameter
+        function getPlayerFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('player');
+        }
+
+        // Load player profile data
+        document.addEventListener('DOMContentLoaded', async function() {
+            const playerName = getPlayerFromURL();
+            
+            if (!playerName) {
+                // Redirect to players index if no player specified
+                window.location.href = './';
+                return;
+            }
+
+            console.log(`👤 Loading profile for: ${playerName}`);
+
+            const tournamentEngine = new TournamentEngine();
+            window.tournamentEngine = tournamentEngine; // Make it globally accessible
+            const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+            
+            try {
+                await tournamentEngine.loadFromGoogleSheets(sheetId);
+                
+                const players = tournamentEngine.getAllPlayers('total_tricks');
+                const tournaments = Array.from(tournamentEngine.tournaments.values());
+                
+                // Find the player
+                const player = players.find(p => p.name.toLowerCase() === playerName.toLowerCase());
+                
+                if (!player) {
+                    console.error(`❌ Player "${playerName}" not found`);
+                    document.getElementById('player-name').textContent = 'Player Not Found';
+                    document.getElementById('player-title').textContent = 'This player could not be found in our records.';
+                    return;
+                }
+
+                // Update page title and meta
+                document.title = `${player.name} - Player Profile | Ruston Family Whist Drive`;
+                
+                // Update player information
+                document.getElementById('player-name').textContent = player.name;
+                document.getElementById('player-initial').textContent = player.name.split(' ').map(n => n[0]).join('');
+                
+                // Get player statistics
+                const playerTournaments = tournaments.filter(t => 
+                    t.final_standings.some(s => s.player === player.name)
+                );
+                
+                const championships = tournaments.filter(t => t.winner === player.name).length;
+                const topThreeFinishes = tournaments.filter(t => {
+                    const ranking = t.final_standings.findIndex(s => s.player === player.name) + 1;
+                    return ranking <= 3 && ranking > 0;
+                }).length;
+                
+                const firstYear = Math.min(...playerTournaments.map(t => t.year));
+                const lastYear = Math.max(...playerTournaments.map(t => t.year));
+                const yearsActive = lastYear - firstYear + 1;
+                
+                const avgTricks = player.tournaments_played > 0 ? 
+                    (player.total_tricks / (player.tournaments_played * 13)).toFixed(2) : '0.00';
+                
+                // Update champion status
+                if (championships > 0) {
+                    document.getElementById('champion-badge').style.display = 'block';
+                    document.getElementById('champion-badge').textContent = 
+                        championships === 1 ? 'Champion' : `${championships}x Champion`;
+                    document.getElementById('player-icon').textContent = '👑';
+                    document.getElementById('player-title').textContent = 
+                        championships === 1 ? 'Tournament Champion' : `${championships}-Time Champion`;
+                } else if (topThreeFinishes > 0) {
+                    document.getElementById('player-icon').textContent = '🏆';
+                    document.getElementById('player-title').textContent = 'Championship Contender';
+                } else {
+                    document.getElementById('player-icon').textContent = '🎯';
+                    document.getElementById('player-title').textContent = 'Tournament Player';
+                }
+                
+                // Update meta information
+                document.getElementById('first-tournament').textContent = firstYear;
+                document.getElementById('years-active').textContent = `${yearsActive} year${yearsActive !== 1 ? 's' : ''}`;
+                document.getElementById('total-tournaments').textContent = player.tournaments_played;
+                
+                // Get current ranking
+                const playerRanking = players.findIndex(p => p.name === player.name) + 1;
+                document.getElementById('current-ranking').textContent = `#${playerRanking}`;
+                
+                // Update career highlights
+                document.getElementById('tournament-victories').textContent = championships;
+                document.getElementById('total-tricks').textContent = player.total_tricks.toLocaleString();
+                document.getElementById('avg-tricks').textContent = avgTricks;
+                document.getElementById('top-finishes').textContent = topThreeFinishes;
+                
+                // Generate career statistics table
+                generateCareerStats(player, playerTournaments);
+                
+                // Generate tournament timeline
+                generateTournamentTimeline(player, playerTournaments);
+                
+                // Rank progression chart removed as requested
+                
+                console.log('✅ Player profile loaded successfully!');
+                
+            } catch (error) {
+                console.error('❌ Error loading player profile:', error);
+                document.getElementById('player-name').textContent = 'Error Loading Player';
+                document.getElementById('player-title').textContent = 'There was an error loading this player profile.';
+            }
+        });
+
+        function generateCareerStats(player, tournaments) {
+            // Use centralized calculation methods for caching compatibility
+            const engine = window.tournamentEngine;
+            
+            if (!engine || typeof engine.getPlayerVictoryCount !== 'function') {
+                console.error('❌ Tournament engine not available or missing methods');
+                return;
+            }
+            
+            const victories = engine.getPlayerVictoryCount(player.name);
+            const top3Finishes = engine.getPlayerTop3Count(player.name);
+            const winRate = engine.getPlayerWinRate(player.name);
+
+            const statsHTML = `
+                <div class="stats-row">
+                    <div class="stat-label">Total Tournaments</div>
+                    <div class="stat-value">${player.tournaments_played}</div>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-label">Tournament Victories</div>
+                    <div class="stat-value">${victories}</div>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-label">Top 3 Finishes</div>
+                    <div class="stat-value">${top3Finishes}</div>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-label">Total Tricks</div>
+                    <div class="stat-value">${player.total_tricks.toLocaleString()}</div>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-label">Average Tricks/Round</div>
+                    <div class="stat-value">${(player.total_tricks / (player.tournaments_played * 13)).toFixed(2)}</div>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-label">Win Rate</div>
+                    <div class="stat-value">${winRate.toFixed(1)}%</div>
+                </div>
+            `;
+            
+            document.getElementById('career-stats').innerHTML = statsHTML;
+        }
+
+        function generateTournamentTimeline(player, tournaments) {
+            // Use centralized calculation methods for caching compatibility
+            const engine = window.tournamentEngine;
+            
+            if (!engine || typeof engine.getPositionEmoji !== 'function') {
+                console.error('❌ Tournament engine not available or missing methods');
+                document.getElementById('tournament-timeline').innerHTML = '<p>Error loading tournament history.</p>';
+                return;
+            }
+            
+            const timelineHTML = tournaments
+                .sort((a, b) => b.year - a.year)
+                .slice(0, 10) // Show last 10 tournaments
+                .map(tournament => {
+                    const playerRanking = tournament.final_standings.findIndex(s => s.player === player.name) + 1;
+                    const isWinner = tournament.winner === player.name;
+                    const isTopThree = playerRanking <= 3;
+                    const totalPlayers = tournament.final_standings.length;
+                    
+                    // Use centralized methods for calculations
+                    const positionEmoji = engine.getPositionEmoji(playerRanking, totalPlayers);
+                    const totalTricks = engine.getPlayerTricksInTournament(player.name, tournament);
+                    const actualRounds = engine.getTournamentRoundsCount(tournament);
+                    const avgTricks = engine.getPlayerAverageTricksPerRound(player.name, tournament).toFixed(1);
+                    
+                    return `
+                        <a href="../tournaments/results.html?year=${tournament.year}" class="timeline-item ${isWinner ? 'winner' : isTopThree ? 'top-three' : ''}">
+                            <div class="timeline-year-column">
+                                <div class="timeline-year">${tournament.year}</div>
+                                <div class="tricks-box">
+                                    <div class="tricks-number">${totalTricks}</div>
+                                    <div class="tricks-label">tricks</div>
+                                </div>
+                            </div>
+                            <div class="timeline-content">
+                                <div class="timeline-header">
+                                    <div class="timeline-tournament">${tournament.name}</div>
+                                </div>
+                                <div class="timeline-result">
+                                    <span class="position-emoji">${positionEmoji}</span>
+                                    <span class="result-position">${playerRanking}${engine.getOrdinalSuffix(playerRanking)} Place</span>
+                                    ${isWinner ? '<span class="winner-badge">🏆 Champion</span>' : ''}
+                                </div>
+                                <div class="timeline-stats">
+                                    <div class="stat-item">
+                                        <span class="stat-icon">👥</span>
+                                        <span>${totalPlayers} players</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-icon">🎲</span>
+                                        <span>${actualRounds} rounds</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-icon">🎯</span>
+                                        <span>${avgTricks} avg/round</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                })
+                .join('');
+            
+            document.getElementById('tournament-timeline').innerHTML = timelineHTML || '<p>No tournament history available.</p>';
+        }
+
+        // getOrdinalSuffix function moved to TournamentEngine class for centralized caching
+    </script>
+    
+    <style>
+        /* Player Profile Specific Styles */
+        .player-hero {
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--primary-dark) 100%);
+            color: var(--text-primary);
+            padding: var(--spacing-3xl) 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .player-profile {
+            display: flex;
+            gap: var(--spacing-2xl);
+            align-items: flex-start;
+        }
+
+        .player-avatar {
+            position: relative;
+            text-align: center;
+        }
+
+        .avatar-placeholder {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin-bottom: var(--spacing-md);
+            box-shadow: var(--shadow-card);
+        }
+
+        .avatar-icon {
+            font-size: 2rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .avatar-initial {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .champion-badge {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            color: #1a1a1a;
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius-full);
+            font-size: 0.875rem;
+            font-weight: 600;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .player-info {
+            flex: 1;
+        }
+
+        .player-header {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .player-name {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+            line-height: 1.1;
+        }
+
+        .player-nickname {
+            font-size: 1.25rem;
+            font-style: italic;
+            color: var(--accent-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .player-title {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .player-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .meta-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .meta-value {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .family-tree-link {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .family-tree-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: var(--border-radius-md);
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+
+        .family-tree-btn:hover {
+            background: var(--bg-accent);
+        }
+
+        .career-highlights {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--spacing-md);
+        }
+
+        .highlight-card {
+            background: var(--bg-secondary);
+            padding: var(--spacing-lg);
+            border-radius: var(--border-radius-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .highlight-card.primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            color: var(--text-primary);
+        }
+
+        .highlight-icon {
+            font-size: 2rem;
+        }
+
+        .highlight-number {
+            font-size: 2rem;
+            font-weight: 900;
+            line-height: 1;
+            margin-bottom: 0.25rem;
+        }
+
+        .highlight-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        .player-stats {
+            padding: var(--spacing-3xl) 0;
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, #f8fafc 50%, var(--bg-secondary) 100%);
+            position: relative;
+        }
+
+        .player-stats::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(var(--primary-color-rgb), 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(var(--accent-color-rgb), 0.03) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            gap: var(--spacing-2xl);
+        }
+
+        .stats-section {
+            background: white;
+            padding: var(--spacing-xl);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-card);
+            position: relative;
+            z-index: 1;
+        }
+
+        .stats-section .section-title {
+            color: var(--text-primary-dark);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .stats-section .title-icon {
+            color: var(--primary-color);
+        }
+
+        .stats-section.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .stats-table {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-md) 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .stats-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            font-weight: 500;
+            color: var(--text-secondary-dark);
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: var(--text-primary-dark);
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-lg);
+            height: 400px;
+        }
+
+        .chart-container canvas {
+            max-height: 100% !important;
+        }
+
+        .tournament-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: var(--spacing-lg);
+            padding: var(--spacing-xl);
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 16px;
+            border: 2px solid #dee2e6;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            align-items: flex-start;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+            transform: translateX(-100%);
+            transition: transform 0.6s;
+        }
+
+        .timeline-item:hover::before {
+            transform: translateX(100%);
+        }
+
+        .timeline-item:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+            text-decoration: none;
+            border-color: var(--primary-color);
+        }
+
+        .timeline-item.winner {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            border-color: #ffc107;
+            color: #1a1a1a;
+            box-shadow: 0 8px 20px rgba(255, 193, 7, 0.3);
+        }
+
+        .timeline-item.winner:hover {
+            box-shadow: 0 12px 32px rgba(255, 193, 7, 0.4);
+            border-color: #ffb300;
+        }
+
+        .timeline-item.top-three {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-color: var(--accent-color);
+        }
+
+        .timeline-year-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-md);
+            min-width: 80px;
+            flex-shrink: 0;
+        }
+
+        .timeline-year {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #2c3e50;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+            text-align: center;
+        }
+
+        .timeline-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .timeline-tournament {
+            font-weight: 700;
+            font-size: 1.25rem;
+            margin-bottom: 0.25rem;
+            color: var(--text-primary-dark);
+        }
+
+        .timeline-result {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .result-position {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #2c3e50;
+        }
+
+        .tricks-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+
+        .tricks-number {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: #1a1a1a;
+            line-height: 1;
+        }
+
+        .tricks-label {
+            font-size: 0.6rem;
+            font-weight: 500;
+            color: #666;
+            text-transform: lowercase;
+            margin-top: 1px;
+        }
+
+        .timeline-item.winner .tricks-box {
+            background: rgba(255, 255, 255, 0.98);
+            border-color: #ffc107;
+        }
+
+        .timeline-item.winner .tricks-number {
+            color: #1a1a1a;
+        }
+
+        .timeline-item.top-three .tricks-box {
+            background: rgba(255, 255, 255, 0.98);
+            border-color: var(--accent-color);
+        }
+
+        .timeline-item.top-three .tricks-number {
+            color: #1a1a1a;
+        }
+
+        .timeline-item.winner .timeline-year,
+        .timeline-item.winner .result-position {
+            color: #8b4513;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
+        }
+
+        .timeline-item.top-three .timeline-year,
+        .timeline-item.top-three .result-position {
+            color: #1565c0;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
+        }
+
+        .position-emoji {
+            font-size: 1.5rem;
+            margin-right: var(--spacing-xs);
+        }
+
+        .timeline-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-lg);
+            align-items: center;
+            padding-top: var(--spacing-sm);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            font-size: 0.9rem;
+            color: var(--text-secondary-dark);
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .stat-icon {
+            font-size: 1rem;
+        }
+
+        .winner-badge {
+            background: #1a1a1a;
+            color: #ffd700;
+            padding: 0.25rem 0.5rem;
+            border-radius: var(--border-radius-sm);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .loading-message {
+            text-align: center;
+            color: var(--text-secondary-dark);
+            padding: var(--spacing-xl);
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .player-profile {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+
+            .player-name {
+                font-size: 2rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .timeline-item {
+                flex-direction: row;
+                gap: var(--spacing-md);
+                padding: var(--spacing-lg);
+            }
+
+            .timeline-year-column {
+                min-width: 60px;
+                gap: var(--spacing-sm);
+            }
+
+            .timeline-year {
+                font-size: 1.25rem;
+                text-align: center;
+            }
+
+            .timeline-tournament {
+                font-size: 1.1rem;
+            }
+
+            .timeline-stats {
+                gap: var(--spacing-md);
+            }
+
+            .timeline-stats .stat-item {
+                flex: 0 0 calc(50% - var(--spacing-sm));
+                min-width: 0;
+            }
+
+            .timeline-stats .stat-item {
+                font-size: 0.85rem;
+            }
+
+            .tricks-box {
+                width: 50px;
+                height: 50px;
+            }
+
+            .tricks-number {
+                font-size: 1.2rem;
+            }
+
+            .tricks-label {
+                font-size: 0.55rem;
+            }
+        }
+    </style>
+</body>
+</html> 
