@@ -334,17 +334,20 @@
                 const resultText = round.won ? 'WIN' : 'LOSS';
                 const trumpSymbol = getTrumpSymbol(round.trump);
                 
+                // Add bold class for majority wins (7+ tricks)
+                const ourTricksClass = round.tricks >= 7 ? 'our-tricks tricks-majority' : 'our-tricks';
+                const theirTricksClass = round.opponentTricks >= 7 ? 'their-tricks tricks-majority' : 'their-tricks';
+
                 return `
                     <tr class="round-row ${resultClass}">
                         <td class="round-number">${round.round}</td>
                         <td class="trump-suit">
                             <span class="trump-symbol ${round.trump.toLowerCase()}">${trumpSymbol}</span>
-                            ${round.trump}
                         </td>
                         <td class="table-number">${round.table}</td>
                         <td class="partner-name">${round.partner || 'Unknown'}</td>
-                        <td class="our-tricks">${round.tricks}</td>
-                        <td class="their-tricks">${round.opponentTricks}</td>
+                        <td class="${ourTricksClass}">${round.tricks}</td>
+                        <td class="${theirTricksClass}">${round.opponentTricks}</td>
                         <td class="opponents-names">${round.opponents.join(' & ')}</td>
                         <td class="result ${resultClass}">${resultText}</td>
                     </tr>
@@ -571,6 +574,11 @@
         /* Right-align the header for Our Tricks column too */
         .scorecard-table th:nth-child(5) {
             text-align: right;
+        }
+
+        /* Bold numbers 7 or greater (majority wins) */
+        .tricks-majority {
+            font-weight: bold;
         }
 
         /* Photo Section */
