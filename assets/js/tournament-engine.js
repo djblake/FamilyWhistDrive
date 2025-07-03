@@ -1,6 +1,12 @@
 /**
- * Tournament Data Processing Engine
+ * Tournament Data Processing Engine v42
  * Handles CSV scorecard data and derives tournament structure
+ * 
+ * Version 42 Features:
+ * - Official Seed Ranking System (Tennis-style weighted points)
+ * - Trump suit performance tracking
+ * - Partnership performance rankings
+ * - Family statistics grouping
  */
 
 class TournamentEngine {
@@ -1359,70 +1365,130 @@ class TournamentEngine {
             for (const standing of tournament.final_standings) {
                 const player = standing.player;
                 
-                if (!this.players.has(player)) {
-                    this.players.set(player, {
-                        name: player,
-                        // Combined stats (default display)
-                        tournaments_played: 0,
-                        total_tricks: 0, // Combined individual + shared
-                        total_rounds: 0,
-                        tournament_wins: 0,
-                        top_three_finishes: 0,
-                        // Individual stats (solo play only)
-                        individual: {
+                // Check if this is a shared hand entry that needs individual player processing
+                const isSharedHandEntry = standing.is_partnership && standing.partnership_players;
+                
+                if (isSharedHandEntry) {
+                    // Create individual records for each player in the partnership
+                    for (const individualPlayer of standing.partnership_players) {
+                        if (!this.players.has(individualPlayer)) {
+                            this.players.set(individualPlayer, {
+                                name: individualPlayer,
+                                // Combined stats (default display)
+                                tournaments_played: 0,
+                                total_tricks: 0, // Combined individual + shared
+                                total_rounds: 0,
+                                tournament_wins: 0,
+                                top_three_finishes: 0,
+                                // Individual stats (solo play only)
+                                individual: {
+                                    tournaments_played: 0,
+                                    total_tricks: 0,
+                                    total_rounds: 0,
+                                    tournament_wins: 0,
+                                    top_three_finishes: 0
+                                },
+                                // Shared hand tracking
+                                shared_rounds: 0,
+                                shared_tricks: 0,
+                                tournament_history: []
+                            });
+                        }
+                        
+                        const individualPlayerData = this.players.get(individualPlayer);
+                        
+                        // Combined stats (always updated for shared hands)
+                        individualPlayerData.tournaments_played++;
+                        individualPlayerData.total_tricks += standing.total_tricks; // Full shared hand credit
+                        individualPlayerData.total_rounds += standing.rounds_played;
+                        individualPlayerData.shared_rounds += standing.shared_rounds || 0;
+                        individualPlayerData.shared_tricks += standing.shared_tricks || 0;
+                        
+                        if (standing.position === 1) {
+                            individualPlayerData.tournament_wins++;
+                        }
+                        if (standing.position <= 3) {
+                            individualPlayerData.top_three_finishes++;
+                        }
+                        
+                        individualPlayerData.tournament_history.push({
+                            tournament: tournament.name,
+                            year: tournament.year,
+                            position: standing.position,
+                            tricks: standing.total_tricks,
+                            individual_tricks: 0,
+                            shared_tricks: standing.shared_tricks || 0,
+                            has_shared_rounds: true,
+                            partnership_name: standing.player
+                        });
+                    }
+                } else {
+                    // Handle regular individual entries
+                    if (!this.players.has(player)) {
+                        this.players.set(player, {
+                            name: player,
+                            // Combined stats (default display)
                             tournaments_played: 0,
-                            total_tricks: 0,
+                            total_tricks: 0, // Combined individual + shared
                             total_rounds: 0,
                             tournament_wins: 0,
-                            top_three_finishes: 0
-                        },
-                        // Shared hand tracking
-                        shared_rounds: 0,
-                        shared_tricks: 0,
-                        tournament_history: []
-                    });
-                }
-                
-                const playerData = this.players.get(player);
-                const hasSharedRounds = standing.shared_rounds > 0;
-                
-                // Combined stats (always updated)
-                playerData.tournaments_played++;
-                playerData.total_tricks += standing.total_tricks; // Combined total
-                playerData.total_rounds += standing.rounds_played;
-                playerData.shared_rounds += standing.shared_rounds || 0;
-                playerData.shared_tricks += standing.shared_tricks || 0;
-                
-                if (standing.position === 1) {
-                    playerData.tournament_wins++;
-                }
-                if (standing.position <= 3) {
-                    playerData.top_three_finishes++;
-                }
-                
-                // Individual stats (only if no shared rounds in this tournament)
-                if (!hasSharedRounds) {
-                    playerData.individual.tournaments_played++;
-                    playerData.individual.total_tricks += standing.individual_tricks || standing.total_tricks;
-                    playerData.individual.total_rounds += standing.individual_rounds || standing.rounds_played;
+                            top_three_finishes: 0,
+                            // Individual stats (solo play only)
+                            individual: {
+                                tournaments_played: 0,
+                                total_tricks: 0,
+                                total_rounds: 0,
+                                tournament_wins: 0,
+                                top_three_finishes: 0
+                            },
+                            // Shared hand tracking
+                            shared_rounds: 0,
+                            shared_tricks: 0,
+                            tournament_history: []
+                        });
+                    }
+                    
+                    const playerData = this.players.get(player);
+                    const hasSharedRounds = standing.shared_rounds > 0;
+                    
+                    // Combined stats (always updated)
+                    playerData.tournaments_played++;
+                    playerData.total_tricks += standing.total_tricks; // Combined total
+                    playerData.total_rounds += standing.rounds_played;
+                    playerData.shared_rounds += standing.shared_rounds || 0;
+                    playerData.shared_tricks += standing.shared_tricks || 0;
                     
                     if (standing.position === 1) {
-                        playerData.individual.tournament_wins++;
+                        playerData.tournament_wins++;
                     }
                     if (standing.position <= 3) {
-                        playerData.individual.top_three_finishes++;
+                        playerData.top_three_finishes++;
                     }
+                    
+                    // Individual stats (only if no shared rounds in this tournament)
+                    if (!hasSharedRounds) {
+                        playerData.individual.tournaments_played++;
+                        playerData.individual.total_tricks += standing.individual_tricks || standing.total_tricks;
+                        playerData.individual.total_rounds += standing.individual_rounds || standing.rounds_played;
+                        
+                        if (standing.position === 1) {
+                            playerData.individual.tournament_wins++;
+                        }
+                        if (standing.position <= 3) {
+                            playerData.individual.top_three_finishes++;
+                        }
+                    }
+                    
+                    playerData.tournament_history.push({
+                        tournament: tournament.name,
+                        year: tournament.year,
+                        position: standing.position,
+                        tricks: standing.total_tricks,
+                        individual_tricks: standing.individual_tricks || 0,
+                        shared_tricks: standing.shared_tricks || 0,
+                        has_shared_rounds: hasSharedRounds
+                    });
                 }
-                
-                playerData.tournament_history.push({
-                    tournament: tournament.name,
-                    year: tournament.year,
-                    position: standing.position,
-                    tricks: standing.total_tricks,
-                    individual_tricks: standing.individual_tricks || 0,
-                    shared_tricks: standing.shared_tricks || 0,
-                    has_shared_rounds: hasSharedRounds
-                });
             }
         }
         
@@ -1518,7 +1584,213 @@ class TournamentEngine {
     }
 
     /**
-     * Get all players ranked by combined stats
+     * OFFICIAL SEED RANKING SYSTEM
+     * 
+     * Tennis-style weighted points system that emphasizes recent performance
+     * while rewarding consistency and historical achievement.
+     * 
+     * ALGORITHM OVERVIEW:
+     * ===================
+     * 
+     * 1. BASE TOURNAMENT POINTS:
+     *    - 1st Place: 500 points    - 5th Place: 80 points     - 13th+ Place: 10 points
+     *    - 2nd Place: 300 points    - 6th-8th: 50 points      - Participation: 5 points
+     *    - 3rd Place: 200 points    - 9th-12th: 25 points
+     *    - 4th Place: 120 points
+     * 
+     * 2. RECENCY WEIGHTING (Last 6 tournaments system):
+     *    - Most recent tournament: 100% weight    - 5th most recent: 20% weight
+     *    - 2nd most recent: 80% weight            - 6th most recent: 10% weight  
+     *    - 3rd most recent: 60% weight            - 7+ tournaments ago: 5% weight
+     *    - 4th most recent: 40% weight
+     * 
+     * 3. BONUS MULTIPLIERS:
+     *    - Championship Bonus: +25% for 1st place finishes
+     *    - Podium Bonus: +15% for top-3 finishes
+     *    - Legacy Bonus: +10% if player has any historical wins (maintains relevance)
+     * 
+     * 4. CONSISTENCY FACTOR:
+     *    - Minimum 3 of the last 6 tournaments for full ranking
+     *    - Players with <3 tournaments get 50% penalty
+     *    - Average performance bonus: +10% if avg finish is top-6
+     * 
+     * 5. FINAL CALCULATION:
+     *    Total Points = Σ(Base Points × Recency Weight × Bonuses) + Consistency Adjustments
+     * 
+     * This system ensures:
+     * - Recent performance carries most weight (like ATP rankings)
+     * - Historical champions maintain some standing
+     * - Consistent participation is rewarded
+     * - True current form determines seedings
+     */
+    getOfficialSeedRankings(includeSharedHands = true) {
+        const rankings = [];
+        
+        console.log('\n🏆 === OFFICIAL SEED RANKING CALCULATION ===');
+        console.log(`📊 Total players in system: ${this.players.size}`);
+        
+        // Get all tournaments sorted by year (most recent first)
+        const allTournaments = Array.from(this.tournaments.entries())
+            .map(([key, tournament]) => ({ key, ...tournament }))
+            .sort((a, b) => b.year - a.year);
+        
+        console.log(`🏟️ Tournament order (most recent first): ${allTournaments.map(t => `${t.name} (${t.year})`).join(', ')}`);
+        
+        // Base points for finishing positions
+        const positionPoints = {
+            1: 500, 2: 300, 3: 200, 4: 120, 5: 80,
+            6: 50, 7: 50, 8: 50, 9: 25, 10: 25, 11: 25, 12: 25
+        };
+        
+        // Recency weight factors (last 6 tournaments system)
+        const getRecencyWeight = (tournamentPosition) => {
+            if (tournamentPosition === 0) return 1.00;      // Most recent tournament
+            if (tournamentPosition === 1) return 0.80;      // 2nd most recent
+            if (tournamentPosition === 2) return 0.60;      // 3rd most recent
+            if (tournamentPosition === 3) return 0.40;      // 4th most recent
+            if (tournamentPosition === 4) return 0.20;      // 5th most recent
+            if (tournamentPosition === 5) return 0.10;      // 6th most recent
+            return 0.05;                                     // 7+ tournaments ago (minimal legacy weight)
+        };
+        
+        // Helper function to check if a player name represents a shared hand
+        const isSharedHandEntry = (playerName) => {
+            return playerName.includes('/') || playerName.includes('&') || playerName.includes('+');
+        };
+        
+        let processedCount = 0;
+        
+        for (const [playerName, playerData] of this.players) {
+            // Skip shared hand entries from rankings (e.g., "Paul & Marci", "Paul/Marci")
+            // Individual players get credit for shared hand performances via tournament data
+            if (isSharedHandEntry(playerName)) {
+                console.log(`⏭️ Skipping shared hand entry: "${playerName}"`);
+                continue;
+            }
+            
+            processedCount++;
+            console.log(`\n👤 === PLAYER ${processedCount}: ${playerName} ===`);
+            
+            const stats = this.getPlayerStats(playerName, includeSharedHands);
+            if (!stats) {
+                console.log(`❌ No stats found for ${playerName}`);
+                continue;
+            }
+            
+            console.log(`📈 Basic Stats: ${stats.tournaments_played} tournaments, ${stats.total_tricks} tricks, ${stats.average_tricks} avg`);
+            
+            let totalPoints = 0;
+            let tournamentsInPeriod = 0;
+            let championshipCount = 0;
+            let podiumCount = 0;
+            let totalFinishSum = 0;
+            let finishCount = 0;
+            let hasHistoricalWin = false;
+            
+            console.log(`🔍 Checking tournament performance:`);
+            
+            // Calculate points from each tournament based on position in chronological order
+            allTournaments.forEach((tournament, tournamentIndex) => {
+                const recencyWeight = getRecencyWeight(tournamentIndex);
+                
+                // Get player's position in this tournament
+                const playerTournamentData = this.getIndividualPlayerData(tournament, playerName);
+                if (!playerTournamentData) {
+                    console.log(`   ${tournament.year} ${tournament.name}: Not participated`);
+                    return;
+                }
+                
+                const position = playerTournamentData.position;
+                const participantCount = tournament.final_standings ? tournament.final_standings.length : 20;
+                
+                // Base points for this tournament
+                let basePoints = positionPoints[position] || 10; // Default 10 for positions 13+
+                if (position > 12) basePoints = 10;
+                if (!position) basePoints = 5; // Participation points if no position data
+                
+                // Apply recency weighting
+                let tournamentPoints = basePoints * recencyWeight;
+                
+                // Track bonuses to apply
+                let bonusesApplied = [];
+                
+                // Track statistics for bonuses
+                if (tournamentIndex <= 5) tournamentsInPeriod++; // Count tournaments in last 6 tournaments
+                if (position === 1) {
+                    championshipCount++;
+                    hasHistoricalWin = true;
+                    tournamentPoints *= 1.25; // Championship bonus
+                    bonusesApplied.push('Championship +25%');
+                }
+                if (position <= 3) {
+                    podiumCount++;
+                    tournamentPoints *= 1.15; // Podium bonus
+                    bonusesApplied.push('Podium +15%');
+                }
+                if (position) {
+                    totalFinishSum += position;
+                    finishCount++;
+                }
+                
+                console.log(`   ${tournament.year} ${tournament.name}: Pos ${position} → ${basePoints} base × ${recencyWeight} recency = ${(basePoints * recencyWeight).toFixed(1)} → ${bonusesApplied.length > 0 ? bonusesApplied.join(', ') + ' → ' : ''}${tournamentPoints.toFixed(1)} points ${playerTournamentData.is_partnership_member ? '(shared hand)' : ''}`);
+                
+                totalPoints += tournamentPoints;
+            });
+            
+            console.log(`📊 Tournament Points Subtotal: ${totalPoints.toFixed(1)}`);
+            console.log(`🎯 Tournaments in last 6: ${tournamentsInPeriod} (need 3+ for full ranking)`);
+            
+            // Apply consistency factor
+            if (tournamentsInPeriod < 3) {
+                console.log(`⚠️ Consistency Penalty: <3 tournaments in last 6 → ×0.5 penalty`);
+                totalPoints *= 0.5; // Penalty for infrequent participation
+            }
+            
+            // Average finish bonus (if avg finish is top 6)
+            if (finishCount > 0) {
+                const avgFinish = totalFinishSum / finishCount;
+                console.log(`📊 Average Finish: ${avgFinish.toFixed(1)}`);
+                if (avgFinish <= 6) {
+                    console.log(`🎯 Consistency Bonus: Avg finish ≤6 → ×1.10 bonus`);
+                    totalPoints *= 1.10; // Consistency bonus
+                }
+            }
+            
+            // Legacy bonus for historical winners
+            if (hasHistoricalWin) {
+                console.log(`👑 Legacy Bonus: Has championship(s) → ×1.10 bonus`);
+                totalPoints *= 1.10; // Legacy bonus
+            }
+            
+            console.log(`🏆 FINAL SEED POINTS: ${Math.round(totalPoints)}`);
+            
+            // Create ranking entry
+            const ranking = {
+                ...stats,
+                seed_points: Math.round(totalPoints),
+                tournaments_in_period: tournamentsInPeriod,
+                championships: championshipCount,
+                podium_finishes: podiumCount,
+                avg_finish: finishCount > 0 ? (totalFinishSum / finishCount).toFixed(1) : 'N/A',
+                has_legacy: hasHistoricalWin
+            };
+            
+            rankings.push(ranking);
+        }
+        
+        // Sort by seed points (highest first)
+        rankings.sort((a, b) => b.seed_points - a.seed_points);
+        
+        // Add ranking positions
+        rankings.forEach((player, index) => {
+            player.seed_rank = index + 1;
+        });
+        
+        return rankings;
+    }
+
+    /**
+     * Get all players ranked by combined stats (Legacy method)
      */
     getPlayerRankings(includeSharedHands = true) {
         const rankings = [];
@@ -1822,6 +2094,217 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
         if (j == 2 && k != 12) return "nd";
         if (j == 3 && k != 13) return "rd";
         return "th";
+    }
+
+    /**
+     * Calculate trump suit statistics for a player
+     */
+    getPlayerTrumpSuitStats(playerName) {
+        const trumpStats = {
+            'Hearts': { total_tricks: 0, rounds_played: 0, average: 0 },
+            'Diamonds': { total_tricks: 0, rounds_played: 0, average: 0 },
+            'Spades': { total_tricks: 0, rounds_played: 0, average: 0 },
+            'Clubs': { total_tricks: 0, rounds_played: 0, average: 0 }
+        };
+
+        // Iterate through all tournaments and rounds
+        for (const [tournamentKey, tournament] of this.tournaments) {
+            for (const round of tournament.rounds) {
+                const trumpSuit = round.trump_suit;
+                
+                for (const table of round.tables) {
+                    for (const partnership of table.partnerships) {
+                        // Check if player participated in this partnership
+                        let playerParticipated = false;
+                        let playerTricks = 0;
+                        let playerRounds = 0;
+
+                        for (const player of partnership.players) {
+                            const parsedPlayer = this.parseSharedHand(player);
+                            
+                            if (parsedPlayer.isShared) {
+                                // Check if target player is in shared hand
+                                if (parsedPlayer.players.some(p => p.toLowerCase() === playerName.toLowerCase())) {
+                                    playerParticipated = true;
+                                    // For shared hands, divide tricks and rounds by number of partners
+                                    playerTricks = Math.floor(partnership.tricks / parsedPlayer.players.length);
+                                    playerRounds = Math.floor(1 / parsedPlayer.players.length);
+                                    break;
+                                }
+                            } else {
+                                // Individual player
+                                if (player.toLowerCase() === playerName.toLowerCase()) {
+                                    playerParticipated = true;
+                                    playerTricks = partnership.tricks;
+                                    playerRounds = 1;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (playerParticipated && trumpStats[trumpSuit]) {
+                            trumpStats[trumpSuit].total_tricks += playerTricks;
+                            trumpStats[trumpSuit].rounds_played += playerRounds;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Calculate averages
+        for (const suit of Object.keys(trumpStats)) {
+            if (trumpStats[suit].rounds_played > 0) {
+                trumpStats[suit].average = (trumpStats[suit].total_tricks / trumpStats[suit].rounds_played);
+            }
+        }
+
+        return trumpStats;
+    }
+
+    /**
+     * Get partnership performance rankings
+     */
+    getPartnershipPerformanceRankings() {
+        const partnerships = new Map();
+
+        // Iterate through all tournaments and rounds
+        for (const [tournamentKey, tournament] of this.tournaments) {
+            for (const round of tournament.rounds) {
+                for (const table of round.tables) {
+                    for (const partnership of table.partnerships) {
+                        if (partnership.players.length !== 2) continue;
+
+                        const sortedPlayers = partnership.players.slice().sort();
+                        const partnershipKey = sortedPlayers.join(' & ');
+                        
+                        if (!partnerships.has(partnershipKey)) {
+                            partnerships.set(partnershipKey, {
+                                players: sortedPlayers,
+                                total_tricks: 0,
+                                total_rounds: 0,
+                                partnerships_count: 0
+                            });
+                        }
+
+                        const partnershipData = partnerships.get(partnershipKey);
+                        
+                        // Handle shared hands
+                        let tricksToAdd = partnership.tricks;
+                        let roundsToAdd = 1;
+                        
+                        // Check if this is a shared hand partnership
+                        const player1Parsed = this.parseSharedHand(partnership.players[0]);
+                        const player2Parsed = this.parseSharedHand(partnership.players[1]);
+                        
+                        if (player1Parsed.isShared || player2Parsed.isShared) {
+                            // For shared hands, use pro-rated values (divided by partners, rounded down)
+                            const maxPartners = Math.max(
+                                player1Parsed.players.length, 
+                                player2Parsed.players.length
+                            );
+                            tricksToAdd = Math.floor(partnership.tricks / maxPartners);
+                            roundsToAdd = Math.floor(1 / maxPartners);
+                        }
+
+                        partnershipData.total_tricks += tricksToAdd;
+                        partnershipData.total_rounds += roundsToAdd;
+                        partnershipData.partnerships_count++;
+                    }
+                }
+            }
+        }
+
+        // Convert to array and calculate averages
+        const rankings = [];
+        for (const [partnershipKey, data] of partnerships) {
+            if (data.total_rounds > 0) {
+                rankings.push({
+                    partnership: partnershipKey,
+                    players: data.players,
+                    average_tricks: data.total_tricks / data.total_rounds,
+                    total_tricks: data.total_tricks,
+                    total_rounds: data.total_rounds,
+                    partnerships_count: data.partnerships_count
+                });
+            }
+        }
+
+        // Sort by average tricks (descending)
+        rankings.sort((a, b) => b.average_tricks - a.average_tricks);
+
+        return rankings;
+    }
+
+    /**
+     * Get family statistics grouped by last name
+     */
+    getFamilyStatistics() {
+        const families = new Map();
+
+        // Group players by last name
+        for (const [playerName, playerData] of this.players) {
+            // Extract last name (handle partnerships)
+            let lastName = '';
+            if (playerName.includes('/')) {
+                // Partnership - get last names of both players
+                const partners = playerName.split('/');
+                const lastNames = partners.map(partner => partner.trim().split(' ').pop()).sort();
+                lastName = lastNames.join('/');
+            } else {
+                // Individual player
+                lastName = playerName.trim().split(' ').pop();
+            }
+
+            if (!families.has(lastName)) {
+                families.set(lastName, {
+                    family_name: lastName,
+                    members: [],
+                    total_players: 0,
+                    total_tournaments: 0,
+                    total_tricks: 0,
+                    total_rounds: 0,
+                    tournament_wins: 0,
+                    top_three_finishes: 0
+                });
+            }
+
+            const familyData = families.get(lastName);
+            familyData.members.push({
+                name: playerName,
+                tournaments_played: playerData.tournaments_played,
+                total_tricks: playerData.total_tricks,
+                tournament_wins: playerData.tournament_wins,
+                average_tricks: parseFloat(playerData.average_tricks)
+            });
+            
+            familyData.total_players++;
+            familyData.total_tournaments += playerData.tournaments_played;
+            familyData.total_tricks += playerData.total_tricks;
+            familyData.total_rounds += playerData.total_rounds;
+            familyData.tournament_wins += playerData.tournament_wins;
+            familyData.top_three_finishes += playerData.top_three_finishes;
+        }
+
+        // Convert to array and calculate family averages
+        const familyStats = [];
+        for (const [familyName, data] of families) {
+            familyStats.push({
+                family_name: data.family_name,
+                members: data.members,
+                total_players: data.total_players,
+                average_tricks_per_player: data.total_rounds > 0 ? (data.total_tricks / data.total_rounds) : 0,
+                total_tricks: data.total_tricks,
+                total_tournaments: data.total_tournaments,
+                tournament_wins: data.tournament_wins,
+                top_three_finishes: data.top_three_finishes,
+                win_rate: data.total_tournaments > 0 ? (data.tournament_wins / data.total_tournaments * 100) : 0
+            });
+        }
+
+        // Sort by average tricks per player (descending)
+        familyStats.sort((a, b) => b.average_tricks_per_player - a.average_tricks_per_player);
+
+        return familyStats;
     }
 
     /**

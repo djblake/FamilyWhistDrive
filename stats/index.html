@@ -80,6 +80,32 @@
             </div>
         </section>
 
+        <section class="partnership-performance-section">
+            <div class="container">
+                <h2 class="section-title">
+                    <span class="title-icon">🤝</span>
+                    Partnership Performance Rankings
+                </h2>
+                
+                <div class="partnership-rankings" id="partnership-rankings">
+                    <!-- Partnership rankings will be loaded dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <section class="family-statistics-section">
+            <div class="container">
+                <h2 class="section-title">
+                    <span class="title-icon">👨‍👩‍👧‍👦</span>
+                    Family Statistics
+                </h2>
+                
+                <div class="family-stats" id="family-stats">
+                    <!-- Family statistics will be loaded dynamically -->
+                </div>
+            </div>
+        </section>
+
         <section class="statistical-records-section">
             <div class="container">
                 <h2 class="section-title">
@@ -122,7 +148,7 @@
         </div>
     </footer>
 
-    <script src="../assets/js/tournament-engine.js"></script>
+            <script src="../assets/js/tournament-engine.js?v=47"></script>
     
     <script>
         // Load real statistical data
@@ -437,6 +463,12 @@
                 
                 document.getElementById('records-showcase').innerHTML = recordsHTML;
                 
+                // Load partnership performance rankings
+                loadPartnershipRankings();
+                
+                // Load family statistics
+                loadFamilyStatistics();
+                
                 // Update footer
                 document.getElementById('total-scorecards').textContent = `${totalRounds} Rounds Analyzed`;
                 document.getElementById('data-timespan').textContent = `${lastYear - firstYear + 1} Years of Data`;
@@ -500,6 +532,95 @@
                     };
                 })
                 .sort((a, b) => b.championships - a.championships);
+        }
+
+        function loadPartnershipRankings() {
+            const partnershipRankings = window.tournamentEngine.getPartnershipPerformanceRankings();
+            
+            const partnershipHTML = `
+                <div class="partnership-table-container">
+                    <table class="partnership-table">
+                        <thead>
+                            <tr>
+                                <th class="rank-column">Rank</th>
+                                <th class="partnership-column">Partnership</th>
+                                <th class="avg-tricks-column">Avg Tricks</th>
+                                <th class="total-tricks-column">Total Tricks</th>
+                                <th class="rounds-column">Rounds</th>
+                                <th class="count-column">Partnerships</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${partnershipRankings.slice(0, 20).map((partnership, index) => `
+                                <tr>
+                                    <td class="rank-column">${index + 1}</td>
+                                    <td class="partnership-column">
+                                        <div class="partnership-names">
+                                            <a href="../players/profile.html?player=${encodeURIComponent(partnership.players[0])}" class="player-name-link">${partnership.players[0]}</a>
+                                            <span class="partnership-separator">&</span>
+                                            <a href="../players/profile.html?player=${encodeURIComponent(partnership.players[1])}" class="player-name-link">${partnership.players[1]}</a>
+                                        </div>
+                                    </td>
+                                    <td class="avg-tricks-column">${partnership.average_tricks.toFixed(2)}</td>
+                                    <td class="total-tricks-column">${partnership.total_tricks}</td>
+                                    <td class="rounds-column">${partnership.total_rounds}</td>
+                                    <td class="count-column">${partnership.partnerships_count}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById('partnership-rankings').innerHTML = partnershipHTML;
+        }
+
+        function loadFamilyStatistics() {
+            const familyStats = window.tournamentEngine.getFamilyStatistics();
+            
+            const familyHTML = `
+                <div class="family-stats-grid">
+                    ${familyStats.slice(0, 10).map((family, index) => `
+                        <div class="family-stat-card">
+                            <div class="family-rank">#${index + 1}</div>
+                            <div class="family-header">
+                                <h3 class="family-name">${family.family_name} Family</h3>
+                                <div class="family-average">${family.average_tricks_per_player.toFixed(2)} avg tricks</div>
+                            </div>
+                            <div class="family-members">
+                                <div class="member-count">${family.total_players} ${family.total_players === 1 ? 'member' : 'members'}</div>
+                                <div class="member-list">
+                                    ${family.members.map(member => `
+                                        <a href="../players/profile.html?player=${encodeURIComponent(member.name)}" class="member-link">
+                                            ${member.name}
+                                        </a>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            <div class="family-stats-grid-details">
+                                <div class="family-stat-item">
+                                    <span class="stat-label">Total Tricks</span>
+                                    <span class="stat-value">${family.total_tricks.toLocaleString()}</span>
+                                </div>
+                                <div class="family-stat-item">
+                                    <span class="stat-label">Championships</span>
+                                    <span class="stat-value">${family.tournament_wins}</span>
+                                </div>
+                                <div class="family-stat-item">
+                                    <span class="stat-label">Tournaments</span>
+                                    <span class="stat-value">${family.total_tournaments}</span>
+                                </div>
+                                <div class="family-stat-item">
+                                    <span class="stat-label">Win Rate</span>
+                                    <span class="stat-value">${family.win_rate.toFixed(1)}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            document.getElementById('family-stats').innerHTML = familyHTML;
         }
     </script>
     
@@ -801,6 +922,201 @@
             color: var(--primary);
         }
 
+        /* Partnership Performance Styles */
+        .partnership-performance-section {
+            padding: var(--spacing-3xl) 0;
+            background: var(--bg-primary);
+        }
+
+        .partnership-table-container {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            border: 2px solid var(--border-light);
+        }
+
+        .partnership-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .partnership-table th {
+            background: var(--primary);
+            color: white;
+            padding: var(--spacing-lg);
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .partnership-table td {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+            color: var(--text-primary);
+        }
+
+        .partnership-table tbody tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        .partnership-names {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .partnership-separator {
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .player-name-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .player-name-link:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        .rank-column {
+            text-align: center;
+            font-weight: 600;
+            color: var(--primary);
+            width: 60px;
+        }
+
+        .avg-tricks-column, .total-tricks-column, .rounds-column, .count-column {
+            text-align: center;
+            font-weight: 500;
+        }
+
+        /* Family Statistics Styles */
+        .family-statistics-section {
+            padding: var(--spacing-3xl) 0;
+            background: white;
+        }
+
+        .family-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: var(--spacing-xl);
+        }
+
+        .family-stat-card {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-lg);
+            border: 2px solid var(--border-light);
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .family-stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--primary);
+        }
+
+        .family-rank {
+            position: absolute;
+            top: var(--spacing-lg);
+            right: var(--spacing-lg);
+            background: var(--primary);
+            color: white;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--border-radius-full);
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .family-header {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .family-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .family-average {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .family-members {
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .member-count {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+            font-weight: 500;
+        }
+
+        .member-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+        }
+
+        .member-link {
+            background: white;
+            color: var(--primary);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--border-radius);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border: 1px solid var(--border-light);
+        }
+
+        .member-link:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .family-stats-grid-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-md);
+        }
+
+        .family-stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+
+        .family-stat-item .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .family-stat-item .stat-value {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
         @media (max-width: 768px) {
             .hero-title {
                 font-size: 2.5rem;
@@ -812,6 +1128,18 @@
             
             .analytics-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .family-stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .partnership-table-container {
+                overflow-x: auto;
+            }
+            
+            .partnership-table {
+                min-width: 600px;
             }
             
             .metrics-grid {

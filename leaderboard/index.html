@@ -37,29 +37,23 @@
                     <div class="hall-of-fame-badge">🏛️ HALL OF FAME</div>
                     <h1 class="hero-title">Championship Rankings</h1>
                     <p class="hero-subtitle">The Official Leaderboards of the World's Most Prestigious Family Tournament</p>
-                    
-                    <div class="ranking-filters">
-                        <button class="filter-btn active" data-ranking="overall">Overall Excellence</button>
-                        <button class="filter-btn" data-ranking="championships">Tournament Wins</button>
-                        <button class="filter-btn" data-ranking="career_wins">Career Victories</button>
-                        <button class="filter-btn" data-ranking="win_percentage">Win Percentage</button>
-                        <button class="filter-btn" data-ranking="recent_form">Recent Form</button>
-                    </div>
                 </div>
             </div>
         </section>
 
         <section class="current-rankings">
             <div class="container">
-                <div class="rankings-header">
-                    <h2 class="rankings-title" id="current-ranking-title">Overall Excellence Rankings</h2>
-                    <p class="rankings-subtitle" id="current-ranking-description">Comprehensive ranking based on tournament victories, career performance, and recent form</p>
+                <div class="ranking-filters">
+                    <button class="filter-btn active" data-ranking="overall">Official Seed Ranking</button>
+                    <button class="filter-btn" data-ranking="championships">Tournament Wins</button>
+                    <button class="filter-btn" data-ranking="career_wins">Career Victories</button>
+                    <button class="filter-btn" data-ranking="win_percentage">Win Percentage</button>
+                    <button class="filter-btn" data-ranking="recent_form">Recent Form</button>
                 </div>
 
-                <div class="podium-section">
-                    <div class="podium-container" id="podium-container">
-                        <!-- Top 3 will be populated here -->
-                    </div>
+                <div class="rankings-header">
+                    <h2 class="rankings-title" id="current-ranking-title">Official Seed Rankings</h2>
+                    <p class="rankings-subtitle" id="current-ranking-description">Comprehensive ranking based on tournament victories, career performance, and recent form</p>
                 </div>
 
                 <div class="full-rankings">
@@ -319,12 +313,13 @@
         </div>
     </footer>
 
-    <script src="../assets/js/tournament-engine.js"></script>
+            <script src="../assets/js/tournament-engine.js?v=48"></script>
     
     <script>
         // Leaderboard specific JavaScript
         let currentRankingType = 'overall';
         let allPlayers = [];
+        let tournamentEngine = null;
         
         document.addEventListener('DOMContentLoaded', function() {
             initializeLeaderboard();
@@ -333,14 +328,14 @@
         async function initializeLeaderboard() {
             try {
                 // Initialize engine and load real data
-                const engine = new TournamentEngine();
+                tournamentEngine = new TournamentEngine();
                 const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
 
                 console.log('🏆 Loading real tournament data for Hall of Fame...');
-                await engine.loadFromGoogleSheets(sheetId);
+                await tournamentEngine.loadFromGoogleSheets(sheetId);
 
                 // Get all players with comprehensive stats from real data
-                allPlayers = engine.getAllPlayers('overall');
+                allPlayers = tournamentEngine.getAllPlayers('overall');
                 
                 // Initialize rankings display
                 updateRankingsDisplay('overall');
@@ -377,13 +372,22 @@
         }
 
         function updateRankingsDisplay(rankingType) {
-            const sortedPlayers = sortPlayersByRanking(allPlayers, rankingType);
+            let sortedPlayers;
+            
+            if (rankingType === 'overall') {
+                // Use the new Official Seed Ranking system
+                if (tournamentEngine && typeof tournamentEngine.getOfficialSeedRankings === 'function') {
+                    sortedPlayers = tournamentEngine.getOfficialSeedRankings(true);
+                } else {
+                    console.warn('Official seed rankings not available, falling back to legacy method');
+                    sortedPlayers = sortPlayersByRanking(allPlayers, rankingType);
+                }
+            } else {
+                sortedPlayers = sortPlayersByRanking(allPlayers, rankingType);
+            }
             
             // Update title and description
             updateRankingInfo(rankingType);
-            
-            // Update podium (top 3)
-            updatePodium(sortedPlayers.slice(0, 3));
             
             // Update full rankings table
             updateRankingsTable(sortedPlayers);
@@ -407,7 +411,7 @@
         function calculateRankingScore(player, rankingType) {
             switch (rankingType) {
                 case 'overall':
-                    // Weighted combination of multiple factors
+                    // Legacy weighted combination of multiple factors
                     const tournamentWeight = (player.tournament_wins || 0) * 10;
                     const winPctWeight = parseFloat(player.win_percentage || 0) * 2;
                     const careerWeight = (player.career_wins || 0) * 0.1;
@@ -440,8 +444,8 @@
             
             const rankingInfo = {
                 overall: {
-                    title: 'Overall Excellence Rankings',
-                    desc: 'Comprehensive ranking based on tournament victories, career performance, and recent form'
+                    title: 'Official Seed Rankings',
+                    desc: 'Weighted ranking system prioritizing recent performance, consistency, and tournament achievements'
                 },
                 championships: {
                     title: 'Tournament Championships',
@@ -466,69 +470,7 @@
             descElement.textContent = info.desc;
         }
 
-        function updatePodium(topThree) {
-            const podiumContainer = document.getElementById('podium-container');
-            
-            if (topThree.length < 3) {
-                podiumContainer.innerHTML = '<p>Loading championship podium...</p>';
-                return;
-            }
 
-            const podiumHTML = `
-                <div class="podium-places">
-                    <div class="podium-place second">
-                        <div class="podium-player">
-                            <div class="podium-avatar">
-                                <div class="avatar-placeholder small">
-                                    <span class="avatar-initial">${getInitials(topThree[1].name)}</span>
-                                </div>
-                            </div>
-                            <h3 class="podium-name">${topThree[1].name}</h3>
-                            <div class="podium-score">${formatScoreDisplay(topThree[1], currentRankingType)}</div>
-                        </div>
-                        <div class="podium-base second-place">
-                            <div class="podium-medal">🥈</div>
-                            <div class="podium-rank">2nd</div>
-                        </div>
-                    </div>
-                    
-                    <div class="podium-place first">
-                        <div class="podium-player">
-                            <div class="podium-avatar">
-                                <div class="avatar-placeholder large">
-                                    <span class="avatar-initial">${getInitials(topThree[0].name)}</span>
-                                </div>
-                                <div class="champion-crown">👑</div>
-                            </div>
-                            <h3 class="podium-name">${topThree[0].name}</h3>
-                            <div class="podium-score">${formatScoreDisplay(topThree[0], currentRankingType)}</div>
-                        </div>
-                        <div class="podium-base first-place">
-                            <div class="podium-medal">🥇</div>
-                            <div class="podium-rank">1st</div>
-                        </div>
-                    </div>
-                    
-                    <div class="podium-place third">
-                        <div class="podium-player">
-                            <div class="podium-avatar">
-                                <div class="avatar-placeholder small">
-                                    <span class="avatar-initial">${getInitials(topThree[2].name)}</span>
-                                </div>
-                            </div>
-                            <h3 class="podium-name">${topThree[2].name}</h3>
-                            <div class="podium-score">${formatScoreDisplay(topThree[2], currentRankingType)}</div>
-                        </div>
-                        <div class="podium-base third-place">
-                            <div class="podium-medal">🥉</div>
-                            <div class="podium-rank">3rd</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            podiumContainer.innerHTML = podiumHTML;
-        }
 
         function updateRankingsTable(players) {
             const tableBody = document.getElementById('rankings-table-body');
@@ -564,7 +506,8 @@
         function formatScoreDisplay(player, rankingType) {
             switch (rankingType) {
                 case 'overall':
-                    return Math.round(player.rankingScore || 0);
+                    // Display seed points for Official Seed Ranking system
+                    return player.seed_points || Math.round(player.rankingScore || 0);
                 case 'championships':
                     return player.tournament_wins || 0;
                 case 'career_wins':
@@ -706,24 +649,27 @@
             justify-content: center;
             gap: var(--spacing-md);
             flex-wrap: wrap;
+            margin-bottom: var(--spacing-xl);
         }
 
         .filter-btn {
             background: rgba(255, 255, 255, 0.1);
             border: 2px solid rgba(255, 255, 255, 0.2);
-            color: white;
+            color: var(--text-primary);
             padding: var(--spacing-sm) var(--spacing-lg);
             border-radius: var(--border-radius-lg);
             font-size: 0.875rem;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
         }
 
         .filter-btn:hover,
         .filter-btn.active {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.4);
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
             transform: translateY(-2px);
         }
 
@@ -733,137 +679,25 @@
 
         .rankings-header {
             text-align: center;
-            margin-bottom: var(--spacing-2xl);
+            margin-bottom: var(--spacing-xl);
         }
 
         .rankings-title {
-            font-size: 2.5rem;
-            font-weight: 900;
-            margin-bottom: var(--spacing-md);
-            color: var(--text-primary);
-        }
-
-        .rankings-subtitle {
-            font-size: 1.125rem;
-            color: var(--text-secondary);
-            margin-bottom: 0;
-        }
-
-        .podium-section {
-            margin-bottom: var(--spacing-3xl);
-        }
-
-        .podium-container {
-            display: flex;
-            justify-content: center;
-            padding: var(--spacing-2xl) 0;
-        }
-
-        .podium-places {
-            display: flex;
-            align-items: end;
-            gap: var(--spacing-xl);
-        }
-
-        .podium-place {
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .podium-player {
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .podium-avatar {
-            position: relative;
-            margin-bottom: var(--spacing-md);
-        }
-
-        .avatar-placeholder {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 900;
-            font-family: var(--font-primary);
-        }
-
-        .avatar-placeholder.large {
-            width: 120px;
-            height: 120px;
             font-size: 2rem;
-        }
-
-        .avatar-placeholder.small {
-            width: 100px;
-            height: 100px;
-            font-size: 1.5rem;
-        }
-
-        .champion-crown {
-            position: absolute;
-            top: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 2.5rem;
-            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
-        }
-
-        .podium-name {
-            font-size: 1.25rem;
-            font-weight: 600;
+            font-weight: 800;
             margin-bottom: var(--spacing-sm);
             color: var(--text-primary);
         }
 
-        .podium-score {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: var(--primary);
+        .rankings-subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
         }
 
-        .podium-base {
-            border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            width: 120px;
-            position: relative;
-        }
 
-        .podium-base.first-place {
-            height: 120px;
-            background: linear-gradient(135deg, var(--gold) 0%, #f59e0b 100%);
-        }
 
-        .podium-base.second-place {
-            height: 100px;
-            background: linear-gradient(135deg, var(--silver) 0%, #9ca3af 100%);
-        }
 
-        .podium-base.third-place {
-            height: 80px;
-            background: linear-gradient(135deg, var(--bronze) 0%, #92400e 100%);
-        }
-
-        .podium-medal {
-            font-size: 2rem;
-            margin-bottom: var(--spacing-xs);
-        }
-
-        .podium-rank {
-            font-size: 0.875rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
 
         .full-rankings {
             background: var(--card-bg);
@@ -880,6 +714,11 @@
             padding: var(--spacing-lg) var(--spacing-md);
             font-weight: 600;
             font-size: 0.875rem;
+        }
+
+        .rankings-table-header .score-col {
+            color: white;
+            font-weight: 600;
         }
 
         .ranking-row {
@@ -1110,11 +949,16 @@
             .ranking-filters {
                 flex-direction: column;
                 align-items: center;
+                gap: var(--spacing-sm);
+                margin-bottom: var(--spacing-lg);
             }
             
-            .podium-places {
-                flex-direction: column;
-                align-items: center;
+            .rankings-title {
+                font-size: 1.75rem;
+            }
+            
+            .rankings-subtitle {
+                font-size: 0.9rem;
             }
             
             .rankings-table-header,
