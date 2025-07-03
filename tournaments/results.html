@@ -238,6 +238,14 @@
                     const bestScore = roundScores.length > 0 ? Math.max(...roundScores) : 0;
                     const worstScore = roundScores.length > 0 ? Math.min(...roundScores) : 0;
                     const roundsWon = roundScores.filter(score => score >= 7).length;
+                    
+                    // Count occurrences of best and worst scores
+                    const bestScoreCount = roundScores.filter(score => score === bestScore).length;
+                    const worstScoreCount = roundScores.filter(score => score === worstScore).length;
+                    
+                    // Format with occurrence counts
+                    const bestScoreDisplay = bestScore + (bestScoreCount > 1 ? ` <span class="score-count">(x${bestScoreCount})</span>` : '');
+                    const worstScoreDisplay = worstScore + (worstScoreCount > 1 ? ` <span class="score-count">(x${worstScoreCount})</span>` : '');
                     const isLastPlace = index === tournament.final_standings.length - 1;
                     
                     let rowClass = '';
@@ -265,8 +273,8 @@
                             </td>
                             <td class="tricks-cell">${player.total_tricks}</td>
                             <td>${(player.total_tricks / tournament.total_rounds).toFixed(1)}</td>
-                            <td class="best-round">${bestScore}</td>
-                            <td class="worst-round">${worstScore}</td>
+                            <td class="best-round">${bestScoreDisplay}</td>
+                            <td class="worst-round">${worstScoreDisplay}</td>
                             <td>${roundsWon}</td>
                             <td>
                                 <a href="scorecard.html?year=${year}&player=${encodeURIComponent(player.player)}" 
@@ -469,7 +477,14 @@
         }
 
         .scorecard-btn:hover {
-            background: var(--secondary-dark);
+            background: #1f2937; /* Darker blue-gray for better contrast */
+            color: white;
+        }
+
+        .score-count {
+            font-size: 0.75rem;
+            color: #6b7280; /* Lighter gray color */
+            font-weight: 400;
         }
 
         .tournament-rounds {
