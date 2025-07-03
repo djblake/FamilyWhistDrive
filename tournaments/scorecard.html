@@ -282,7 +282,7 @@
                         if (playerMatch) {
                             playerRounds.push({
                                 round: round.round,
-                                trump: round.trump_suit,
+                                trump: partnership.trump_suit || round.trump_suit, // Use partnership trump first, fall back to round trump
                                 table: table.table,
                                 partner: partnerName || partnership.players.find(p => p !== playerName) || 'Partnership',
                                 opponents: partnership.opponents,

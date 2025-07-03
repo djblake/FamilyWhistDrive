@@ -1115,7 +1115,6 @@ class TournamentEngine {
      * Process individual round
      */
     processRound(roundNum, scorecards) {
-        const trumpSuit = scorecards[0]?.Trump_Suit;
         const tables = new Map();
         
         // Group scorecards by table number (from Table field)
@@ -1147,19 +1146,22 @@ class TournamentEngine {
                 const opponent2 = card.Opponent2Name || card.Opponent2;
                 const tricksWon = parseInt(card.Tricks_Won);
                 const opponentTricks = parseInt(card.Opponent_Tricks || (13 - tricksWon));
+                const trumpSuit = card.Trump_Suit; // Preserve trump suit for this specific partnership
                 
                 // Partnership A: Player1 + Player2
                 partnerships.push({
                     players: [player1, player2],
                     tricks: tricksWon,
-                    opponents: [opponent1, opponent2]
+                    opponents: [opponent1, opponent2],
+                    trump_suit: trumpSuit // Store trump suit with partnership
                 });
                 
                 // Partnership B: Opponent1 + Opponent2  
                 partnerships.push({
                     players: [opponent1, opponent2],
                     tricks: opponentTricks,
-                    opponents: [player1, player2]
+                    opponents: [player1, player2],
+                    trump_suit: trumpSuit // Store trump suit with partnership
                 });
             }
             
@@ -1171,9 +1173,16 @@ class TournamentEngine {
             processedTables.push(tableData);
         }
         
+        // For round-level trump suit, use the most common one (backwards compatibility)
+        const trumpCounts = {};
+        scorecards.forEach(card => {
+            trumpCounts[card.Trump_Suit] = (trumpCounts[card.Trump_Suit] || 0) + 1;
+        });
+        const roundTrumpSuit = Object.keys(trumpCounts).reduce((a, b) => trumpCounts[a] > trumpCounts[b] ? a : b);
+        
         return {
             round: roundNum,
-            trump_suit: trumpSuit,
+            trump_suit: roundTrumpSuit, // Most common trump for round display
             tables: processedTables
         };
     }
