@@ -86,7 +86,7 @@
                             </div>
                             <div class="stat">
                                 <span class="stat-value" id="best-round">--</span>
-                                <span class="stat-label">Best Round</span>
+                                <span class="stat-label">Most Tricks</span>
                             </div>
                         </div>
                     </div>
@@ -243,8 +243,18 @@
 
             // Get player's individual rounds
             const playerRounds = getPlayerRounds(tournament, playerName);
-            const bestRound = Math.max(...playerRounds.map(r => r.tricks));
-            document.getElementById('best-round').textContent = bestRound;
+            const maxTricks = Math.max(...playerRounds.map(r => r.tricks));
+            
+            // Count how many times they achieved the maximum
+            const maxTricksCount = playerRounds.filter(r => r.tricks === maxTricks).length;
+            
+            // Display with count if achieved more than once
+            let mostTricksText = maxTricks.toString();
+            if (maxTricksCount > 1) {
+                mostTricksText += ` (x${maxTricksCount})`;
+            }
+            
+            document.getElementById('best-round').textContent = mostTricksText;
 
             // Generate scorecard table
             generateScorecardTable(playerRounds);
