@@ -106,8 +106,8 @@
                                     <th>Trump</th>
                                     <th>Table</th>
                                     <th>Partner</th>
-                                    <th>Opponents</th>
                                     <th>Our Tricks</th>
+                                    <th>Opponents</th>
                                     <th>Their Tricks</th>
                                     <th>Result</th>
                                 </tr>
@@ -262,29 +262,40 @@
 
         function getPlayerRounds(tournament, playerName) {
             const playerRounds = [];
+            
+            console.log(`🔍 Looking for rounds for player: "${playerName}"`);
 
             for (const round of tournament.rounds) {
+                let foundInRound = false;
                 for (const table of round.tables) {
                     for (const partnership of table.partnerships) {
-                        // Check if player is directly in partnership or part of a partnership name
+                        console.log(`  Round ${round.round}, Table ${table.table}: Partnership players:`, partnership.players);
+                        
                         let playerMatch = false;
-                        let actualPartnership = partnership;
                         let partnerName = null;
                         
-                        if (partnership.players.includes(playerName)) {
-                            // Direct match
-                            playerMatch = true;
-                            partnerName = partnership.players.find(p => p !== playerName);
-                        } else {
-                            // Check if player is part of a partnership name (e.g., "Paul + Marci")
-                            for (const partnershipPlayer of partnership.players) {
-                                if (partnershipPlayer.includes('+')) {
-                                    const partnershipMembers = partnershipPlayer.split('+').map(name => name.trim());
-                                    if (partnershipMembers.some(member => member.toLowerCase() === playerName.toLowerCase())) {
-                                        playerMatch = true;
-                                        partnerName = partnershipMembers.filter(member => member.toLowerCase() !== playerName.toLowerCase()).join(' + ');
-                                        break;
-                                    }
+                        // Check each player slot in the partnership
+                        for (const partnershipPlayer of partnership.players) {
+                            // Case 1: Direct exact match
+                            if (partnershipPlayer.toLowerCase() === playerName.toLowerCase()) {
+                                playerMatch = true;
+                                partnerName = partnership.players.find(p => p.toLowerCase() !== playerName.toLowerCase()) || 'Unknown';
+                                console.log(`    ✓ Direct match found! Partner: ${partnerName}`);
+                                break;
+                            }
+                            
+                            // Case 2: Player is part of a combined name (e.g., "Paul + Marci")
+                            if (partnershipPlayer.includes('+')) {
+                                const partnershipMembers = partnershipPlayer.split('+').map(name => name.trim());
+                                console.log(`    Checking combined name "${partnershipPlayer}" -> [${partnershipMembers.join(', ')}]`);
+                                
+                                if (partnershipMembers.some(member => member.toLowerCase() === playerName.toLowerCase())) {
+                                    playerMatch = true;
+                                    partnerName = partnershipMembers
+                                        .filter(member => member.toLowerCase() !== playerName.toLowerCase())
+                                        .join(' + ');
+                                    console.log(`    ✓ Found in combined name! Partner: ${partnerName}`);
+                                    break;
                                 }
                             }
                         }
@@ -292,20 +303,26 @@
                         if (playerMatch) {
                             playerRounds.push({
                                 round: round.round,
-                                trump: partnership.trump_suit || round.trump_suit, // Use partnership trump first, fall back to round trump
+                                trump: partnership.trump_suit || round.trump_suit,
                                 table: table.table,
-                                partner: partnerName || partnership.players.find(p => p !== playerName) || 'Partnership',
+                                partner: partnerName || 'Unknown',
                                 opponents: partnership.opponents,
                                 tricks: partnership.tricks,
                                 opponentTricks: 13 - partnership.tricks,
                                 won: partnership.tricks > 6
                             });
+                            foundInRound = true;
                             break;
                         }
                     }
+                    if (foundInRound) break;
+                }
+                if (!foundInRound) {
+                    console.log(`  ❌ Player "${playerName}" not found in round ${round.round}`);
                 }
             }
-
+            
+            console.log(`🎯 Found ${playerRounds.length} rounds for ${playerName}`);
             return playerRounds.sort((a, b) => a.round - b.round);
         }
 
@@ -326,8 +343,8 @@
                         </td>
                         <td class="table-number">${round.table}</td>
                         <td class="partner-name">${round.partner || 'Unknown'}</td>
-                        <td class="opponents-names">${round.opponents.join(' & ')}</td>
                         <td class="our-tricks">${round.tricks}</td>
+                        <td class="opponents-names">${round.opponents.join(' & ')}</td>
                         <td class="their-tricks">${round.opponentTricks}</td>
                         <td class="result ${resultClass}">${resultText}</td>
                     </tr>
