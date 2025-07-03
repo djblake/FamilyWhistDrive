@@ -208,8 +208,11 @@
         async function generatePlayerScorecard(tournament, playerStanding, params) {
             const playerName = playerStanding.player;
 
-            // Update player header
-            document.getElementById('player-name').textContent = playerName;
+            // Update player header - show partnership name if applicable
+            const displayName = playerStanding.is_partnership_member && playerStanding.partnership_name 
+                ? playerStanding.partnership_name 
+                : playerName;
+            document.getElementById('player-name').textContent = displayName;
             
             // Show partnership information if applicable
             let contextText = `${tournament.name} • ${tournament.year}`;
@@ -241,8 +244,9 @@
             document.getElementById('average-tricks').textContent = playerStanding.average_tricks;
             document.getElementById('rounds-played').textContent = playerStanding.rounds_played;
 
-            // Get player's individual rounds
-            const playerRounds = getPlayerRounds(tournament, playerName);
+            // Get player's individual rounds - use original searched name, not partnership name
+            const searchedPlayerName = params.player; // The name they searched for (e.g., "Paul")
+            const playerRounds = getPlayerRounds(tournament, searchedPlayerName);
             const maxTricks = Math.max(...playerRounds.map(r => r.tricks));
             
             // Count how many times they achieved the maximum
