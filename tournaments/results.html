@@ -64,8 +64,8 @@
                                 <th>Player</th>
                                 <th>Total Tricks</th>
                                 <th>Average per Round</th>
-                                <th>Best Round</th>
-                                <th>Worst Round</th>
+                                <th>Best Score</th>
+                                <th>Worst Score</th>
                                 <th>Rounds Won</th>
                                 <th>Scorecard</th>
                             </tr>
@@ -123,6 +123,36 @@
     <script src="../assets/js/tournament-engine.js"></script>
     
     <script>
+        // Helper function to extract individual round scores for a player
+        function extractPlayerRoundScores(tournament, playerName) {
+            const scores = [];
+            
+            for (const round of tournament.rounds) {
+                for (const table of round.tables) {
+                    for (const partnership of table.partnerships) {
+                        // Check if player is directly in partnership
+                        if (partnership.players.includes(playerName)) {
+                            scores.push(partnership.tricks);
+                            break; // Found the player in this round, move to next round
+                        }
+                        
+                        // Check if player is part of a partnership name (e.g., "Paul + Marci")
+                        for (const partnershipPlayer of partnership.players) {
+                            if (partnershipPlayer.includes('+')) {
+                                const partnershipMembers = partnershipPlayer.split('+').map(name => name.trim());
+                                if (partnershipMembers.some(member => member.toLowerCase() === playerName.toLowerCase())) {
+                                    scores.push(partnership.tricks);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return scores;
+        }
+
         // Load tournament results based on URL parameter
         document.addEventListener('DOMContentLoaded', async function() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -202,9 +232,12 @@
                 // Generate rankings table
                 const rankingsHTML = tournament.final_standings.map((player, index) => {
                     const playerStats = tournamentEngine.getPlayerStats(player.player);
-                    const roundScores = Object.values(player.round_scores || {});
-                    const bestRound = roundScores.length > 0 ? Math.max(...roundScores) : 0;
-                    const worstRound = roundScores.length > 0 ? Math.min(...roundScores) : 0;
+                    
+                    // Extract individual round scores from tournament rounds data
+                    const roundScores = extractPlayerRoundScores(tournament, player.player);
+                    const bestScore = roundScores.length > 0 ? Math.max(...roundScores) : 0;
+                    const worstScore = roundScores.length > 0 ? Math.min(...roundScores) : 0;
+                    const roundsWon = roundScores.filter(score => score >= 7).length;
                     const isLastPlace = index === tournament.final_standings.length - 1;
                     
                     let rowClass = '';
@@ -232,9 +265,9 @@
                             </td>
                             <td class="tricks-cell">${player.total_tricks}</td>
                             <td>${(player.total_tricks / tournament.total_rounds).toFixed(1)}</td>
-                            <td class="best-round">${bestRound}</td>
-                            <td class="worst-round">${worstRound}</td>
-                            <td>${roundScores.filter(score => score >= 10).length}</td>
+                            <td class="best-round">${bestScore}</td>
+                            <td class="worst-round">${worstScore}</td>
+                            <td>${roundsWon}</td>
                             <td>
                                 <a href="scorecard.html?year=${year}&player=${encodeURIComponent(player.player)}" 
                                    class="scorecard-btn">See Scorecard</a>
