@@ -71,6 +71,13 @@
                             <!-- Rankings will be populated here -->
                         </div>
                     </div>
+                    
+                    <div class="table-controls">
+                        <button id="toggle-view-btn" class="toggle-view-btn">
+                            <span class="btn-text">See All Players</span>
+                            <span class="btn-icon">👁️</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -313,13 +320,15 @@
         </div>
     </footer>
 
-            <script src="../assets/js/tournament-engine.js?v=48"></script>
+            <script src="../assets/js/tournament-engine.js?v=49"></script>
     
     <script>
         // Leaderboard specific JavaScript
         let currentRankingType = 'overall';
         let allPlayers = [];
         let tournamentEngine = null;
+        let showingAllPlayers = false;
+        let currentSortedPlayers = [];
         
         document.addEventListener('DOMContentLoaded', function() {
             initializeLeaderboard();
@@ -345,6 +354,9 @@
                 
                 // Add filter event listeners
                 setupFilterListeners();
+                
+                // Add toggle view event listener
+                setupToggleViewListener();
 
                 console.log('🏆 Hall of Fame loaded successfully with real data');
 
@@ -371,6 +383,33 @@
             });
         }
 
+        function setupToggleViewListener() {
+            const toggleBtn = document.getElementById('toggle-view-btn');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    showingAllPlayers = !showingAllPlayers;
+                    updateToggleButton();
+                    updateRankingsTable(currentSortedPlayers, showingAllPlayers ? currentSortedPlayers.length : 10);
+                });
+            }
+        }
+
+        function updateToggleButton() {
+            const toggleBtn = document.getElementById('toggle-view-btn');
+            const btnText = toggleBtn.querySelector('.btn-text');
+            const btnIcon = toggleBtn.querySelector('.btn-icon');
+            
+            if (showingAllPlayers) {
+                btnText.textContent = 'Show Top 10';
+                btnIcon.textContent = '🔟';
+                toggleBtn.classList.add('showing-all');
+            } else {
+                btnText.textContent = 'See All Players';
+                btnIcon.textContent = '👁️';
+                toggleBtn.classList.remove('showing-all');
+            }
+        }
+
         function updateRankingsDisplay(rankingType) {
             let sortedPlayers;
             
@@ -386,11 +425,18 @@
                 sortedPlayers = sortPlayersByRanking(allPlayers, rankingType);
             }
             
+            // Store sorted players for toggle functionality
+            currentSortedPlayers = sortedPlayers;
+            
             // Update title and description
             updateRankingInfo(rankingType);
             
-            // Update full rankings table
-            updateRankingsTable(sortedPlayers);
+            // Reset to top 10 view when switching categories
+            showingAllPlayers = false;
+            updateToggleButton();
+            
+            // Update rankings table (show top 10 by default)
+            updateRankingsTable(sortedPlayers, showingAllPlayers ? sortedPlayers.length : 10);
         }
 
         function sortPlayersByRanking(players, rankingType) {
@@ -472,10 +518,13 @@
 
 
 
-        function updateRankingsTable(players) {
+        function updateRankingsTable(players, limit = players.length) {
             const tableBody = document.getElementById('rankings-table-body');
             
-            const tableHTML = players.map((player, index) => {
+            // Limit the number of players shown
+            const displayPlayers = players.slice(0, limit);
+            
+            const tableHTML = displayPlayers.map((player, index) => {
                 const trend = generateTrendIndicator(player, index);
                 const medalIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
                 
@@ -941,6 +990,51 @@
             color: var(--primary);
         }
 
+        /* Table Controls Styling */
+        .table-controls {
+            display: flex;
+            justify-content: center;
+            padding: var(--spacing-xl) 0;
+            margin-top: var(--spacing-lg);
+            border-top: 1px solid var(--border);
+        }
+
+        .toggle-view-btn {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            padding: var(--spacing-md) var(--spacing-xl);
+            border-radius: var(--border-radius-lg);
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .toggle-view-btn:hover {
+            background: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .toggle-view-btn.showing-all {
+            background: var(--primary);
+            color: white;
+        }
+
+        .toggle-view-btn.showing-all:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-icon {
+            font-size: 1rem;
+        }
+
         @media (max-width: 768px) {
             .hero-title {
                 font-size: 2.5rem;
@@ -974,6 +1068,15 @@
             
             .records-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .table-controls {
+                padding: var(--spacing-lg) 0;
+            }
+            
+            .toggle-view-btn {
+                padding: var(--spacing-sm) var(--spacing-lg);
+                font-size: 0.8rem;
             }
         }
     </style>
