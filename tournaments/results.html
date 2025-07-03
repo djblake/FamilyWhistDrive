@@ -165,7 +165,7 @@
                 
                 const summaryHTML = `
                     <div class="summary-card champion-card">
-                        <div class="summary-icon">👑</div>
+                        <div class="summary-icon">🏆</div>
                         <div class="summary-content">
                             <h3>Champion</h3>
                             <p class="summary-value">${tournament.winner}</p>
@@ -208,8 +208,12 @@
                     const isLastPlace = index === tournament.final_standings.length - 1;
                     
                     let rowClass = '';
-                    if (index < 3) {
-                        rowClass = 'podium-row';
+                    if (index === 0) {
+                        rowClass = 'podium-row first-place';
+                    } else if (index === 1) {
+                        rowClass = 'podium-row second-place';
+                    } else if (index === 2) {
+                        rowClass = 'podium-row third-place';
                     } else if (isLastPlace && tournament.final_standings.length > 3) {
                         rowClass = 'booby-row';
                     }
@@ -383,6 +387,18 @@
 
         .podium-row {
             background: linear-gradient(135deg, #fef3c7 0%, #fff 100%);
+        }
+
+        .podium-row.first-place {
+            border-left: 4px solid #fbbf24; /* Gold */
+        }
+
+        .podium-row.second-place {
+            border-left: 4px solid #94a3b8; /* Silver */
+        }
+
+        .podium-row.third-place {
+            border-left: 4px solid #d97706; /* Bronze */
         }
 
         .booby-row {
