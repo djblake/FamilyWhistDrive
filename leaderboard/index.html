@@ -46,8 +46,7 @@
                 <div class="ranking-filters">
                     <button class="filter-btn active" data-ranking="overall">Official Seed Ranking</button>
                     <button class="filter-btn" data-ranking="championships">Tournament Wins</button>
-                    <button class="filter-btn" data-ranking="career_wins">Career Victories</button>
-                    <button class="filter-btn" data-ranking="win_percentage">Win Percentage</button>
+                    <button class="filter-btn" data-ranking="career_stats">Career Wins</button>
                     <button class="filter-btn" data-ranking="recent_form">Recent Form</button>
                 </div>
 
@@ -320,7 +319,7 @@
         </div>
     </footer>
 
-            <script src="../assets/js/tournament-engine.js?v=49"></script>
+            <script src="../assets/js/tournament-engine.js?v=55"></script>
     
     <script>
         // Leaderboard specific JavaScript
@@ -387,9 +386,21 @@
             const toggleBtn = document.getElementById('toggle-view-btn');
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', function() {
+                    const wasShowingAll = showingAllPlayers;
                     showingAllPlayers = !showingAllPlayers;
                     updateToggleButton();
                     updateRankingsTable(currentSortedPlayers, showingAllPlayers ? currentSortedPlayers.length : 10);
+                    
+                    // If we just switched from showing all to showing top 10, scroll to top of table
+                    if (wasShowingAll && !showingAllPlayers) {
+                        const rankingsTitle = document.getElementById('current-ranking-title');
+                        if (rankingsTitle) {
+                            rankingsTitle.scrollIntoView({ 
+                                behavior: 'smooth', 
+                                block: 'start' 
+                            });
+                        }
+                    }
                 });
             }
         }
@@ -400,7 +411,7 @@
             const btnIcon = toggleBtn.querySelector('.btn-icon');
             
             if (showingAllPlayers) {
-                btnText.textContent = 'Show Top 10';
+                btnText.textContent = 'Show Top 10 Only';
                 btnIcon.textContent = '🔟';
                 toggleBtn.classList.add('showing-all');
             } else {
@@ -431,11 +442,10 @@
             // Update title and description
             updateRankingInfo(rankingType);
             
-            // Reset to top 10 view when switching categories
-            showingAllPlayers = false;
+            // Preserve the current view state (top 10 or all players)
             updateToggleButton();
             
-            // Update rankings table (show top 10 by default)
+            // Update rankings table with current view preference
             updateRankingsTable(sortedPlayers, showingAllPlayers ? sortedPlayers.length : 10);
         }
 
@@ -467,11 +477,10 @@
                 case 'championships':
                     return player.tournament_wins || 0;
                 
-                case 'career_wins':
-                    return player.career_wins || 0;
-                
-                case 'win_percentage':
-                    return parseFloat(player.win_percentage || 0);
+                case 'career_stats':
+                    // Sort by win percentage (rounds_won / total_rounds)
+                    const winRate = player.total_rounds > 0 ? (player.rounds_won / player.total_rounds) * 100 : 0;
+                    return winRate;
                 
                 case 'recent_form':
                     // Simulate recent form based on tournament wins and recency
@@ -497,13 +506,9 @@
                     title: 'Tournament Championships',
                     desc: 'Players ranked by total number of tournament victories achieved'
                 },
-                career_wins: {
-                    title: 'Career Victories',
-                    desc: 'Total number of round victories accumulated throughout their career'
-                },
-                win_percentage: {
-                    title: 'Win Percentage Leaders',
-                    desc: 'Percentage of rounds won relative to total rounds played'
+                career_stats: {
+                    title: 'Career Wins',
+                    desc: 'Players ranked by round win percentage - total rounds won vs rounds played'
                 },
                 recent_form: {
                     title: 'Recent Form Rankings',
@@ -521,35 +526,108 @@
         function updateRankingsTable(players, limit = players.length) {
             const tableBody = document.getElementById('rankings-table-body');
             
+            // Update table headers based on ranking type
+            updateTableHeaders(currentRankingType);
+            
             // Limit the number of players shown
             const displayPlayers = players.slice(0, limit);
             
             const tableHTML = displayPlayers.map((player, index) => {
-                const trend = generateTrendIndicator(player, index);
+                const trend = generateTrendIndicator(player, index + 1, currentRankingType);
                 const medalIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
                 
-                return `
-                    <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
-                        <div class="rank-col">
-                            <span class="rank-number">${index + 1}</span>
-                            <span class="rank-medal">${medalIcon}</span>
+                if (currentRankingType === 'career_stats') {
+                    // Special layout for Career Wins
+                    return `
+                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
+                            <div class="rank-col">
+                                <span class="rank-number">${index + 1}</span>
+                                <span class="rank-medal">${medalIcon}</span>
+                            </div>
+                            <div class="player-col">
+                                <a href="../players/profile.html?player=${encodeURIComponent(player.name)}" class="player-link">
+                                    <span class="player-name">${player.name}</span>
+                                    <span class="player-nickname">${getPlayerNickname(player.name)}</span>
+                                </a>
+                            </div>
+                            <div class="rounds-won-col">${player.rounds_won || 0}</div>
+                            <div class="rounds-played-col">${player.total_rounds || 0}</div>
+                            <div class="score-col">${player.total_rounds > 0 ? ((player.rounds_won / player.total_rounds) * 100).toFixed(1) : '0.0'}%</div>
+                            <div class="trend-col">${trend}</div>
                         </div>
-                        <div class="player-col">
-                            <a href="../players/profile.html?player=${encodeURIComponent(player.name)}" class="player-link">
-                                <span class="player-name">${player.name}</span>
-                                <span class="player-nickname">${getPlayerNickname(player.name)}</span>
-                            </a>
+                    `;
+                } else {
+                    // Standard layout for other ranking types
+                    return `
+                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
+                            <div class="rank-col">
+                                <span class="rank-number">${index + 1}</span>
+                                <span class="rank-medal">${medalIcon}</span>
+                            </div>
+                            <div class="player-col">
+                                <a href="../players/profile.html?player=${encodeURIComponent(player.name)}" class="player-link">
+                                    <span class="player-name">${player.name}</span>
+                                    <span class="player-nickname">${getPlayerNickname(player.name)}</span>
+                                </a>
+                            </div>
+                            <div class="score-col">${formatScoreDisplay(player, currentRankingType)}</div>
+                            <div class="tournaments-col">${player.tournaments_played || 0}</div>
+                            <div class="wins-col">${player.tournament_wins || 0}</div>
+                            <div class="percentage-col">${player.win_percentage || '0.0'}%</div>
+                            <div class="trend-col">${trend}</div>
                         </div>
-                        <div class="score-col">${formatScoreDisplay(player, currentRankingType)}</div>
-                        <div class="tournaments-col">${player.tournaments_played || 0}</div>
-                        <div class="wins-col">${player.tournament_wins || 0}</div>
-                        <div class="percentage-col">${player.win_percentage || '0.0'}%</div>
-                        <div class="trend-col">${trend}</div>
-                    </div>
-                `;
+                    `;
+                }
             }).join('');
             
             tableBody.innerHTML = tableHTML;
+        }
+
+        function updateTableHeaders(rankingType) {
+            const tableHeader = document.querySelector('.rankings-table-header');
+            const rankingsTable = document.querySelector('.full-rankings');
+            
+            if (rankingType === 'career_stats') {
+                // Add career-stats class for special layout
+                rankingsTable.classList.add('career-stats');
+                
+                // Special layout for Career Wins
+                tableHeader.innerHTML = `
+                    <div class="rank-col">Rank</div>
+                    <div class="player-col">Player</div>
+                    <div class="rounds-won-col">Rounds Won</div>
+                    <div class="rounds-played-col">Rounds Played</div>
+                    <div class="score-col">Round Win %</div>
+                    <div class="trend-col">Trend</div>
+                `;
+            } else {
+                // Remove career-stats class for standard layout
+                rankingsTable.classList.remove('career-stats');
+                
+                // Standard layout for other ranking types
+                tableHeader.innerHTML = `
+                    <div class="rank-col">Rank</div>
+                    <div class="player-col">Player</div>
+                    <div class="score-col">${getScoreHeaderText(rankingType)}</div>
+                    <div class="tournaments-col">Tournaments</div>
+                    <div class="wins-col">Wins</div>
+                    <div class="percentage-col">Win %</div>
+                    <div class="trend-col">Trend</div>
+                `;
+            }
+        }
+        
+        function getScoreHeaderText(rankingType) {
+            switch (rankingType) {
+                case 'overall':
+                    return 'Score';
+                case 'championships':
+                    return 'Championships';
+                case 'recent_form':
+                    return 'Form Score';
+                default:
+                    return 'Score';
+            }
         }
 
         function formatScoreDisplay(player, rankingType) {
@@ -559,10 +637,10 @@
                     return player.seed_points || Math.round(player.rankingScore || 0);
                 case 'championships':
                     return player.tournament_wins || 0;
-                case 'career_wins':
-                    return player.career_wins || 0;
-                case 'win_percentage':
-                    return `${player.win_percentage || '0.0'}%`;
+                case 'career_stats':
+                    // Display win percentage (the sorting metric) in the score column
+                    const winPct = player.total_rounds > 0 ? ((player.rounds_won / player.total_rounds) * 100).toFixed(1) : '0.0';
+                    return `${winPct}%`;
                 case 'recent_form':
                     return Math.round(player.rankingScore || 0);
                 default:
@@ -588,12 +666,27 @@
             return nicknames[name] || '';
         }
 
-        function generateTrendIndicator(player, index) {
-            // Simulate trend based on position and some randomness
-            const trends = ['📈', '📊', '📉'];
-            if (index < 3) return '📈'; // Top 3 trending up
-            if (index > 15) return '📉'; // Lower ranks trending down
-            return trends[Math.floor(Math.random() * trends.length)];
+        function generateTrendIndicator(player, currentPosition, rankingType) {
+            // Calculate real trend by comparing position before and after most recent tournament
+            try {
+                if (!tournamentEngine || typeof tournamentEngine.calculatePlayerTrend !== 'function') {
+                    // Fallback if trend calculation not available
+                    return '—';
+                }
+                
+                const trend = tournamentEngine.calculatePlayerTrend(player.name, rankingType);
+                
+                if (trend > 0) {
+                    return '<span style="color: #10b981;">↗</span>'; // Green up arrow
+                } else if (trend < 0) {
+                    return '<span style="color: #ef4444;">↘</span>'; // Red down arrow
+                } else {
+                    return '<span style="color: #6b7280;">—</span>'; // Gray dash for no change
+                }
+            } catch (error) {
+                console.warn('Error calculating trend for', player.name, ':', error);
+                return '—';
+            }
         }
 
         function generateChampionshipHistory() {
@@ -757,10 +850,16 @@
 
         .rankings-table-header {
             display: grid;
-            grid-template-columns: 80px 1fr 100px 100px 80px 100px 80px;
+            grid-template-columns: 80px 1.2fr 120px 120px 100px 120px 80px;
             background: var(--primary);
             color: white;
             padding: var(--spacing-lg) var(--spacing-md);
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        
+        .rankings-table-header > div {
+            color: white;
             font-weight: 600;
             font-size: 0.875rem;
         }
@@ -772,7 +871,7 @@
 
         .ranking-row {
             display: grid;
-            grid-template-columns: 80px 1fr 100px 100px 80px 100px 80px;
+            grid-template-columns: 80px 1.2fr 120px 120px 100px 120px 80px;
             padding: var(--spacing-md);
             border-bottom: 1px solid var(--border);
             align-items: center;
@@ -828,6 +927,21 @@
 
         .trend-col {
             font-size: 1.25rem;
+        }
+
+        .rounds-won-col, .rounds-played-col {
+            font-weight: 500;
+            color: var(--text-primary-dark);
+            text-align: center;
+        }
+
+        /* Career Stats specific grid layout */
+        .career-stats .rankings-table-header {
+            grid-template-columns: 80px 1.2fr 140px 140px 120px 80px;
+        }
+
+        .career-stats .ranking-row {
+            grid-template-columns: 80px 1.2fr 140px 140px 120px 80px;
         }
 
         .ranking-insights {

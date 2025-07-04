@@ -1378,6 +1378,7 @@ class TournamentEngine {
                                 tournaments_played: 0,
                                 total_tricks: 0, // Combined individual + shared
                                 total_rounds: 0,
+                                rounds_won: 0, // NEW: Count of rounds where player scored 7+ tricks
                                 tournament_wins: 0,
                                 top_three_finishes: 0,
                                 // Individual stats (solo play only)
@@ -1385,6 +1386,7 @@ class TournamentEngine {
                                     tournaments_played: 0,
                                     total_tricks: 0,
                                     total_rounds: 0,
+                                    rounds_won: 0, // NEW: Individual rounds won
                                     tournament_wins: 0,
                                     top_three_finishes: 0
                                 },
@@ -1431,6 +1433,7 @@ class TournamentEngine {
                             tournaments_played: 0,
                             total_tricks: 0, // Combined individual + shared
                             total_rounds: 0,
+                            rounds_won: 0, // NEW: Count of rounds where player scored 7+ tricks
                             tournament_wins: 0,
                             top_three_finishes: 0,
                             // Individual stats (solo play only)
@@ -1438,6 +1441,7 @@ class TournamentEngine {
                                 tournaments_played: 0,
                                 total_tricks: 0,
                                 total_rounds: 0,
+                                rounds_won: 0, // NEW: Individual rounds won
                                 tournament_wins: 0,
                                 top_three_finishes: 0
                             },
@@ -1492,11 +1496,68 @@ class TournamentEngine {
             }
         }
         
-        // Calculate averages for both combined and individual stats
+        // Calculate averages and rounds won for both combined and individual stats
         for (const [player, data] of this.players) {
             data.average_tricks = data.total_rounds > 0 ? (data.total_tricks / data.total_rounds).toFixed(2) : 0;
             data.individual.average_tricks = data.individual.total_rounds > 0 ? 
                 (data.individual.total_tricks / data.individual.total_rounds).toFixed(2) : 0;
+            
+            // Calculate rounds won (where player scored 7+ tricks)
+            data.rounds_won = 0;
+            data.individual.rounds_won = 0;
+            
+            // Go through tournament history to count rounds won
+            for (const tournamentHistory of data.tournament_history) {
+                // Check all tournaments this player participated in
+                const tournament = Array.from(this.tournaments.values())
+                    .find(t => t.name === tournamentHistory.tournament && t.year === tournamentHistory.year);
+                
+                if (tournament) {
+                    // Count rounds where this player scored 7+ tricks
+                    for (const round of tournament.rounds) {
+                        for (const table of round.tables) {
+                            for (const partnership of table.partnerships) {
+                                let playerParticipated = false;
+                                let roundTricks = 0;
+                                let isSharedRound = false;
+                                
+                                // Check if this player participated in this partnership
+                                for (const partnershipPlayer of partnership.players) {
+                                    const parsedPlayer = this.parseSharedHand(partnershipPlayer);
+                                    
+                                    if (parsedPlayer.isShared) {
+                                        // Check if target player is in shared hand
+                                        if (parsedPlayer.players.some(p => p.toLowerCase() === player.toLowerCase())) {
+                                            playerParticipated = true;
+                                            roundTricks = partnership.tricks;
+                                            isSharedRound = true;
+                                            break;
+                                        }
+                                    } else {
+                                        // Individual player
+                                        if (partnershipPlayer.toLowerCase() === player.toLowerCase()) {
+                                            playerParticipated = true;
+                                            roundTricks = partnership.tricks;
+                                            isSharedRound = false;
+                                            break;
+                                        }
+                                    }
+                                }
+                                
+                                // If player participated and scored 7+ tricks, count as round won
+                                if (playerParticipated && roundTricks >= 7) {
+                                    data.rounds_won++;
+                                    
+                                    // Count towards individual stats only if not a shared round
+                                    if (!isSharedRound) {
+                                        data.individual.rounds_won++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -2426,6 +2487,111 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
                 });
             default:
                 return players.sort((a, b) => b.total_tricks - a.total_tricks);
+        }
+    }
+
+    /**
+     * Calculate player trend by comparing position before and after most recent tournament
+     * @param {string} playerName - Name of the player
+     * @param {string} rankingType - Type of ranking (overall, championships, career_stats, recent_form)
+     * @returns {number} Position change (positive = improvement, negative = decline, 0 = same)
+     */
+    calculatePlayerTrend(playerName, rankingType) {
+        try {
+            // Get all tournaments sorted by year (most recent first)
+            const allTournaments = Array.from(this.tournaments.entries())
+                .map(([key, tournament]) => ({ key, ...tournament }))
+                .sort((a, b) => b.year - a.year);
+
+            if (allTournaments.length < 2) {
+                return 0; // Need at least 2 tournaments to show trend
+            }
+
+            const mostRecentTournament = allTournaments[0];
+            
+            // Calculate rankings excluding the most recent tournament
+            const previousRankings = this.calculateRankingsExcludingTournament(mostRecentTournament.key, rankingType);
+            
+            // Calculate current rankings (including all tournaments)
+            const currentRankings = this.calculateRankingsForType(rankingType);
+            
+            // Find player positions in both rankings
+            const previousPosition = previousRankings.findIndex(p => p.name === playerName) + 1;
+            const currentPosition = currentRankings.findIndex(p => p.name === playerName) + 1;
+            
+            // If player wasn't in previous ranking, they're new
+            if (previousPosition === 0) {
+                return 0; // New player, no trend
+            }
+            
+            if (currentPosition === 0) {
+                return 0; // Player not in current ranking
+            }
+            
+            // Calculate change (positive = improvement in ranking = lower position number)
+            return previousPosition - currentPosition;
+            
+        } catch (error) {
+            console.warn('Error calculating trend for', playerName, ':', error);
+            return 0;
+        }
+    }
+
+    /**
+     * Calculate rankings excluding a specific tournament
+     * @param {string} excludeTournamentKey - Tournament key to exclude
+     * @param {string} rankingType - Type of ranking
+     * @returns {Array} Rankings array
+     */
+    calculateRankingsExcludingTournament(excludeTournamentKey, rankingType) {
+        // Temporarily remove the tournament
+        const originalTournament = this.tournaments.get(excludeTournamentKey);
+        this.tournaments.delete(excludeTournamentKey);
+        
+        // Recalculate player statistics without this tournament
+        this.players.clear();
+        this.calculatePlayerStatistics();
+        
+        // Get rankings for this type
+        const rankings = this.calculateRankingsForType(rankingType);
+        
+        // Restore the tournament
+        this.tournaments.set(excludeTournamentKey, originalTournament);
+        
+        // Recalculate with all tournaments
+        this.players.clear();
+        this.calculatePlayerStatistics();
+        
+        return rankings;
+    }
+
+    /**
+     * Calculate rankings for a specific type
+     * @param {string} rankingType - Type of ranking
+     * @returns {Array} Rankings array
+     */
+    calculateRankingsForType(rankingType) {
+        switch (rankingType) {
+            case 'overall':
+                return this.getOfficialSeedRankings();
+            case 'championships':
+                return this.getPlayerRankings().sort((a, b) => b.tournament_wins - a.tournament_wins);
+            case 'career_stats':
+                return this.getPlayerRankings().sort((a, b) => {
+                    const aWinPct = a.total_rounds > 0 ? (a.rounds_won / a.total_rounds) * 100 : 0;
+                    const bWinPct = b.total_rounds > 0 ? (b.rounds_won / b.total_rounds) * 100 : 0;
+                    return bWinPct - aWinPct;
+                });
+            case 'recent_form':
+                // For recent form, we could implement a more sophisticated algorithm
+                // For now, use a simple approach based on recent performance
+                return this.getPlayerRankings().sort((a, b) => {
+                    const aRecent = (a.tournament_wins || 0) * 2 + (a.top_three_finishes || 0);
+                    const bRecent = (b.tournament_wins || 0) * 2 + (b.top_three_finishes || 0);
+                    return bRecent - aRecent;
+                });
+            default:
+                return this.getPlayerRankings();
         }
     }
 }
