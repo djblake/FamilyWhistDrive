@@ -26,6 +26,41 @@ class TournamentEngine {
     }
 
     /**
+     * Parse a CSV line properly handling quoted fields that may contain commas
+     * @param {string} line - The CSV line to parse
+     * @returns {Array<string>} Array of field values
+     */
+    parseCSVLine(line) {
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            
+            if (char === '"') {
+                inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+                values.push(current.trim());
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        
+        // Add the last value
+        values.push(current.trim());
+        
+        // Remove any surrounding quotes from values
+        return values.map(value => {
+            if (value.startsWith('"') && value.endsWith('"')) {
+                return value.slice(1, -1);
+            }
+            return value;
+        });
+    }
+
+    /**
      * Generate the official 20-player tournament schedule
      * Based on devenezia.com Whist algorithm
      */
@@ -102,6 +137,39 @@ class TournamentEngine {
     }
 
     /**
+     * Read the Index sheet to get list of sheet names to process
+     * @param {string} sheetId - The Google Sheets ID
+     * @returns {Array<string>} Array of sheet names from column A
+     */
+    async readIndexSheet(sheetId) {
+        try {
+            const indexUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=Index&range=A:A`;
+            console.log(`📖 Reading Index sheet from: ${indexUrl}`);
+            
+            const response = await fetch(indexUrl);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch Index sheet: ${response.status}`);
+            }
+            
+            const csvData = await response.text();
+            const lines = csvData.split('\n');
+            const sheetNames = [];
+            
+            for (const line of lines) {
+                const sheetName = line.replace(/^"|"$/g, '').trim(); // Remove quotes and trim
+                if (sheetName && sheetName !== '') {
+                    sheetNames.push(sheetName);
+                }
+            }
+            
+            return sheetNames;
+        } catch (error) {
+            console.error('❌ Error reading Index sheet:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Load complete tournament data from Google Sheets
      * @param {string} sheetId - The Google Sheets ID
      */
@@ -109,22 +177,27 @@ class TournamentEngine {
         try {
             console.log(`📊 Loading complete tournament data from Google Sheets: ${sheetId}`);
             
-            // First, get the sheet metadata to find all sheets
-            const sheets = await this.getSheetsList(sheetId);
-            console.log(`📋 Found ${sheets.length} sheets:`, sheets.map(s => s.name));
+            // Read the Index sheet to get list of sheets to process
+            const indexSheetNames = await this.readIndexSheet(sheetId);
+            console.log(`📋 Index sheet contains ${indexSheetNames.length} sheets:`, indexSheetNames);
             
-            // Auto-detect sheet types by examining their content
+            // Categorize sheets based on their names (no need to fetch metadata)
             let playersSheet = null;
             const tournamentSheets = [];
+            const scorecardsSheets = [];
             
-            for (const sheet of sheets) {
-                const sheetType = await this.detectSheetType(sheetId, sheet);
-                console.log(`🔍 Sheet "${sheet.name}" detected as: ${sheetType}`);
+            for (const sheetName of indexSheetNames) {
+                // Create sheet object with name (GID will be resolved when needed)
+                const sheet = { name: sheetName };
                 
-                if (sheetType === 'players') {
+                if (sheetName === 'Players') {
                     playersSheet = sheet;
-                } else if (sheetType === 'tournament') {
+                } else if (sheetName.startsWith('WhistGame_')) {
                     tournamentSheets.push(sheet);
+                } else if (sheetName.startsWith('Scorecards_')) {
+                    scorecardsSheets.push(sheet);
+                } else {
+                    console.warn(`⚠️  Unknown sheet type for: ${sheetName}`);
                 }
             }
             
@@ -137,15 +210,41 @@ class TournamentEngine {
                 this.playersLookup = new Map(); // Initialize empty lookup
             }
             
-            console.log(`🏆 Found ${tournamentSheets.length} tournament sheets`);
+            console.log(`🏆 Found ${tournamentSheets.length} tournament sheets and ${scorecardsSheets.length} individual scorecards sheets`);
             
             let totalScorecards = 0;
+            
+            // Load regular tournament sheets
             for (const sheet of tournamentSheets) {
                 const count = await this.loadTournamentSheet(sheetId, sheet, sheet.name);
                 totalScorecards += count;
             }
             
-            console.log(`✅ Successfully loaded ${totalScorecards} scorecards from ${tournamentSheets.length} tournaments`);
+            // Load and process individual scorecards sheets
+            for (const sheet of scorecardsSheets) {
+                const count = await this.loadScorecardsSheet(sheetId, sheet, sheet.name);
+                totalScorecards += count;
+            }
+            
+            console.log(`✅ Successfully loaded ${totalScorecards} scorecards from ${tournamentSheets.length} tournaments and ${scorecardsSheets.length} individual scorecards sheets`);
+            
+            // Debug: Check for duplicate scorecards
+            const duplicateCheck = new Map();
+            let duplicates = 0;
+            for (const scorecard of this.rawScorecards) {
+                const key = `${scorecard.Tournament}_${scorecard.Year}_${scorecard.Round}_${scorecard.Player1}_${scorecard.Player2}`;
+                if (duplicateCheck.has(key)) {
+                    duplicates++;
+                    if (duplicates <= 3) {
+                        console.warn(`🔍 Duplicate scorecard detected:`, key);
+                    }
+                } else {
+                    duplicateCheck.set(key, true);
+                }
+            }
+            if (duplicates > 0) {
+                console.warn(`⚠️  Found ${duplicates} duplicate scorecards in raw data`);
+            }
             
             // Process all the loaded data
             this.processRawScorecards();
@@ -216,7 +315,19 @@ class TournamentEngine {
         console.log('🎯 Using smart detection strategy...');
         
         // First, try common sheet names that might work
-        const commonNames = ['Players', 'WhistGame_2020', 'WhistGame_2021', 'WhistGame_2022', 'WhistGame_2023', 'WhistGame_2024'];
+        // Generate WhistGame_ names for years 1985-2025 to dynamically include any new games
+        const whistGameNames = [];
+        for (let year = 1985; year <= 2025; year++) {
+            whistGameNames.push(`WhistGame_${year}`);
+        }
+        
+        // Generate Scorecards_ names for years 1986-2028 for individual scorecard data
+        const scorecardsNames = [];
+        for (let year = 1986; year <= 2028; year++) {
+            scorecardsNames.push(`Scorecards_${year}`);
+        }
+        
+        const commonNames = ['Players', ...whistGameNames, ...scorecardsNames];
         const seenContent = new Set(); // Track content to detect Google Sheets fallback behavior
         
         for (const name of commonNames) {
@@ -284,17 +395,43 @@ class TournamentEngine {
      */
     async detectSheetType(sheetId, sheet) {
         try {
-            // First, try name-based detection for efficiency (but not for WhistGame_ sheets)
+            // First, try name-based detection for efficiency
             if (sheet.name) {
                 if (sheet.name.toLowerCase().includes('players') && !sheet.name.startsWith('WhistGame_')) {
                     console.log(`👥 Sheet "${sheet.name}" detected as players (name pattern)`);
                     return 'players';
                 }
-                // Don't auto-classify WhistGame_ sheets - need to examine content
-                // Some might be player rosters, others might be scorecard data
+                // WhistGame_ sheets are assumed to be tournament data by default
+                if (sheet.name.startsWith('WhistGame_')) {
+                    console.log(`🏆 Sheet "${sheet.name}" assumed as tournament (WhistGame_ prefix)`);
+                    // Still examine content to confirm, but default to tournament
+                    const contentType = await this.examineSheetContent(sheetId, sheet);
+                    return contentType === 'players' ? 'players' : 'tournament';
+                }
+                
+                // Scorecards_ sheets contain individual player scorecards that need reverse-engineering
+                if (sheet.name.startsWith('Scorecards_')) {
+                    console.log(`📋 Sheet "${sheet.name}" detected as individual scorecards (Scorecards_ prefix)`);
+                    return 'scorecards';
+                }
             }
             
             // Fallback to content analysis if name doesn't match patterns
+            return await this.examineSheetContent(sheetId, sheet);
+        } catch (error) {
+            console.error(`Error detecting sheet type for "${sheet.name}":`, error);
+            return 'unknown';
+        }
+    }
+
+    /**
+     * Examine the content of a sheet to determine its type
+     * @param {string} sheetId - The Google Sheets ID
+     * @param {object} sheet - Sheet information with name and gid
+     * @returns {string} - 'players', 'tournament', or 'unknown'
+     */
+    async examineSheetContent(sheetId, sheet) {
+        try {
             let csvUrl;
             
             // Try accessing by sheet name first
@@ -496,6 +633,10 @@ class TournamentEngine {
             let csvUrl;
             if (sheetInfo.url) {
                 csvUrl = sheetInfo.url;
+            } else if (sheetInfo.name && !sheetInfo.gid) {
+                // Sheet from index with just name - use name-based URL
+                const encodedName = encodeURIComponent(sheetInfo.name);
+                csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodedName}`;
             } else if (sheetInfo.gid && sheetInfo.gid.startsWith('name:')) {
                 // Sheet found by name - use name-based URL
                 const actualSheetName = sheetInfo.gid.substring(5); // Remove 'name:' prefix
@@ -515,7 +656,7 @@ class TournamentEngine {
             
             const csvData = await response.text();
             const lines = csvData.trim().split('\n');
-            const headers = lines[0].split(',').map(h => h.trim());
+            const headers = this.parseCSVLine(lines[0]);
             
             console.log(`📋 Players sheet headers: ${headers.join(', ')}`);
             
@@ -523,20 +664,26 @@ class TournamentEngine {
             this.playersLookup = new Map();
             
             for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',').map(v => v.trim());
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                const values = this.parseCSVLine(line);
                 if (values.length < 3 || !values[0]) continue;
                 
                 const player = {
                     id: values[0],
                     firstName: values[1] || '',
                     lastName: values[2] || '',
+                    nickname: values[3] || '', // New nickname field
                     fullName: `${values[1] || ''} ${values[2] || ''}`.trim()
                 };
+                
                 
                 this.playersLookup.set(player.id, player);
             }
             
             console.log(`✅ Loaded ${this.playersLookup.size} players`);
+            
         } catch (error) {
             console.error('❌ Error loading players data:', error);
             throw error;
@@ -552,6 +699,10 @@ class TournamentEngine {
             let csvUrl;
             if (sheetInfo.url) {
                 csvUrl = sheetInfo.url;
+            } else if (sheetInfo.name && !sheetInfo.gid) {
+                // Sheet from index with just name - use name-based URL
+                const encodedName = encodeURIComponent(sheetInfo.name);
+                csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodedName}`;
             } else if (sheetInfo.gid && sheetInfo.gid.startsWith('name:')) {
                 // Sheet found by name - use name-based URL
                 const actualSheetName = sheetInfo.gid.substring(5); // Remove 'name:' prefix
@@ -687,6 +838,448 @@ class TournamentEngine {
         
         console.log(`✅ Processed ${validScorecards} valid scorecards from ${sheetName}`);
         return validScorecards;
+    }
+
+    /**
+     * Load and process individual scorecards sheet (Scorecards_ prefix)
+     * Reverse-engineers partnerships and opponents from individual player records
+     */
+    async loadScorecardsSheet(sheetId, sheetInfo, sheetName) {
+        try {
+            // Construct appropriate URL based on how sheet was found
+            let csvUrl;
+            if (sheetInfo.url) {
+                csvUrl = sheetInfo.url;
+            } else if (sheetInfo.name && !sheetInfo.gid) {
+                // Sheet from index with just name - use name-based URL
+                const encodedName = encodeURIComponent(sheetInfo.name);
+                csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodedName}`;
+            } else if (sheetInfo.gid && sheetInfo.gid.startsWith('name:')) {
+                const actualSheetName = sheetInfo.gid.substring(5);
+                const encodedName = encodeURIComponent(actualSheetName);
+                csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodedName}`;
+            } else {
+                csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${sheetInfo.gid || sheetInfo}`;
+            }
+            
+            console.log(`📋 Loading individual scorecards from ${sheetName} (${sheetInfo.name || sheetInfo.gid || sheetInfo})`);
+            
+            const response = await fetch(csvUrl);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch scorecards data: ${response.statusText}`);
+            }
+            
+            const csvData = await response.text();
+            return await this.processScorecardsCSV(csvData, sheetName);
+        } catch (error) {
+            console.error(`❌ Error loading scorecards sheet ${sheetName}:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Process individual scorecards CSV and reverse-engineer partnerships
+     * Expected headers: Id, Date, Tournament, Year, Round, Trump_Suit, Table, Player, Tricks_Won
+     */
+    async processScorecardsCSV(csvData, sheetName) {
+        const lines = csvData.trim().split('\n');
+        
+        console.log(`🔍 DEBUG: Processing individual scorecards ${sheetName}:`);
+        console.log(`  Total lines: ${lines.length}`);
+        console.log(`  First 3 lines:`, lines.slice(0, 3));
+        
+        if (lines.length <= 1) {
+            console.log(`⚠️  ${sheetName} has no data rows (only ${lines.length} lines)`);
+            return 0;
+        }
+        
+        const headers = lines[0].split(',').map(h => {
+            let trimmed = h.trim();
+            if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+                trimmed = trimmed.slice(1, -1);
+            }
+            return trimmed;
+        });
+        
+        console.log(`📊 Headers found: ${headers.join(', ')}`);
+        
+        // Expected headers: Id, Date, Tournament, Year, Round, Trump_Suit, Table, Player, Tricks_Won
+        const requiredHeaders = ['Id', 'Date', 'Tournament', 'Year', 'Round', 'Trump_Suit', 'Table', 'Player', 'Tricks_Won'];
+        const missingHeaders = requiredHeaders.filter(header => !headers.includes(header));
+        
+        if (missingHeaders.length > 0) {
+            throw new Error(`Missing required headers: ${missingHeaders.join(', ')}`);
+        }
+        
+        // Parse individual scorecards
+        const individualScores = [];
+        let validRows = 0;
+        let emptyRows = 0;
+        const errors = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) {
+                emptyRows++;
+                continue;
+            }
+            
+            try {
+                const values = line.split(',').map(v => v.replace(/^"|"$/g, '').trim());
+                if (values.length !== headers.length) {
+                    errors.push(`Row ${i + 1}: Expected ${headers.length} values, got ${values.length}`);
+                    continue;
+                }
+                
+                const scorecard = {};
+                headers.forEach((header, index) => {
+                    scorecard[header] = values[index];
+                });
+                
+                // Validate required fields
+                if (!scorecard.Tournament || !scorecard.Year || !scorecard.Round || 
+                    !scorecard.Table || !scorecard.Player || !scorecard.Tricks_Won) {
+                    errors.push(`Row ${i + 1}: Missing required data`);
+                    continue;
+                }
+                
+                // Convert numeric fields
+                scorecard.Year = parseInt(scorecard.Year);
+                scorecard.Round = parseInt(scorecard.Round);
+                scorecard.Table = parseInt(scorecard.Table);
+                scorecard.Tricks_Won = parseInt(scorecard.Tricks_Won);
+                
+                if (isNaN(scorecard.Year) || isNaN(scorecard.Round) || 
+                    isNaN(scorecard.Table) || isNaN(scorecard.Tricks_Won)) {
+                    errors.push(`Row ${i + 1}: Invalid numeric values`);
+                    continue;
+                }
+                
+                individualScores.push(scorecard);
+                validRows++;
+                
+            } catch (error) {
+                errors.push(`Row ${i + 1}: ${error.message}`);
+            }
+        }
+        
+        console.log(`📊 Parsed ${validRows} individual scorecard records from ${sheetName}`);
+        
+        if (errors.length > 0) {
+            console.warn(`⚠️  Parsing errors in ${sheetName}:`, errors.slice(0, 10)); // Show first 10 errors
+        }
+        
+        // Now reverse-engineer partnerships and convert to tournament format
+        const engineeredScorecards = this.processIndividualScorecards(individualScores);
+        
+        // Add to raw scorecards
+        for (const scorecard of engineeredScorecards) {
+            this.rawScorecards.push(scorecard);
+        }
+        
+        console.log(`✅ Reverse-engineered ${engineeredScorecards.length} tournament scorecards from ${sheetName}`);
+        return engineeredScorecards.length;
+    }
+
+    /**
+     * Reverse-engineer partnerships from individual player scorecards
+     */
+    reverseEngineerPartnerships(individualScores, sheetName) {
+        const engineeredScorecards = [];
+        const validationIssues = [];
+        
+        // Group by tournament, round, and table
+        const groupedScores = new Map();
+        
+        for (const score of individualScores) {
+            const key = `${score.Tournament}_${score.Year}_${score.Round}_${score.Table}`;
+            if (!groupedScores.has(key)) {
+                groupedScores.set(key, []);
+            }
+            groupedScores.get(key).push(score);
+        }
+        
+        console.log(`🔧 Reverse-engineering partnerships for ${groupedScores.size} table instances...`);
+        
+        for (const [key, tableScores] of groupedScores) {
+            try {
+                // Each table should have exactly 4 players
+                if (tableScores.length !== 4) {
+                    validationIssues.push(`${key}: Expected 4 players, got ${tableScores.length}`);
+                    continue;
+                }
+                
+                // Sort players by name for consistent partnership assignment
+                const sortedPlayers = tableScores.sort((a, b) => a.Player.localeCompare(b.Player));
+                
+                // Create partnerships: first two players vs last two players  
+                const partnership1 = [sortedPlayers[0], sortedPlayers[1]];
+                const partnership2 = [sortedPlayers[2], sortedPlayers[3]];
+                
+                // Calculate partnership tricks
+                const p1Tricks = partnership1[0].Tricks_Won + partnership1[1].Tricks_Won;
+                const p2Tricks = partnership2[0].Tricks_Won + partnership2[1].Tricks_Won;
+                
+                // Verify tricks sum to 13
+                if (p1Tricks + p2Tricks !== 13) {
+                    validationIssues.push(`${key}: Tricks sum to ${p1Tricks + p2Tricks}, expected 13`);
+                }
+                
+                // Create scorecard entries for each partnership
+                const [tournamentName, year, round, table] = key.split('_');
+                const baseScore = tableScores[0]; // Use first player's data as template
+                
+                // Partnership 1 scorecard
+                const scorecard1 = {
+                    Tournament: baseScore.Tournament,
+                    Year: baseScore.Year,
+                    Round: baseScore.Round,
+                    Trump_Suit: baseScore.Trump_Suit,
+                    Player1: partnership1[0].Player,
+                    Player2: partnership1[1].Player,
+                    Tricks_Won: p1Tricks,
+                    Opponent1: partnership2[0].Player,
+                    Opponent2: partnership2[1].Player,
+                    Opponent_Tricks: p2Tricks,
+                    Source: 'reverse-engineered',
+                    Table: baseScore.Table,
+                    Date: baseScore.Date
+                };
+                
+                // Partnership 2 scorecard
+                const scorecard2 = {
+                    Tournament: baseScore.Tournament,
+                    Year: baseScore.Year,
+                    Round: baseScore.Round,
+                    Trump_Suit: baseScore.Trump_Suit,
+                    Player1: partnership2[0].Player,
+                    Player2: partnership2[1].Player,
+                    Tricks_Won: p2Tricks,
+                    Opponent1: partnership1[0].Player,
+                    Opponent2: partnership1[1].Player,
+                    Opponent_Tricks: p1Tricks,
+                    Source: 'reverse-engineered',
+                    Table: baseScore.Table,
+                    Date: baseScore.Date
+                };
+                
+                engineeredScorecards.push(scorecard1, scorecard2);
+                
+            } catch (error) {
+                validationIssues.push(`${key}: ${error.message}`);
+            }
+        }
+        
+        if (validationIssues.length > 0) {
+            console.warn(`⚠️  Partnership reverse-engineering issues in ${sheetName}:`, validationIssues.slice(0, 10));
+        }
+        
+        console.log(`🔧 Successfully reverse-engineered ${engineeredScorecards.length} scorecards from ${individualScores.length} individual records`);
+        
+        // Debug: Log a few sample engineered scorecards
+        if (engineeredScorecards.length > 0) {
+            console.log(`🔍 Sample reverse-engineered scorecard:`, engineeredScorecards[0]);
+        }
+        
+        return engineeredScorecards;
+    }
+
+    /**
+     * Get trump suit for a given round (1-20)
+     */
+    getTrumpSuit(round) {
+        const trumpSuits = ['Hearts', 'Diamonds', 'Spades', 'Clubs'];
+        return trumpSuits[(round - 1) % 4];
+    }
+
+    /**
+     * Parse CSV data into tournament format
+     */
+    parseCSVData(csvData) {
+        const lines = csvData.trim().split('\n');
+        const scorecards = [];
+        
+        // Skip header row
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            const values = line.split(',').map(v => v.replace(/^"|"$/g, '').trim());
+            
+            if (values.length >= 10) {
+                scorecards.push({
+                    Tournament: values[0],
+                    Year: values[1],
+                    Round: values[2],
+                    Trump_Suit: values[3],
+                    Player1: values[4],
+                    Player2: values[5],
+                    Tricks_Won: parseInt(values[6]),
+                    Opponent1: values[7],
+                    Opponent2: values[8],
+                    Opponent_Tricks: parseInt(values[9]),
+                    Source: 'csv'
+                });
+            }
+        }
+        
+        return scorecards;
+    }
+
+    /**
+     * Get canonical player ID from Players sheet lookup
+     * This handles cases where tournament data might have "Stephen" but Players sheet has "Steve Blake"
+     */
+    getCanonicalPlayerId(playerName) {
+        if (!playerName) return playerName;
+        
+        const trimmedName = playerName.trim();
+        
+        // First, try exact match with the Players sheet
+        if (this.playersLookup.has(trimmedName)) {
+            return trimmedName;
+        }
+        
+        // If no exact match, try to find by first name
+        const firstName = trimmedName.split(/\s+/)[0];
+        
+        // Look for a player ID that starts with this first name
+        for (const [playerId, player] of this.playersLookup) {
+            if (player.firstName === firstName || playerId === firstName) {
+                return playerId;
+            }
+        }
+        
+        // If still no match, return the original name
+        return trimmedName;
+    }
+
+    /**
+     * Get player's full display name for profile pages
+     * Includes nickname if present: George "Grandad" Ruston
+     */
+    getPlayerFullName(playerId) {
+        if (!playerId) return playerId;
+        
+        const playerData = this.playersLookup.get(playerId);
+        if (playerData) {
+            const firstName = playerData.firstName || '';
+            const lastName = playerData.lastName || '';
+            const nickname = playerData.nickname || '';
+            
+            if (nickname) {
+                // Format: FirstName "Nickname" LastName
+                return `${firstName} "${nickname}" ${lastName}`.trim();
+            } else if (firstName || lastName) {
+                // Format: FirstName LastName
+                return `${firstName} ${lastName}`.trim();
+            }
+        }
+        
+        // Fallback to ID if no player data found
+        return playerId;
+    }
+
+    /**
+     * Process individual scorecard data and create tournament structure
+     */
+    processIndividualScorecards(individualScores) {
+        // Create sorting key: round_table_tricks_player
+        const sortedScores = individualScores.map(score => ({
+            ...score,
+            sortKey: `${score.Round}_${score.Table}_${score.Tricks_Won}_${score.Player}`
+        })).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+        
+        const engineeredScorecards = [];
+        
+        // Debug: Log first few sorted entries to understand the data structure
+        if (sortedScores.length > 0) {
+            console.log(`🔍 First 8 sorted individual scores:`, sortedScores.slice(0, 8).map(s => 
+                `R${s.Round}T${s.Table} ${s.Player}: ${s.Tricks_Won} tricks`
+            ));
+        }
+        
+        // Process in groups of 4 (each table)
+        for (let i = 0; i < sortedScores.length; i += 4) {
+            const tableGroup = sortedScores.slice(i, i + 4);
+            
+            if (tableGroup.length !== 4) continue;
+            
+            // Verify all 4 players are from same round/table
+            const roundTable = `${tableGroup[0].Round}_${tableGroup[0].Table}`;
+            if (!tableGroup.every(p => `${p.Round}_${p.Table}` === roundTable)) {
+                console.warn(`⚠️  Mixed round/table in group: ${tableGroup.map(p => `${p.Round}_${p.Table}`).join(', ')}`);
+                continue;
+            }
+            
+            // First 2 = Partnership 1, Next 2 = Partnership 2
+            const partnership1 = tableGroup.slice(0, 2);
+            const partnership2 = tableGroup.slice(2, 4);
+            
+            const p1Tricks = partnership1[0].Tricks_Won;
+            const p2Tricks = partnership2[0].Tricks_Won;
+            
+            // Validate tricks sum to 13
+            if (p1Tricks + p2Tricks !== 13) {
+                console.warn(`⚠️  Table ${roundTable}: Tricks sum to ${p1Tricks + p2Tricks}, expected 13. P1: ${p1Tricks}, P2: ${p2Tricks}`);
+                continue;
+            }
+            
+            // Create WhistGame structure
+            const baseData = tableGroup[0];
+            const scorecard = {
+                Tournament: baseData.Tournament,
+                Year: baseData.Year,
+                Round: baseData.Round,
+                Trump_Suit: baseData.Trump_Suit,
+                Player1: this.getCanonicalPlayerId(partnership1[0].Player),
+                Player2: this.getCanonicalPlayerId(partnership1[1].Player),
+                Tricks_Won: p1Tricks,
+                Opponent1: this.getCanonicalPlayerId(partnership2[0].Player),
+                Opponent2: this.getCanonicalPlayerId(partnership2[1].Player),
+                Opponent_Tricks: p2Tricks,
+                Source: 'reverse-engineered',
+                Table: baseData.Table,
+                Date: baseData.Date
+            };
+            
+            // Debug: Log first few created scorecards
+            if (engineeredScorecards.length < 3) {
+                console.log(`🔍 Created scorecard: ${scorecard.Player1}+${scorecard.Player2} (${scorecard.Tricks_Won}) vs ${scorecard.Opponent1}+${scorecard.Opponent2} (${scorecard.Opponent_Tricks})`);
+            }
+            
+            engineeredScorecards.push(scorecard);
+        }
+        
+        return engineeredScorecards;
+    }
+
+    /**
+     * Group tournaments by key for processing
+     */
+    groupTournaments() {
+        const groups = new Map();
+        
+        for (const scorecard of this.rawScorecards) {
+            const key = `${scorecard.Tournament}_${scorecard.Year}`;
+            
+            if (!groups.has(key)) {
+                groups.set(key, []);
+            }
+            
+            groups.get(key).push(scorecard);
+        }
+        
+        return groups;
+    }
+
+    /**
+     * Get trump suit for a given round (helper method)
+     */
+    getTrumpSuit(round) {
+        // Trump suit rotation: Hearts, Diamonds, Spades, Clubs (repeating)
+        const suitIndex = (round - 1) % 4;
+        return this.trumpSuits[suitIndex];
     }
 
     /**
@@ -1263,7 +1856,6 @@ class TournamentEngine {
                         }
                         
                         const partnershipData = playerScores.get(displayKey);
-                        partnershipData.total_tricks += partnership.tricks;
                         partnershipData.shared_tricks += partnership.tricks;
                         partnershipData.shared_rounds += 1;
                         partnershipData.rounds_played += 1;
@@ -1286,7 +1878,6 @@ class TournamentEngine {
                             
                             const individualData = playerScores.get(individualKey);
                             const splitTricks = partnership.tricks / parsedPlayer.players.length;
-                            individualData.total_tricks += partnership.tricks; // Full credit for averages
                             individualData.shared_tricks += splitTricks; // Split credit for sums
                             individualData.shared_rounds += 1;
                             individualData.rounds_played += 1;
@@ -1305,7 +1896,6 @@ class TournamentEngine {
                         }
                         
                         const playerData = playerScores.get(playerName);
-                        playerData.total_tricks += partnership.tricks;
                         playerData.individual_tricks += partnership.tricks;
                         playerData.individual_rounds += 1;
                         playerData.rounds_played += 1;
@@ -1331,11 +1921,12 @@ class TournamentEngine {
             // Use combined tricks for tournament standings (individual + split shared)
             const combinedTricks = data.individual_tricks + data.shared_tricks;
             
+            
             standings.push({
                 player: player,
                 total_tricks: combinedTricks, // Combined total for rankings
                 rounds_played: data.rounds_played,
-                average_tricks: (data.total_tricks / data.rounds_played).toFixed(2), // Average using full trick credit
+                average_tricks: (combinedTricks / data.rounds_played).toFixed(2), // Average using combined tricks
                 individual_tricks: data.individual_tricks || 0,
                 shared_tricks: data.shared_tricks || 0,
                 individual_rounds: data.individual_rounds || 0,
@@ -2391,9 +2982,10 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
                     const roundsPerPlayer = Math.floor(standing.rounds_played / numPartners);
                     
                     for (const individualName of parsedPlayer.players) {
-                        if (!individualPlayers.has(individualName)) {
-                            individualPlayers.set(individualName, {
-                                name: individualName,
+                        const canonicalId = this.getCanonicalPlayerId(individualName);
+                        if (!individualPlayers.has(canonicalId)) {
+                            individualPlayers.set(canonicalId, {
+                                name: canonicalId,
                                 tournaments_played: 0,
                                 total_tricks: 0,
                                 total_rounds: 0,
@@ -2403,7 +2995,7 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
                             });
                         }
                         
-                        const playerData = individualPlayers.get(individualName);
+                        const playerData = individualPlayers.get(canonicalId);
                         playerData.tournaments_played++;
                         playerData.total_tricks += tricksPerPlayer;
                         playerData.total_rounds += roundsPerPlayer;
@@ -2429,7 +3021,7 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
                     }
                 } else {
                     // Individual player
-                    const playerName = standing.player;
+                    const playerName = this.getCanonicalPlayerId(standing.player);
                     
                     if (!individualPlayers.has(playerName)) {
                         individualPlayers.set(playerName, {
