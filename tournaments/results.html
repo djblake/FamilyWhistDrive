@@ -171,37 +171,21 @@
         function extractPlayerRoundScores(tournament, playerName) {
             const scores = [];
             
-            // Helper function to check if a player matches a partnership entry
-            function playerMatchesPartnership(searchPlayerName, partnershipPlayerName) {
-                // Normalize both names for comparison
-                const normalizeForComparison = (name) => name.replace(/[+\/&\s]/g, '').toLowerCase();
-                
-                // Direct exact match first
-                if (searchPlayerName === partnershipPlayerName) {
-                    return true;
-                }
-                
-                // Check if partnership player contains hand sharing delimiters
-                const delimiters = ['+', '/', '&'];
-                for (const delimiter of delimiters) {
-                    if (partnershipPlayerName.includes(delimiter)) {
-                        const members = partnershipPlayerName.split(delimiter).map(name => name.trim());
-                        
-                        // Check if searchPlayerName matches any member
-                        if (members.some(member => member.toLowerCase() === searchPlayerName.toLowerCase())) {
-                            return true;
-                        }
-                        
-                        // Check if searchPlayerName is a normalized version of the full partnership
-                        const normalizedSearchName = normalizeForComparison(searchPlayerName);
-                        const normalizedPartnershipName = normalizeForComparison(partnershipPlayerName);
-                        if (normalizedSearchName === normalizedPartnershipName) {
-                            return true;
-                        }
-                    }
-                }
-                
-                return false;
+            // Check if playerName is a shared hand (contains "/")
+            const isSharedHandSearch = playerName.includes('/');
+            let searchPlayers = [];
+            
+            if (isSharedHandSearch) {
+                // Extract individual canonical IDs from shared hand format
+                searchPlayers = playerName.split('/').map(name => name.trim());
+            } else {
+                searchPlayers = [playerName];
+            }
+            
+            // Helper function to get canonical ID for comparison
+            function getCanonicalId(fullName) {
+                // Simple canonical ID extraction (first name)
+                return fullName.split(' ')[0];
             }
             
             for (const round of tournament.rounds) {
@@ -211,16 +195,39 @@
                     if (foundInRound) break;
                     
                     for (const partnership of table.partnerships) {
-                        // Check each player in the partnership
-                        for (const partnershipPlayer of partnership.players) {
-                            if (playerMatchesPartnership(playerName, partnershipPlayer)) {
+                        // For shared hands, check if this partnership contains our search players
+                        if (isSharedHandSearch) {
+                            // Check if this partnership contains all the players we're looking for
+                            const partnershipCanonicalIds = partnership.players.map(p => getCanonicalId(p));
+                            const allPlayersFound = searchPlayers.every(searchPlayer =>
+                                partnershipCanonicalIds.some(canonicalId => 
+                                    canonicalId.toLowerCase() === searchPlayer.toLowerCase()
+                                )
+                            );
+                            
+                            if (allPlayersFound && partnership.players.length === searchPlayers.length) {
+                                scores.push(partnership.tricks);
+                                foundInRound = true;
+                                break;
+                            }
+                        } else {
+                            // Individual player search
+                            const found = partnership.players.some(partnershipPlayer => {
+                                // Direct match
+                                if (partnershipPlayer.toLowerCase() === playerName.toLowerCase()) {
+                                    return true;
+                                }
+                                // Canonical ID match
+                                const canonicalId = getCanonicalId(partnershipPlayer);
+                                return canonicalId.toLowerCase() === playerName.toLowerCase();
+                            });
+                            
+                            if (found) {
                                 scores.push(partnership.tricks);
                                 foundInRound = true;
                                 break;
                             }
                         }
-                        
-                        if (foundInRound) break;
                     }
                 }
             }
@@ -469,7 +476,7 @@
 
                 
                 // Create tournament rank progression chart
-                createTournamentRankChart(tournament);
+                createTournamentRankChart(tournament, tournamentEngine);
                 
                 console.log(`✅ Tournament results for ${year} loaded successfully!`);
                 
@@ -481,13 +488,13 @@
             }
         });
 
-        function createTournamentRankChart(tournament) {
+        function createTournamentRankChart(tournament, tournamentEngine) {
             try {
                 // Initialize charts instance
                 const charts = new TournamentCharts();
                 
                 // Create the rank progression chart without player highlighting (show all players)
-                charts.createRankProgressChart('tournament-rank-progression-chart', tournament);
+                charts.createRankProgressChart('tournament-rank-progression-chart', tournament, null, tournamentEngine);
                 
                 console.log(`📈 Created tournament rank progression chart for ${tournament.year}`);
             } catch (error) {

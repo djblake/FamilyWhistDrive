@@ -31,6 +31,13 @@ Building a website to immortalize 40 years of family Partners Whist tournaments.
 - 13 tricks per round, partnerships rotate between rounds
 - Scoring: 1 point per trick over 6 for each partnership
 
+### Player Identification System (CRITICAL)
+**Primary Key**: Players sheet "Id" column is the canonical identifier for all players
+- **Matching**: ALWAYS use the Id field as the merge key when matching players across data sources
+- **Display**: Use Id field for display throughout the website (except Player Profile pages which show full names)
+- **Examples**: "David" (not "David Blake"), "Jennifer" (not "Jennifer Blake"), "David/Jennifer" for shared hands
+- **Data Sources**: Tournament data contains full names, but these must be converted to canonical Ids for consistency
+
 ### Shared Hand Statistics Rules (IMPORTANT)
 When calculating individual player statistics for shared hand partnerships:
 - **Total tricks**: Partnership total ÷ 2 (each player gets half credit)

@@ -520,11 +520,22 @@ class TournamentCharts {
             round.tables.forEach(table => {
                 table.partnerships.forEach(partnership => {
                     partnership.players.forEach(player => {
-                        // Handle shared hand partnerships - convert format instead of splitting
+                        // Handle shared hand partnerships - convert format to match final standings
                         let playerToFind = player;
-                        if (player.includes('+')) {
-                            // Convert "David + Jennifer" to "David/Jennifer" format to match final standings
-                            playerToFind = player.replace(/\s*\+\s*/g, '/');
+                        const delimiters = ['+', '&'];
+                        let foundDelimiter = null;
+                        
+                        for (const delimiter of delimiters) {
+                            if (player.includes(delimiter)) {
+                                foundDelimiter = delimiter;
+                                break;
+                            }
+                        }
+                        
+                        if (foundDelimiter) {
+                            // Convert any delimiter to "/" format to match final standings
+                            const regex = new RegExp(`\\s*\\${foundDelimiter}\\s*`, 'g');
+                            playerToFind = player.replace(regex, '/');
                             console.log(`    🔗 Converting partnership "${player}" → "${playerToFind}"`);
                         }
           
@@ -618,7 +629,7 @@ class TournamentCharts {
     /**
      * Create rank progression chart showing position changes throughout tournament
      */
-    createRankProgressChart(canvasId, tournamentData, highlightPlayer = null) {
+    createRankProgressChart(canvasId, tournamentData, highlightPlayer = null, tournamentEngine = null) {
         console.log(`📈 Creating rank progression chart on canvas '${canvasId}' for player: ${highlightPlayer || 'all players'}`);
         
         if (typeof Chart === 'undefined') {
@@ -637,7 +648,7 @@ class TournamentCharts {
         const ctx = canvas.getContext('2d');
         
         // Process tournament data for rank progression
-        const rankData = this.processRankProgression(tournamentData);
+        const rankData = this.processRankProgression(tournamentData, tournamentEngine);
         
         if (!rankData || !rankData.players || rankData.players.length === 0) {
             console.error('❌ No rank data generated');
@@ -929,7 +940,7 @@ class TournamentCharts {
     /**
      * Process tournament data for rank progression with proper tie handling
      */
-    processRankProgression(tournamentData) {
+    processRankProgression(tournamentData, tournamentEngine = null) {
         console.log('🔍 Processing rank progression data:', tournamentData);
         
         if (!tournamentData || !tournamentData.rounds) {
@@ -948,6 +959,7 @@ class TournamentCharts {
         });
 
         console.log(`🎯 Initialized ${playerScores.size} players:`, Array.from(playerScores.keys()).join(', '));
+        console.log(`📋 Sample round data:`, tournamentData.rounds[0]?.tables[0]?.partnerships[0]);
 
         // Calculate cumulative scores after each round
         tournamentData.rounds.forEach((round, roundIndex) => {
@@ -961,28 +973,68 @@ class TournamentCharts {
 
             // Add this round's tricks
             let roundTricksAdded = 0;
+            const processedPartnerships = new Set(); // Track processed shared hands to avoid double counting
+            
             round.tables.forEach(table => {
                 table.partnerships.forEach(partnership => {
                     const tricks = partnership.tricks || 0;
                     console.log(`    Partnership [${partnership.players.join(', ')}]: ${tricks} tricks`);
                     
                     partnership.players.forEach(player => {
-                        // Handle shared hand partnerships - convert format instead of splitting
-                        let playerToFind = player;
-                        if (player.includes('+')) {
-                            // Convert "David + Jennifer" to "David/Jennifer" format to match final standings
-                            playerToFind = player.replace(/\s*\+\s*/g, '/');
-                            console.log(`    🔗 Converting partnership "${player}" → "${playerToFind}"`);
-                        }
-          
-                        if (roundScores.has(playerToFind)) {
-                            const currentScore = roundScores.get(playerToFind);
-                            const newScore = currentScore + tricks;
-                            roundScores.set(playerToFind, newScore);
-                            roundTricksAdded += tricks;
+                        // Use tournament engine to parse shared hands properly
+                        let playerKey;
+                        let isSharedHand = false;
+                        
+                        if (tournamentEngine && tournamentEngine.parseSharedHand) {
+                            const parsedPlayer = tournamentEngine.parseSharedHand(player);
+                            isSharedHand = parsedPlayer.isShared;
+                            playerKey = parsedPlayer.displayName; // This will be "David/Jennifer" for shared hands
+                            
+                            if (isSharedHand) {
+                                // Skip if already processed in this round
+                                if (processedPartnerships.has(playerKey)) {
+                                    console.log(`    ⏭️ Skipping already processed shared hand: ${playerKey}`);
+                                    return;
+                                }
+                                processedPartnerships.add(playerKey);
+                            }
                         } else {
-                            console.warn(`⚠️  Player "${playerToFind}" from partnership not found in initialized players!`);
-                            console.log(`    Available players (${playerScores.size}):`, Array.from(playerScores.keys()).join(', '));
+                            // Fallback logic for shared hands
+                            const delimiters = ['+', '&'];
+                            for (const delimiter of delimiters) {
+                                if (player.includes(delimiter)) {
+                                    isSharedHand = true;
+                                    const regex = new RegExp(`\\s*\\${delimiter}\\s*`, 'g');
+                                    playerKey = player.replace(regex, '/');
+                                    
+                                    if (processedPartnerships.has(playerKey)) {
+                                        console.log(`    ⏭️ Skipping already processed shared hand: ${playerKey}`);
+                                        return;
+                                    }
+                                    processedPartnerships.add(playerKey);
+                                    break;
+                                }
+                            }
+                            
+                            if (!isSharedHand) {
+                                playerKey = player.split(' ')[0]; // First name fallback
+                            }
+                        }
+                        
+                        // For individual players, get canonical ID
+                        if (!isSharedHand && tournamentEngine && tournamentEngine.getCanonicalPlayerId) {
+                            playerKey = tournamentEngine.getCanonicalPlayerId(player);
+                        }
+                        
+                        if (roundScores.has(playerKey)) {
+                            const currentScore = roundScores.get(playerKey);
+                            const newScore = currentScore + partnership.tricks;
+                            roundScores.set(playerKey, newScore);
+                            roundTricksAdded += partnership.tricks;
+                            console.log(`    ✅ Added ${partnership.tricks} tricks to ${playerKey} (from ${player})`);
+                        } else {
+                            console.warn(`    ⚠️ No match found for player: ${player} → ${playerKey}`);
+                            console.log(`    Available players: ${Array.from(roundScores.keys()).join(', ')}`);
                         }
                     });
                 });
