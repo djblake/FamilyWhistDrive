@@ -1843,6 +1843,9 @@ class TournamentEngine {
                         processedPlayers.add(displayKey);
                         
                         if (!playerScores.has(displayKey)) {
+                            // Convert partnership players to canonical IDs
+                            const canonicalPartners = parsedPlayer.players.map(p => this.getCanonicalPlayerId(p));
+                            
                             playerScores.set(displayKey, { 
                                 total_tricks: 0, 
                                 rounds_played: 0,
@@ -1851,7 +1854,7 @@ class TournamentEngine {
                                 shared_tricks: 0,
                                 shared_rounds: 0,
                                 is_partnership: true,
-                                partnership_players: parsedPlayer.players
+                                partnership_players: canonicalPartners
                             });
                         }
                         
