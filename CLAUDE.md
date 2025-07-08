@@ -31,6 +31,13 @@ Building a website to immortalize 40 years of family Partners Whist tournaments.
 - 13 tricks per round, partnerships rotate between rounds
 - Scoring: 1 point per trick over 6 for each partnership
 
+### Shared Hand Statistics Rules (IMPORTANT)
+When calculating individual player statistics for shared hand partnerships:
+- **Total tricks**: Partnership total ÷ 2 (each player gets half credit)
+- **Average tricks per round**: Partnership total ÷ total tournament rounds
+  - Both players get the same average since we don't know who played which rounds
+  - Use total tournament rounds, not individual participation rounds
+
 ## Official Tournament Structure (CRITICAL)
 **Tournament Generator**: https://www.devenezia.com/downloads/round-robin/rounds.php
 

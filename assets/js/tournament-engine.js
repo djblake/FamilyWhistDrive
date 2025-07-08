@@ -2698,9 +2698,9 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
         );
         
         if (sharedHandEntry) {
-            // For shared hands, we need to return the individual player's share
-            // This could be calculated from the individual tracker data or split evenly
-            return sharedHandEntry.total_tricks / sharedHandEntry.partnership_players.length;
+            // For shared hands, each player gets half credit for the partnership total
+            // This follows the rule: partnership total ÷ 2 (regardless of number of partners)
+            return sharedHandEntry.total_tricks / 2;
         }
         
         return 0;
