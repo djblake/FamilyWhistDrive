@@ -1755,19 +1755,31 @@ class TournamentEngine {
                 const opponentTricks = parseInt(card.Opponent_Tricks || (13 - tricksWon));
                 const trumpSuit = card.Trump_Suit; // Preserve trump suit for this specific partnership
                 
-                // Partnership A: Player1 + Player2 (normalize to canonical IDs)
+                // Helper function to normalize player name (preserve shared hands, canonicalize individuals)
+                const normalizePlayerName = (playerName) => {
+                    const parsed = this.parseSharedHand(playerName);
+                    if (parsed.isShared) {
+                        // For shared hands, return the canonical display name (e.g., "David/Jennifer")
+                        return parsed.displayName;
+                    } else {
+                        // For individual players, return canonical ID
+                        return this.getCanonicalPlayerId(playerName);
+                    }
+                };
+                
+                // Partnership A: Player1 + Player2 (preserve shared hands, canonicalize individuals)
                 partnerships.push({
-                    players: [this.getCanonicalPlayerId(player1), this.getCanonicalPlayerId(player2)],
+                    players: [normalizePlayerName(player1), normalizePlayerName(player2)],
                     tricks: tricksWon,
-                    opponents: [this.getCanonicalPlayerId(opponent1), this.getCanonicalPlayerId(opponent2)],
+                    opponents: [normalizePlayerName(opponent1), normalizePlayerName(opponent2)],
                     trump_suit: trumpSuit // Store trump suit with partnership
                 });
                 
-                // Partnership B: Opponent1 + Opponent2 (normalize to canonical IDs)
+                // Partnership B: Opponent1 + Opponent2 (preserve shared hands, canonicalize individuals)
                 partnerships.push({
-                    players: [this.getCanonicalPlayerId(opponent1), this.getCanonicalPlayerId(opponent2)],
+                    players: [normalizePlayerName(opponent1), normalizePlayerName(opponent2)],
                     tricks: opponentTricks,
-                    opponents: [this.getCanonicalPlayerId(player1), this.getCanonicalPlayerId(player2)],
+                    opponents: [normalizePlayerName(player1), normalizePlayerName(player2)],
                     trump_suit: trumpSuit // Store trump suit with partnership
                 });
             }
