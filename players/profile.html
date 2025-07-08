@@ -303,22 +303,47 @@
                     return;
                 }
 
-                // Update page title and meta
-                document.title = `${player.name} - Player Profile | Ruston Family Whist Drive`;
+                // Get full name for profile display
+                const fullName = tournamentEngine.getPlayerFullName(player.name);
                 
-                // Update player information
-                document.getElementById('player-name').textContent = player.name;
+                // Update page title and meta
+                document.title = `${fullName} - Player Profile | Ruston Family Whist Drive`;
+                
+                // Update player information - use full name for profile display
+                document.getElementById('player-name').textContent = fullName;
                 document.getElementById('player-initial').textContent = player.name.split(' ').map(n => n[0]).join('');
                 
-                // Get player statistics
-                const playerTournaments = tournaments.filter(t => 
-                    t.final_standings.some(s => s.player === player.name)
-                );
+                // Get player statistics - include tournaments where player appears individually OR in shared hands
+                const playerTournaments = tournaments.filter(t => {
+                    // Check if player appears individually in final standings
+                    const appearsIndividually = t.final_standings.some(s => s.player === player.name);
+                    
+                    // Check if player appears in any shared hand partnerships
+                    const appearsInSharedHands = t.final_standings.some(s => 
+                        s.is_partnership && 
+                        s.partnership_players && 
+                        s.partnership_players.some(p => p === player.name)
+                    );
+                    
+                    return appearsIndividually || appearsInSharedHands;
+                });
                 
                 const championships = tournaments.filter(t => t.winner === player.name).length;
                 const topThreeFinishes = tournaments.filter(t => {
-                    const ranking = t.final_standings.findIndex(s => s.player === player.name) + 1;
-                    return ranking <= 3 && ranking > 0;
+                    // Check individual ranking first
+                    const individualRanking = t.final_standings.findIndex(s => s.player === player.name) + 1;
+                    if (individualRanking <= 3 && individualRanking > 0) {
+                        return true;
+                    }
+                    
+                    // Check if player was in a shared hand partnership that finished in top 3
+                    const sharedHandRanking = t.final_standings.findIndex(s => 
+                        s.is_partnership && 
+                        s.partnership_players && 
+                        s.partnership_players.some(p => p === player.name)
+                    ) + 1;
+                    
+                    return sharedHandRanking <= 3 && sharedHandRanking > 0;
                 }).length;
                 
                 const firstYear = Math.min(...playerTournaments.map(t => t.year));
@@ -488,9 +513,31 @@
                 .sort((a, b) => b.year - a.year)
                 .slice(0, 10) // Show last 10 tournaments
                 .map(tournament => {
-                    const playerRanking = tournament.final_standings.findIndex(s => s.player === player.name) + 1;
+                    // Check for individual ranking first
+                    let playerRanking = tournament.final_standings.findIndex(s => s.player === player.name) + 1;
+                    let isSharedHand = false;
+                    let partnershipName = null;
+                    
+                    // If not found individually, check shared hand partnerships
+                    if (playerRanking === 0) {
+                        const sharedHandEntry = tournament.final_standings.find(s => 
+                            s.is_partnership && 
+                            s.partnership_players && 
+                            s.partnership_players.some(p => p === player.name)
+                        );
+                        
+                        if (sharedHandEntry) {
+                            playerRanking = tournament.final_standings.findIndex(s => s === sharedHandEntry) + 1;
+                            isSharedHand = true;
+                            partnershipName = sharedHandEntry.player;
+                        } else {
+                            // Player not found in this tournament - should not happen but handle gracefully
+                            playerRanking = null;
+                        }
+                    }
+                    
                     const isWinner = tournament.winner === player.name;
-                    const isTopThree = playerRanking <= 3;
+                    const isTopThree = playerRanking <= 3 && playerRanking > 0;
                     const totalPlayers = tournament.final_standings.length;
                     
                     // Use centralized methods for calculations
@@ -514,9 +561,11 @@
                                 </div>
                                 <div class="timeline-result">
                                     <span class="position-emoji">${positionEmoji}</span>
-                                    <span class="result-position">${playerRanking}${engine.getOrdinalSuffix(playerRanking)} Place</span>
+                                    <span class="result-position">${playerRanking ? `${playerRanking}${engine.getOrdinalSuffix(playerRanking)} Place` : 'Participated'}</span>
+                                    ${isSharedHand ? '<span class="shared-hand-badge">🤝 Shared Hand</span>' : ''}
                                     ${isWinner ? '<span class="winner-badge">🏆 Champion</span>' : ''}
                                 </div>
+                                ${isSharedHand ? `<div class="partnership-info">Partnership: ${partnershipName}</div>` : ''}
                                 <div class="timeline-stats">
                                     <div class="stat-item">
                                         <span class="stat-icon">👥</span>
@@ -1068,6 +1117,24 @@
             .tricks-label {
                 font-size: 0.55rem;
             }
+        }
+
+        /* Shared Hand Styling */
+        .shared-hand-badge {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .partnership-info {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            font-style: italic;
         }
     </style>
 </body>
