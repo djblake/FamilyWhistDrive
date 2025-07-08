@@ -1862,7 +1862,8 @@ class TournamentEngine {
                         
                         // Also track individual participation for personal scorecards
                         for (const actualPlayer of parsedPlayer.players) {
-                            const individualKey = `__individual_${actualPlayer}`;
+                            const canonicalId = this.getCanonicalPlayerId(actualPlayer);
+                            const individualKey = `__individual_${canonicalId}`;
                             if (!playerScores.has(individualKey)) {
                                 playerScores.set(individualKey, { 
                                     total_tricks: 0, 
@@ -1883,9 +1884,10 @@ class TournamentEngine {
                             individualData.rounds_played += 1;
                         }
                     } else {
-                        // Individual player
-                        if (!playerScores.has(playerName)) {
-                            playerScores.set(playerName, { 
+                        // Individual player - normalize to canonical ID
+                        const canonicalPlayerId = this.getCanonicalPlayerId(playerName);
+                        if (!playerScores.has(canonicalPlayerId)) {
+                            playerScores.set(canonicalPlayerId, { 
                                 total_tricks: 0, 
                                 rounds_played: 0,
                                 individual_tricks: 0,
@@ -1895,7 +1897,7 @@ class TournamentEngine {
                             });
                         }
                         
-                        const playerData = playerScores.get(playerName);
+                        const playerData = playerScores.get(canonicalPlayerId);
                         playerData.individual_tricks += partnership.tricks;
                         playerData.individual_rounds += 1;
                         playerData.rounds_played += 1;
