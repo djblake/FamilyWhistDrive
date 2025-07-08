@@ -409,8 +409,7 @@
                 
                 // Generate rankings table
                 const rankingsHTML = tournament.final_standings.map((player, index) => {
-                    // For shared hands, getPlayerStats won't work since "David/Jennifer" isn't an individual player
-                    const playerStats = player.is_partnership ? null : tournamentEngine.getPlayerStats(player.player);
+                    const playerStats = tournamentEngine.getPlayerStats(player.player);
                     
                     // Extract individual round scores from tournament rounds data
                     const roundScores = extractPlayerRoundScores(tournament, player.player);
