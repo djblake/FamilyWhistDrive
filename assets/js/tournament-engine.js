@@ -1755,19 +1755,19 @@ class TournamentEngine {
                 const opponentTricks = parseInt(card.Opponent_Tricks || (13 - tricksWon));
                 const trumpSuit = card.Trump_Suit; // Preserve trump suit for this specific partnership
                 
-                // Partnership A: Player1 + Player2
+                // Partnership A: Player1 + Player2 (normalize to canonical IDs)
                 partnerships.push({
-                    players: [player1, player2],
+                    players: [this.getCanonicalPlayerId(player1), this.getCanonicalPlayerId(player2)],
                     tricks: tricksWon,
-                    opponents: [opponent1, opponent2],
+                    opponents: [this.getCanonicalPlayerId(opponent1), this.getCanonicalPlayerId(opponent2)],
                     trump_suit: trumpSuit // Store trump suit with partnership
                 });
                 
-                // Partnership B: Opponent1 + Opponent2  
+                // Partnership B: Opponent1 + Opponent2 (normalize to canonical IDs)
                 partnerships.push({
-                    players: [opponent1, opponent2],
+                    players: [this.getCanonicalPlayerId(opponent1), this.getCanonicalPlayerId(opponent2)],
                     tricks: opponentTricks,
-                    opponents: [player1, player2],
+                    opponents: [this.getCanonicalPlayerId(player1), this.getCanonicalPlayerId(player2)],
                     trump_suit: trumpSuit // Store trump suit with partnership
                 });
             }
@@ -1811,8 +1811,10 @@ class TournamentEngine {
         
         if (foundDelimiter) {
             const players = playerName.split(foundDelimiter).map(name => name.trim());
-            // Always display with "/" for hand sharing partnerships
-            const displayName = players.join('/');
+            // Convert to canonical IDs for display (e.g., "David Blake" → "David")
+            const canonicalPlayers = players.map(p => this.getCanonicalPlayerId(p));
+            // Always display with "/" using canonical IDs
+            const displayName = canonicalPlayers.join('/');
             return { players, isShared: true, displayName };
         }
         return { players: [playerName], isShared: false, displayName: playerName };
