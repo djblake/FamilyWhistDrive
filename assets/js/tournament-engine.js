@@ -2684,8 +2684,26 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
      * @returns {number} Total tricks scored in that tournament
      */
     getPlayerTricksInTournament(playerName, tournament) {
+        // First check for individual standing
         const playerStanding = tournament.final_standings.find(s => s.player === playerName);
-        return playerStanding ? playerStanding.total_tricks : 0;
+        if (playerStanding) {
+            return playerStanding.total_tricks;
+        }
+        
+        // If not found individually, check shared hand partnerships
+        const sharedHandEntry = tournament.final_standings.find(s => 
+            s.is_partnership && 
+            s.partnership_players && 
+            s.partnership_players.some(p => p === playerName)
+        );
+        
+        if (sharedHandEntry) {
+            // For shared hands, we need to return the individual player's share
+            // This could be calculated from the individual tracker data or split evenly
+            return sharedHandEntry.total_tricks / sharedHandEntry.partnership_players.length;
+        }
+        
+        return 0;
     }
 
     /**
