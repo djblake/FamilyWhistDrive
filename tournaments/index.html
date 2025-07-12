@@ -137,42 +137,47 @@
                 document.getElementById('total-players').textContent = `${totalPlayers.size} Family Players`;
                 document.getElementById('total-rounds').textContent = `${totalRounds} Total Rounds`;
                 
-                // Generate tournament cards
-                const tournamentsHTML = tournaments.map(tournament => `
-                    <div class="tournament-card ${ tournaments.indexOf(tournament) === 0 ? 'featured' : '' }" id="tournament-${tournament.year}">
-                        <div class="tournament-year">${tournament.year}</div>
-                        <div class="tournament-content">
-                            <h3 class="tournament-title">${tournament.name}</h3>
-                            <div class="tournament-winner">
-                                <span class="winner-icon">👑</span>
-                                <span class="winner-name">
-                                    <a href="../players/profile.html?player=${encodeURIComponent(tournament.winner)}" class="player-name-link">
-                                        ${tournament.winner}
-                                    </a>
-                                </span>
+                // Sort tournaments by year descending
+                const sortedTournaments = tournaments.sort((a, b) => b.year - a.year);
+                
+                // Generate full-width tournament cells
+                const tournamentsHTML = sortedTournaments.map(tournament => {
+                    const winnerScore = tournament.final_standings[0]?.total_tricks || 0;
+                    const secondPlace = tournament.final_standings[1];
+                    const thirdPlace = tournament.final_standings[2];
+                    
+                    return `
+                        <a href="results.html?year=${tournament.year}" class="tournament-item" id="tournament-${tournament.year}">
+                            <div class="tournament-year-column">
+                                <div class="tournament-year">${tournament.year}</div>
+                            </div>
+                            <div class="tournament-content">
+                                <div class="tournament-header">
+                                    <h3 class="tournament-title">${tournament.name}</h3>
+                                </div>
+                                <div class="tournament-winner">
+                                    <span class="winner-icon">🏆</span>
+                                    <span class="winner-name">${tournament.winner}</span>
+                                    <span class="winner-score">${winnerScore} tricks</span>
+                                </div>
+                                <div class="tournament-description">
+                                    ${tournament.winner} claimed victory in this ${tournament.total_players}-player tournament, 
+                                    with ${tournament.runner_up} as runner-up in a competitive field.
+                                </div>
                             </div>
                             <div class="tournament-stats">
-                                <div class="stat-item">
-                                    <span class="stat-label">Players</span>
-                                    <span class="stat-value">${tournament.total_players}</span>
+                                <div class="stat-box">
+                                    <div class="stat-number">${tournament.total_players}</div>
+                                    <div class="stat-label">players</div>
                                 </div>
-                                <div class="stat-item">
-                                    <span class="stat-label">Rounds</span>
-                                    <span class="stat-value">${tournament.total_rounds}</span>
-                                </div>
-                                <div class="stat-item">
-                                    <span class="stat-label">Winner Score</span>
-                                    <span class="stat-value">${tournament.final_standings[0].total_tricks}</span>
+                                <div class="stat-box">
+                                    <div class="stat-number">${tournament.total_rounds}</div>
+                                    <div class="stat-label">rounds</div>
                                 </div>
                             </div>
-                            <p class="tournament-description">
-                                ${tournament.winner} claimed victory in this ${tournament.total_players}-player tournament, 
-                                with ${tournament.runner_up} as runner-up in a competitive field.
-                            </p>
-                            <a href="results.html?year=${tournament.year}" class="tournament-link">View Full Results</a>
-                        </div>
-                    </div>
-                `).join('');
+                        </a>
+                    `;
+                }).join('');
                 
                 document.getElementById('tournaments-grid').innerHTML = tournamentsHTML;
                 
@@ -341,104 +346,143 @@
             background: var(--bg-primary);
         }
 
-        .tournaments-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: var(--spacing-2xl);
+        .tournaments-grid-section .section-title.light {
+            color: white;
         }
 
-        .tournament-card {
+        .tournaments-grid {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+            max-width: 100%;
+        }
+
+        .tournament-item {
+            display: flex;
+            align-items: stretch;
             background: white;
             border-radius: var(--border-radius-lg);
-            padding: var(--spacing-xl);
-            box-shadow: var(--shadow-lg);
-            border: 2px solid var(--border-light);
-            transition: all 0.2s ease;
+            box-shadow: var(--shadow-card);
+            border: 2px solid var(--silver);
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            overflow: hidden;
+            min-height: 120px;
         }
 
-        .tournament-card:hover {
-            transform: translateY(-5px);
+        .tournament-item:hover {
+            transform: translateY(-3px);
             box-shadow: var(--shadow-xl);
-            border-color: var(--secondary);
+            text-decoration: none;
+            color: inherit;
         }
 
-        .tournament-card.featured {
-            border-color: var(--gold);
-            background: linear-gradient(135deg, white 0%, #fef3c7 100%);
+        .tournament-year-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: var(--spacing-xl);
+            background: var(--silver);
+            color: var(--text-primary-dark);
+            padding: var(--spacing-xl) var(--spacing-lg);
+            min-width: 120px;
+            text-align: center;
         }
 
         .tournament-year {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 900;
             font-family: var(--font-primary);
-            color: var(--primary-dark);
-            margin-bottom: var(--spacing-md);
+            line-height: 1;
+            color: #1f2937;
+        }
+
+        .tournament-content {
+            flex: 1;
+            padding: var(--spacing-lg);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        .tournament-header {
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
         }
 
         .tournament-title {
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             font-weight: 700;
             color: var(--primary-dark);
-            margin-bottom: var(--spacing-md);
+            margin: 0;
+            flex: 1;
         }
 
         .tournament-winner {
             display: flex;
             align-items: center;
             gap: var(--spacing-sm);
-            margin-bottom: var(--spacing-lg);
-            font-weight: 600;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .winner-icon {
+            font-size: 1.4rem;
+        }
+
+        .winner-name {
+            font-size: 1.15rem;
+            font-weight: 700;
             color: var(--gold);
         }
 
-        .tournament-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: var(--spacing-md);
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .stat-item {
-            text-align: center;
-            padding: var(--spacing-sm);
-            background: #f3f4f6;
-            border-radius: var(--border-radius);
-        }
-
-        .stat-label {
-            display: block;
-            font-size: 0.75rem;
-            color: var(--text-secondary-dark);
-            margin-bottom: var(--spacing-xs);
-        }
-
-        .stat-value {
-            display: block;
-            font-size: 1.25rem;
-            font-weight: 700;
+        .winner-score {
+            font-size: 1rem;
+            font-weight: 600;
             color: var(--primary-dark);
+            margin-left: var(--spacing-sm);
         }
 
         .tournament-description {
             color: var(--text-secondary-dark);
-            margin-bottom: var(--spacing-lg);
-            line-height: 1.6;
+            line-height: 1.5;
+            font-size: 0.85rem;
         }
 
-        .tournament-link {
-            display: inline-block;
-            background: var(--secondary);
-            color: white;
-            padding: var(--spacing-sm) var(--spacing-lg);
+        .tournament-stats {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md) var(--spacing-md) 0 var(--spacing-md);
+            background: var(--bg-secondary);
+            align-items: center;
+            align-self: stretch;
+            flex-shrink: 0;
+            margin-bottom: -2px;
+        }
+
+        .stat-box {
+            background: #f3f4f6;
             border-radius: var(--border-radius);
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.2s ease;
+            padding: var(--spacing-sm);
+            text-align: center;
+            min-width: 70px;
         }
 
-        .tournament-link:hover {
-            background: var(--primary);
-            transform: translateY(-1px);
+        .stat-number {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary-dark);
+            margin-top: var(--spacing-xs);
         }
 
         .tournament-chart-section {
@@ -560,8 +604,39 @@
                 font-size: 2.5rem;
             }
             
-            .tournaments-grid {
-                grid-template-columns: 1fr;
+            .tournament-item {
+                flex-direction: column;
+            }
+            
+            .tournament-year-column {
+                min-width: auto;
+                padding: var(--spacing-lg) var(--spacing-xl);
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+            }
+            
+            .tournament-year {
+                font-size: 1.75rem;
+            }
+            
+            .tournament-content {
+                padding: var(--spacing-lg);
+            }
+            
+            .tournament-header {
+                margin-bottom: var(--spacing-md);
+            }
+            
+            .tournament-stats {
+                padding: var(--spacing-md);
+                gap: var(--spacing-md);
+                justify-content: center;
+            }
+            
+            .stat-box {
+                flex: 1;
+                max-width: 100px;
             }
         }
     </style>
