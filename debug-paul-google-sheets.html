@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Paul's Google Sheets Tournament Data</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .tournament { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+        .missing { background-color: #ffeeee; }
+        .found { background-color: #eeffee; }
+        .name-variation { background-color: #ffffcc; padding: 2px 4px; margin: 2px; display: inline-block; }
+        .raw-data { background-color: #f0f0f0; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 12px; }
+        pre { background-color: #f5f5f5; padding: 10px; overflow-x: auto; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 2px solid #ddd; border-radius: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Debug Paul's Google Sheets Tournament Data</h1>
+    <div id="debug-output">Loading tournament data from Google Sheets...</div>
+
+    <script src="assets/js/tournament-engine.js"></script>
+    <script>
+        async function debugPaulGoogleSheets() {
+            try {
+                const engine = new TournamentEngine();
+                const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+                const debugOutput = document.getElementById('debug-output');
+                
+                let output = '<div class="debug-section"><h2>Loading Google Sheets Data...</h2>';
+                
+                // Load from Google Sheets
+                await engine.loadFromGoogleSheets(sheetId);
+                
+                const tournaments = engine.getAllTournaments();
+                output += `<p class="success">✅ Loaded ${tournaments.length} tournaments from Google Sheets</p></div>`;
+                
+                // Debug Paul's appearances
+                output += '<div class="debug-section"><h2>Paul\'s Tournament Appearances</h2>';
+                
+                let paulTournaments = [];
+                let missingTournaments = [];
+                
+                for (const tournament of tournaments) {
+                    const standings = engine.generateFinalStandings(tournament.id);
+                    const paulInStandings = standings.find(player => 
+                        player.name.toLowerCase().includes('paul') || 
+                        player.playerId.toLowerCase().includes('paul')
+                    );
+                    
+                    if (paulInStandings) {
+                        paulTournaments.push({
+                            tournament,
+                            paulName: paulInStandings.name,
+                            paulId: paulInStandings.playerId,
+                            position: standings.indexOf(paulInStandings) + 1,
+                            totalTricks: paulInStandings.total_tricks,
+                            tournamentsPlayed: paulInStandings.tournaments_played
+                        });
+                    } else {
+                        missingTournaments.push(tournament);
+                    }
+                }
+                
+                output += `<p><strong>Paul appears in ${paulTournaments.length} tournaments:</strong></p>`;
+                
+                for (const entry of paulTournaments) {
+                    output += `<div class="tournament found">
+                        <h4>${entry.tournament.name} (${entry.tournament.year})</h4>
+                        <p><strong>Name in standings:</strong> "${entry.paulName}"</p>
+                        <p><strong>Player ID:</strong> "${entry.paulId}"</p>
+                        <p><strong>Position:</strong> ${entry.position}</p>
+                        <p><strong>Total Tricks:</strong> ${entry.totalTricks}</p>
+                        <p><strong>Tournaments Played:</strong> ${entry.tournamentsPlayed}</p>
+                    </div>`;
+                }
+                
+                output += `<p class="error"><strong>Paul missing from ${missingTournaments.length} tournaments:</strong></p>`;
+                
+                for (const tournament of missingTournaments) {
+                    output += `<div class="tournament missing">
+                        <h4>${tournament.name} (${tournament.year})</h4>`;
+                    
+                    // Check raw scorecard data for Paul
+                    const scorecards = engine.getScorecardsForTournament(tournament.id);
+                    const paulNames = new Set();
+                    const paulScorecards = [];
+                    
+                    for (const scorecard of scorecards) {
+                        if (scorecard.player1.toLowerCase().includes('paul')) {
+                            paulNames.add(scorecard.player1);
+                            paulScorecards.push(scorecard);
+                        }
+                        if (scorecard.player2.toLowerCase().includes('paul')) {
+                            paulNames.add(scorecard.player2);
+                            paulScorecards.push(scorecard);
+                        }
+                        if (scorecard.opponent1.toLowerCase().includes('paul')) {
+                            paulNames.add(scorecard.opponent1);
+                            paulScorecards.push(scorecard);
+                        }
+                        if (scorecard.opponent2.toLowerCase().includes('paul')) {
+                            paulNames.add(scorecard.opponent2);
+                            paulScorecards.push(scorecard);
+                        }
+                    }
+                    
+                    if (paulNames.size > 0) {
+                        output += `<p><strong>Paul found in raw scorecard data:</strong></p>`;
+                        for (const name of paulNames) {
+                            const canonicalId = engine.getCanonicalPlayerId(name);
+                            output += `<span class="name-variation">"${name}" → "${canonicalId}"</span>`;
+                        }
+                        
+                        output += `<p><strong>Sample scorecards with Paul:</strong></p>`;
+                        const sampleCards = paulScorecards.slice(0, 3);
+                        for (const card of sampleCards) {
+                            output += `<div class="raw-data">Round ${card.round}: ${card.player1} + ${card.player2} vs ${card.opponent1} + ${card.opponent2}</div>`;
+                        }
+                        
+                        // Check if Paul is in shared hands that might be filtered out
+                        const sharedHandNames = paulScorecards.filter(card => 
+                            card.player1.includes('&') || card.player1.includes('/') ||
+                            card.player2.includes('&') || card.player2.includes('/') ||
+                            card.opponent1.includes('&') || card.opponent1.includes('/') ||
+                            card.opponent2.includes('&') || card.opponent2.includes('/')
+                        );
+                        
+                        if (sharedHandNames.length > 0) {
+                            output += `<p class="error"><strong>⚠️ Paul appears in ${sharedHandNames.length} shared hand entries that may be filtered out!</strong></p>`;
+                            for (const card of sharedHandNames.slice(0, 3)) {
+                                output += `<div class="raw-data">Shared: ${card.player1} + ${card.player2} vs ${card.opponent1} + ${card.opponent2}</div>`;
+                            }
+                        }
+                        
+                    } else {
+                        output += `<p class="error"><strong>Paul NOT found in raw scorecard data for this tournament</strong></p>`;
+                    }
+                    
+                    output += `</div>`;
+                }
+                
+                output += '</div>';
+                
+                // Test getCanonicalPlayerId for various Paul name formats
+                output += '<div class="debug-section"><h2>Testing getCanonicalPlayerId for Paul variations</h2>';
+                const paulVariations = [
+                    'Paul', 'Paul Ruston', 'Paul R', 'Paul R.', 'Paul Ruston Jr', 'Paul Jr', 'Paul Ruston Jr.',
+                    'Paul + Marci', 'Paul & Marci', 'Paul/Marci', 'Paul+Marci'
+                ];
+                
+                for (const variation of paulVariations) {
+                    const canonical = engine.getCanonicalPlayerId(variation);
+                    output += `<p>"${variation}" → "${canonical}"</p>`;
+                }
+                output += '</div>';
+                
+                // Check players lookup table
+                output += '<div class="debug-section"><h2>Players Lookup Table</h2>';
+                const playersLookup = engine.playersLookup;
+                const paulInLookup = [];
+                
+                for (const [playerId, playerData] of playersLookup) {
+                    if (playerId.toLowerCase().includes('paul') || 
+                        (playerData.firstName && playerData.firstName.toLowerCase().includes('paul'))) {
+                        paulInLookup.push({playerId, playerData});
+                    }
+                }
+                
+                if (paulInLookup.length > 0) {
+                    output += '<p><strong>Paul entries in players lookup:</strong></p>';
+                    for (const entry of paulInLookup) {
+                        output += `<div class="name-variation">ID: "${entry.playerId}" → First: "${entry.playerData.firstName}" Last: "${entry.playerData.lastName}"</div>`;
+                    }
+                } else {
+                    output += '<p class="error"><strong>No Paul entries found in players lookup table</strong></p>';
+                }
+                output += '</div>';
+                
+                debugOutput.innerHTML = output;
+                
+            } catch (error) {
+                console.error('Error debugging Paul tournaments:', error);
+                document.getElementById('debug-output').innerHTML = `<div class="error"><p>Error: ${error.message}</p><pre>${error.stack}</pre></div>`;
+            }
+        }
+        
+        debugPaulGoogleSheets();
+    </script>
+</body>
+</html>

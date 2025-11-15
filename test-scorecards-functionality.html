@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scorecards_ Functionality Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-button { background: #4f46e5; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; margin: 10px 5px; }
+        .test-button:hover { background: #3730a3; }
+        .test-button.secondary { background: #6b7280; }
+        .test-button.secondary:hover { background: #4b5563; }
+        .results { background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 20px 0; font-family: monospace; white-space: pre-wrap; max-height: 600px; overflow-y: auto; }
+        .success { color: #059669; }
+        .error { color: #dc2626; }
+        .warning { color: #d97706; }
+        .info { color: #2563eb; }
+        .header { color: #7c3aed; font-weight: bold; }
+        .example-data { background: #e0f2fe; padding: 15px; border-radius: 6px; margin: 15px 0; }
+        .example-data pre { margin: 0; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Scorecards_ Functionality Test</h1>
+        <p>This test verifies that the tournament engine can process individual player scorecard data (Scorecards_ prefix) and reverse-engineer partnerships and opponents.</p>
+        
+        <div class="example-data">
+            <h3>📋 Expected Scorecards_ Data Format:</h3>
+            <pre>Id,Date,Tournament,Year,Round,Trump_Suit,Table,Player,Tricks_Won
+1,2023-12-25,Christmas Championship,2023,1,Hearts,1,Alice Smith,7
+2,2023-12-25,Christmas Championship,2023,1,Hearts,1,Bob Jones,7
+3,2023-12-25,Christmas Championship,2023,1,Hearts,1,Carol Brown,6
+4,2023-12-25,Christmas Championship,2023,1,Hearts,1,Dave Wilson,6</pre>
+            <p><strong>Logic:</strong> Alice & Bob (7 tricks each) vs Carol & Dave (6 tricks each) = 7+6=13 ✅</p>
+        </div>
+        
+        <div style="margin: 20px 0;">
+            <button class="test-button" onclick="runTest()">🚀 Test Real Scorecards_ Sheets</button>
+            <button class="test-button secondary" onclick="testSampleData()">📝 Test with Sample Data</button>
+            <button class="test-button secondary" onclick="clearResults()">🧹 Clear Results</button>
+        </div>
+        
+        <div id="results" class="results">
+Click "Test Real Scorecards_ Sheets" to test with actual Google Sheets data, or "Test with Sample Data" to test the reverse-engineering logic with mock data...
+        </div>
+    </div>
+
+    <!-- Load the tournament engine -->
+    <script src="assets/js/tournament-engine.js"></script>
+    
+    <script>
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : 
+                            type === 'error' ? 'error' : 
+                            type === 'warning' ? 'warning' : 
+                            type === 'header' ? 'header' : 'info';
+            results.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function runTest() {
+            clearResults();
+            log('🧪 Testing Scorecards_ functionality with real Google Sheets data...', 'header');
+            
+            try {
+                // Initialize tournament engine
+                const engine = new TournamentEngine();
+                const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+                
+                log('📊 Initializing tournament engine and scanning for sheets...', 'info');
+                
+                // Test the sheet detection
+                const sheets = await engine.getSheetsList(sheetId);
+                log(`📋 Found ${sheets.length} sheets in the document`, 'success');
+                
+                const scorecardsSheets = [];
+                const whistGameSheets = [];
+                
+                for (const sheet of sheets) {
+                    if (sheet.name.startsWith('Scorecards_')) {
+                        scorecardsSheets.push(sheet);
+                        log(`📋 Found Scorecards_ sheet: ${sheet.name} (gid: ${sheet.gid})`, 'success');
+                        
+                        // Test sheet type detection
+                        const sheetType = await engine.detectSheetType(sheetId, sheet);
+                        log(`🔍 Sheet type detected as: ${sheetType}`, sheetType === 'scorecards' ? 'success' : 'warning');
+                    } else if (sheet.name.startsWith('WhistGame_')) {
+                        whistGameSheets.push(sheet);
+                    }
+                }
+                
+                log(`🏆 Summary: ${whistGameSheets.length} WhistGame_ sheets, ${scorecardsSheets.length} Scorecards_ sheets`, 'info');
+                
+                if (scorecardsSheets.length === 0) {
+                    log('⚠️  No Scorecards_ sheets found. Create a sheet with "Scorecards_" prefix to test.', 'warning');
+                    log('   Expected format: Scorecards_YYYY (e.g., Scorecards_2023)', 'warning');
+                    return;
+                }
+                
+                log('🔄 Attempting to load and process Scorecards_ data...', 'info');
+                
+                // Load all tournament data including scorecards
+                const totalScorecards = await engine.loadFromGoogleSheets(sheetId);
+                log(`✅ Successfully loaded ${totalScorecards} total scorecards from all sources`, 'success');
+                
+                // Check which tournaments were created from scorecards sheets
+                const tournaments = engine.getAllTournaments();
+                let scorecardsSourceCount = 0;
+                
+                log('\n📈 Analyzing loaded tournaments...', 'header');
+                
+                for (const tournament of tournaments) {
+                    log(`🏆 Tournament: ${tournament.name} (${tournament.year})`, 'info');
+                    log(`   - Players: ${tournament.total_players}, Rounds: ${tournament.total_rounds}`, 'info');
+                    log(`   - Winner: ${tournament.winner}`, 'info');
+                    
+                    // Check if this tournament has reverse-engineered scorecards
+                    const rawScorecards = engine.rawScorecards.filter(sc => 
+                        sc.Year === tournament.year && sc.Tournament === tournament.name
+                    );
+                    
+                    const reverseEngineered = rawScorecards.filter(sc => 
+                        sc.Source && sc.Source.includes('reverse-engineered')
+                    );
+                    
+                    if (reverseEngineered.length > 0) {
+                        scorecardsSourceCount++;
+                        log(`   ✅ Contains ${reverseEngineered.length} reverse-engineered scorecards from Scorecards_ sheet`, 'success');
+                        
+                        // Show a sample of the reverse-engineered data
+                        const sample = reverseEngineered[0];
+                        log(`   📋 Sample scorecard: ${sample.Player1} & ${sample.Player2} vs ${sample.Opponent1} & ${sample.Opponent2}`, 'info');
+                        log(`      Tricks: ${sample.Tricks_Won} vs ${sample.Opponent_Tricks} (Round ${sample.Round}, Table ${sample.Table})`, 'info');
+                    }
+                }
+                
+                if (scorecardsSourceCount > 0) {
+                    log(`\n🎉 Success! ${scorecardsSourceCount} tournaments were successfully loaded from Scorecards_ sheets`, 'success');
+                    log('   The reverse-engineering of partnerships and opponents worked correctly!', 'success');
+                } else {
+                    log('\n⚠️  No tournaments appear to have been created from Scorecards_ sheets', 'warning');
+                    log('   This could mean the Scorecards_ sheets exist but have no valid data, or there was a processing error', 'warning');
+                }
+                
+                // Show any data issues that were flagged
+                const dataIssues = engine.dataIssues.filter(issue => issue.includes('Scorecards_'));
+                if (dataIssues.length > 0) {
+                    log('\n⚠️  Data validation issues found in Scorecards_ processing:', 'warning');
+                    dataIssues.slice(0, 10).forEach(issue => log(`   - ${issue}`, 'warning'));
+                    if (dataIssues.length > 10) {
+                        log(`   ... and ${dataIssues.length - 10} more issues`, 'warning');
+                    }
+                }
+                
+                log('\n✅ Scorecards_ functionality test completed!', 'success');
+                
+            } catch (error) {
+                log(`❌ Test failed with error: ${error.message}`, 'error');
+                log(`Stack trace: ${error.stack}`, 'error');
+            }
+        }
+        
+        async function testSampleData() {
+            clearResults();
+            log('🧪 Testing reverse-engineering logic with sample data...', 'header');
+            
+            try {
+                const engine = new TournamentEngine();
+                
+                // Create sample individual scorecard data
+                const sampleData = [
+                    { Id: 1, Date: '2023-12-25', Tournament: 'Christmas Championship', Year: 2023, Round: 1, Trump_Suit: 'Hearts', Table: 1, Player: 'Alice Smith', Tricks_Won: 7 },
+                    { Id: 2, Date: '2023-12-25', Tournament: 'Christmas Championship', Year: 2023, Round: 1, Trump_Suit: 'Hearts', Table: 1, Player: 'Bob Jones', Tricks_Won: 7 },
+                    { Id: 3, Date: '2023-12-25', Tournament: 'Christmas Championship', Year: 2023, Round: 1, Trump_Suit: 'Hearts', Table: 1, Player: 'Carol Brown', Tricks_Won: 6 },
+                    { Id: 4, Date: '2023-12-25', Tournament: 'Christmas Championship', Year: 2023, Round: 1, Trump_Suit: 'Hearts', Table: 1, Player: 'Dave Wilson', Tricks_Won: 6 },
+                    
+                    // Second round
+                    { Id: 5, Date: '2023-12-25', Tournament: 'Christmas Championship', Year: 2023, Round: 2, Trump_Suit: 'Diamonds', Table: 1, Player: 'Alice Smith', Tricks_Won: 8 },
+                    { Id: 6, Date: '2023-12-25', Tournament: 'Christmas Championship', Year: 2023, Round: 2, Trump_Suit: 'Diamonds', Table: 1, Player: 'Carol Brown', Tricks_Won: 8 },
+                    { Id: 7, Date: '2023-12-25', Tournament: 'Christmas Championship', Year: 2023, Round: 2, Trump_Suit: 'Diamonds', Table: 1, Player: 'Bob Jones', Tricks_Won: 5 },
+                    { Id: 8, Date: '2023-12-25', Tournament: 'Christmas Championship', Year: 2023, Round: 2, Trump_Suit: 'Diamonds', Table: 1, Player: 'Dave Wilson', Tricks_Won: 5 }
+                ];
+                
+                log('📋 Sample individual scorecard data:', 'info');
+                log('Round 1: Alice(7) & Bob(7) vs Carol(6) & Dave(6) = 7+6=13 ✅', 'info');
+                log('Round 2: Alice(8) & Carol(8) vs Bob(5) & Dave(5) = 8+5=13 ✅', 'info');
+                
+                log('\n🔧 Running reverse-engineering logic...', 'info');
+                
+                // Test the reverse engineering
+                const engineeredScorecards = engine.reverseEngineerPartnerships(sampleData, 'Scorecards_2023_Test');
+                
+                log(`✅ Reverse-engineered ${engineeredScorecards.length} scorecards from ${sampleData.length} individual records`, 'success');
+                
+                // Display results
+                log('\n📊 Reverse-engineered scorecards:', 'header');
+                
+                engineeredScorecards.forEach((scorecard, index) => {
+                    log(`Scorecard ${index + 1}:`, 'info');
+                    log(`  Round ${scorecard.Round} (${scorecard.Trump_Suit}): ${scorecard.Player1} & ${scorecard.Player2}`, 'info');
+                    log(`  vs ${scorecard.Opponent1} & ${scorecard.Opponent2}`, 'info');
+                    log(`  Score: ${scorecard.Tricks_Won} vs ${scorecard.Opponent_Tricks} (Total: ${scorecard.Tricks_Won + scorecard.Opponent_Tricks})`, 'info');
+                    log('', 'info');
+                });
+                
+                // Validation checks
+                let validationErrors = 0;
+                engineeredScorecards.forEach(scorecard => {
+                    const total = scorecard.Tricks_Won + scorecard.Opponent_Tricks;
+                    if (total !== 13) {
+                        log(`❌ Validation error: Tricks sum to ${total}, expected 13`, 'error');
+                        validationErrors++;
+                    }
+                });
+                
+                if (validationErrors === 0) {
+                    log('✅ All scorecards passed validation (tricks sum to 13)', 'success');
+                } else {
+                    log(`❌ ${validationErrors} validation errors found`, 'error');
+                }
+                
+                // Test edge cases
+                log('\n🧪 Testing edge case: Invalid data (tricks don\'t sum to 13)...', 'header');
+                
+                const invalidData = [
+                    { Id: 1, Tournament: 'Test', Year: 2023, Round: 1, Table: 1, Player: 'A', Tricks_Won: 8 },
+                    { Id: 2, Tournament: 'Test', Year: 2023, Round: 1, Table: 1, Player: 'B', Tricks_Won: 8 },
+                    { Id: 3, Tournament: 'Test', Year: 2023, Round: 1, Table: 1, Player: 'C', Tricks_Won: 4 },
+                    { Id: 4, Tournament: 'Test', Year: 2023, Round: 1, Table: 1, Player: 'D', Tricks_Won: 4 }
+                ];
+                
+                const invalidResult = engine.reverseEngineerPartnerships(invalidData, 'TestInvalid');
+                log(`Invalid data processed: ${invalidResult.length} scorecards (should still process despite validation issues)`, 'warning');
+                
+                const issues = engine.dataIssues.filter(issue => issue.includes('TestInvalid'));
+                log(`Validation issues flagged: ${issues.length}`, issues.length > 0 ? 'success' : 'warning');
+                if (issues.length > 0) {
+                    log(`Example issue: ${issues[0]}`, 'warning');
+                }
+                
+                log('\n✅ Sample data test completed successfully!', 'success');
+                
+            } catch (error) {
+                log(`❌ Sample test failed: ${error.message}`, 'error');
+                log(`Stack trace: ${error.stack}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

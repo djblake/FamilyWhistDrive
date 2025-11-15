@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scorecards_ Debug Page | Ruston Family Whist Drive</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background-color: #f8fafc; 
+            color: #1e293b;
+        }
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+        }
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(79, 70, 229, 0.3);
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        .header p {
+            margin: 0;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        .controls {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .control-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .control-row:last-child { margin-bottom: 0; }
+        .btn {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .btn:hover { background: #3730a3; transform: translateY(-1px); }
+        .btn.secondary { background: #6b7280; }
+        .btn.secondary:hover { background: #4b5563; }
+        .btn.danger { background: #dc2626; }
+        .btn.danger:hover { background: #b91c1c; }
+        .btn.success { background: #059669; }
+        .btn.success:hover { background: #047857; }
+        select {
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+        .status {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+        .status.loading { background: #dbeafe; color: #1e40af; border-left: 4px solid #3b82f6; }
+        .status.success { background: #dcfce7; color: #166534; border-left: 4px solid #22c55e; }
+        .status.error { background: #fef2f2; color: #dc2626; border-left: 4px solid #ef4444; }
+        .status.warning { background: #fef3c7; color: #92400e; border-left: 4px solid #f59e0b; }
+        
+        .section {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .section-header {
+            background: #f8fafc;
+            padding: 20px 25px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+            flex: 1;
+        }
+        .section-meta {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-left: 20px;
+        }
+        .section-content {
+            padding: 25px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        th {
+            background: #f1f5f9;
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: 600;
+            color: #475569;
+            border-bottom: 2px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: top;
+        }
+        tr:hover {
+            background: #f8fafc;
+        }
+        
+        .round-group {
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+        .round-header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 15px 20px;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        .round-content {
+            padding: 20px;
+        }
+        .table-group {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        .table-header {
+            background: #e2e8f0;
+            padding: 12px 15px;
+            font-weight: 600;
+            color: #475569;
+        }
+        .table-content {
+            padding: 15px;
+        }
+        .partnership {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        .partnership:last-child { margin-bottom: 0; }
+        .partnership.winning {
+            border-color: #22c55e;
+            background: #f0fdf4;
+        }
+        .partnership-players {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .partnership-score {
+            font-weight: 700;
+            font-size: 1.1rem;
+            padding: 5px 10px;
+            border-radius: 4px;
+            background: #f1f5f9;
+            color: #475569;
+        }
+        .partnership.winning .partnership-score {
+            background: #22c55e;
+            color: white;
+        }
+        
+        .validation-issue {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .validation-success {
+            background: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4f46e5;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            color: #64748b;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .hidden { display: none; }
+        
+        @media (max-width: 768px) {
+            .control-row { flex-direction: column; align-items: stretch; }
+            .btn { margin-bottom: 10px; }
+            .section-header { flex-direction: column; align-items: flex-start; }
+            .section-meta { margin-left: 0; margin-top: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Scorecards_ Debug Page</h1>
+            <p>Debug and validate the processing of individual player scorecard data (Scorecards_ sheets)</p>
+        </div>
+        
+        <div class="controls">
+            <div class="control-row">
+                <select id="sheetSelect">
+                    <option value="">Select a Scorecards_ sheet to debug...</option>
+                </select>
+                <button class="btn" onclick="loadScorecardsSheets()">🔍 Scan for Scorecards_ Sheets</button>
+                <button class="btn success" onclick="debugSelectedSheet()">🐛 Debug Selected Sheet</button>
+            </div>
+            <div class="control-row">
+                <button class="btn secondary" onclick="showRawData()">📊 Show Raw Data</button>
+                <button class="btn secondary" onclick="showProcessedData()">🔧 Show Processed Data</button>
+                <button class="btn secondary" onclick="showValidation()">✅ Show Validation</button>
+                <button class="btn secondary" onclick="debugConsole()">🔍 Debug Console</button>
+                <button class="btn danger" onclick="clearAll()">🧹 Clear All</button>
+            </div>
+        </div>
+        
+        <div id="status" class="hidden"></div>
+        
+        <!-- Statistics Section -->
+        <div id="statsSection" class="section hidden">
+            <div class="section-header">
+                <h2 class="section-title">📊 Processing Statistics</h2>
+            </div>
+            <div class="section-content">
+                <div id="statsContent"></div>
+            </div>
+        </div>
+        
+        <!-- Raw Data Section -->
+        <div id="rawDataSection" class="section hidden">
+            <div class="section-header">
+                <h2 class="section-title">📋 Raw Individual Scorecards</h2>
+                <div class="section-meta" id="rawDataMeta"></div>
+            </div>
+            <div class="section-content">
+                <div id="rawDataContent"></div>
+            </div>
+        </div>
+        
+        <!-- Processed Data Section -->
+        <div id="processedDataSection" class="section hidden">
+            <div class="section-header">
+                <h2 class="section-title">🎯 Reverse-Engineered Games</h2>
+                <div class="section-meta" id="processedDataMeta"></div>
+            </div>
+            <div class="section-content">
+                <div id="processedDataContent"></div>
+            </div>
+        </div>
+        
+        <!-- Validation Section -->
+        <div id="validationSection" class="section hidden">
+            <div class="section-header">
+                <h2 class="section-title">✅ Data Validation Results</h2>
+                <div class="section-meta" id="validationMeta"></div>
+            </div>
+            <div class="section-content">
+                <div id="validationContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load the tournament engine -->
+    <script src="assets/js/tournament-engine.js"></script>
+    
+    <script>
+        let currentEngine = null;
+        let currentSheetData = null;
+        let currentProcessedData = null;
+        let currentValidationIssues = [];
+        
+        function showStatus(message, type = 'loading') {
+            const status = document.getElementById('status');
+            status.className = `status ${type}`;
+            status.textContent = message;
+            status.classList.remove('hidden');
+        }
+        
+        function hideStatus() {
+            document.getElementById('status').classList.add('hidden');
+        }
+        
+        function showSection(sectionId) {
+            document.getElementById(sectionId).classList.remove('hidden');
+        }
+        
+        function hideSection(sectionId) {
+            document.getElementById(sectionId).classList.add('hidden');
+        }
+        
+        async function loadScorecardsSheets() {
+            try {
+                showStatus('🔍 Scanning for Scorecards_ sheets...', 'loading');
+                
+                currentEngine = new TournamentEngine();
+                const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+                
+                const sheets = await currentEngine.getSheetsList(sheetId);
+                const scorecardsSheets = sheets.filter(sheet => sheet.name.startsWith('Scorecards_'));
+                
+                const select = document.getElementById('sheetSelect');
+                select.innerHTML = '<option value="">Select a Scorecards_ sheet to debug...</option>';
+                
+                if (scorecardsSheets.length === 0) {
+                    showStatus('⚠️ No Scorecards_ sheets found in the document', 'warning');
+                    return;
+                }
+                
+                scorecardsSheets.forEach(sheet => {
+                    const option = document.createElement('option');
+                    option.value = JSON.stringify(sheet);
+                    option.textContent = `${sheet.name} (GID: ${sheet.gid})`;
+                    select.appendChild(option);
+                });
+                
+                showStatus(`✅ Found ${scorecardsSheets.length} Scorecards_ sheets`, 'success');
+                
+            } catch (error) {
+                showStatus(`❌ Error scanning sheets: ${error.message}`, 'error');
+                console.error('Error:', error);
+            }
+        }
+        
+        async function debugSelectedSheet() {
+            const select = document.getElementById('sheetSelect');
+            const selectedValue = select.value;
+            
+            if (!selectedValue) {
+                showStatus('⚠️ Please select a Scorecards_ sheet first', 'warning');
+                return;
+            }
+            
+            try {
+                const sheetInfo = JSON.parse(selectedValue);
+                showStatus(`🔍 Loading and processing ${sheetInfo.name}...`, 'loading');
+                
+                if (!currentEngine) {
+                    currentEngine = new TournamentEngine();
+                }
+                
+                const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+                
+                // Clear previous data
+                currentSheetData = null;
+                currentProcessedData = null;
+                currentValidationIssues = [];
+                
+                // Load the sheet data
+                console.log('Loading raw sheet data...');
+                await loadRawSheetData(sheetId, sheetInfo);
+                console.log('Raw data loaded:', currentSheetData);
+                
+                // Process the data
+                console.log('Processing sheet data...');
+                await processSheetData(sheetInfo.name);
+                console.log('Processed data:', currentProcessedData);
+                
+                const rawCount = currentSheetData ? currentSheetData.data.length : 0;
+                const processedCount = currentProcessedData ? currentProcessedData.length : 0;
+                
+                showStatus(`✅ Successfully processed ${sheetInfo.name} - ${rawCount} raw records → ${processedCount} scorecards`, 'success');
+                
+                // Show statistics
+                displayStatistics();
+                
+            } catch (error) {
+                showStatus(`❌ Error processing sheet: ${error.message}`, 'error');
+                console.error('Full error:', error);
+                console.error('Stack trace:', error.stack);
+            }
+        }
+        
+        async function loadRawSheetData(sheetId, sheetInfo) {
+            // Construct CSV URL
+            let csvUrl;
+            if (sheetInfo.gid && sheetInfo.gid.startsWith && sheetInfo.gid.startsWith('name:')) {
+                const actualSheetName = sheetInfo.gid.substring(5);
+                const encodedName = encodeURIComponent(actualSheetName);
+                csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodedName}`;
+            } else {
+                csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${sheetInfo.gid}`;
+            }
+            
+            const response = await fetch(csvUrl);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch data: ${response.statusText}`);
+            }
+            
+            const csvData = await response.text();
+            currentSheetData = parseCSVData(csvData);
+        }
+        
+        function parseCSVData(csvData) {
+            const lines = csvData.trim().split('\n');
+            if (lines.length <= 1) {
+                throw new Error('No data rows found in sheet');
+            }
+            
+            const headers = lines[0].split(',').map(h => {
+                let trimmed = h.trim();
+                if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+                    trimmed = trimmed.slice(1, -1);
+                }
+                return trimmed;
+            });
+            
+            const data = [];
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                const values = parseCSVLine(line);
+                if (values.length !== headers.length) continue;
+                
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index];
+                });
+                
+                // Convert numeric fields
+                if (row.Year) row.Year = parseInt(row.Year);
+                if (row.Round) row.Round = parseInt(row.Round);
+                if (row.Table) row.Table = parseInt(row.Table);
+                if (row.Tricks_Won) row.Tricks_Won = parseInt(row.Tricks_Won);
+                
+                data.push(row);
+            }
+            
+            return { headers, data };
+        }
+        
+        function parseCSVLine(line) {
+            const values = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    values.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            values.push(current.trim());
+            return values;
+        }
+        
+        async function processSheetData(sheetName) {
+            if (!currentSheetData || !currentSheetData.data) {
+                throw new Error('No raw data to process');
+            }
+            
+            // Clear previous validation issues
+            currentEngine.dataIssues = [];
+            
+            try {
+                // Validate and convert the raw data to the expected format
+                const validatedData = [];
+                
+                for (const record of currentSheetData.data) {
+                    // Skip invalid records
+                    if (!record.Tournament || !record.Year || !record.Round || 
+                        !record.Table || !record.Player || record.Tricks_Won === undefined) {
+                        console.warn('Skipping invalid record:', record);
+                        continue;
+                    }
+                    
+                    // Ensure numeric fields are properly converted
+                    const validatedRecord = {
+                        ...record,
+                        Year: parseInt(record.Year) || record.Year,
+                        Round: parseInt(record.Round) || record.Round,
+                        Table: parseInt(record.Table) || record.Table,
+                        Tricks_Won: parseInt(record.Tricks_Won) || record.Tricks_Won
+                    };
+                    
+                    // Additional validation
+                    if (isNaN(validatedRecord.Year) || isNaN(validatedRecord.Round) || 
+                        isNaN(validatedRecord.Table) || isNaN(validatedRecord.Tricks_Won)) {
+                        console.warn('Skipping record with invalid numeric values:', record);
+                        continue;
+                    }
+                    
+                    validatedData.push(validatedRecord);
+                }
+                
+                console.log(`Processing ${validatedData.length} validated records from ${currentSheetData.data.length} raw records`);
+                
+                // Process the data using the engine's reverse engineering
+                currentProcessedData = currentEngine.reverseEngineerPartnerships(validatedData, sheetName);
+                
+                console.log(`Generated ${currentProcessedData.length} processed scorecards`);
+                
+            } catch (error) {
+                console.error('Error in processSheetData:', error);
+                throw error;
+            }
+            
+            // Capture validation issues
+            currentValidationIssues = currentEngine.dataIssues.filter(issue => issue.includes(sheetName));
+        }
+        
+        function displayStatistics() {
+            if (!currentSheetData || !currentProcessedData) return;
+            
+            const statsHtml = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">${currentSheetData.data.length}</div>
+                        <div class="stat-label">Individual Records</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${currentProcessedData.length}</div>
+                        <div class="stat-label">Generated Scorecards</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${getUniqueRounds().length}</div>
+                        <div class="stat-label">Rounds Processed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${getUniqueTables().length}</div>
+                        <div class="stat-label">Tables Processed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${getUniquePlayers().length}</div>
+                        <div class="stat-label">Unique Players</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${currentValidationIssues.length}</div>
+                        <div class="stat-label">Validation Issues</div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('statsContent').innerHTML = statsHtml;
+            showSection('statsSection');
+        }
+        
+        function getUniqueRounds() {
+            if (!currentSheetData) return [];
+            return [...new Set(currentSheetData.data.map(d => d.Round))].sort((a, b) => a - b);
+        }
+        
+        function getUniqueTables() {
+            if (!currentSheetData) return [];
+            return [...new Set(currentSheetData.data.map(d => `${d.Round}-${d.Table}`))];
+        }
+        
+        function getUniquePlayers() {
+            if (!currentSheetData) return [];
+            return [...new Set(currentSheetData.data.map(d => d.Player))];
+        }
+        
+        function showRawData() {
+            if (!currentSheetData) {
+                showStatus('⚠️ No raw data loaded. Please debug a sheet first.', 'warning');
+                return;
+            }
+            
+            const tableHtml = `
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                ${currentSheetData.headers.map(h => `<th>${h}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${currentSheetData.data.map(row => `
+                                <tr>
+                                    ${currentSheetData.headers.map(h => `<td>${row[h] || ''}</td>`).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById('rawDataContent').innerHTML = tableHtml;
+            document.getElementById('rawDataMeta').textContent = `${currentSheetData.data.length} individual scorecard records`;
+            showSection('rawDataSection');
+        }
+        
+        function showProcessedData() {
+            console.log('showProcessedData called');
+            console.log('currentProcessedData:', currentProcessedData);
+            console.log('currentSheetData:', currentSheetData);
+            
+            if (!currentProcessedData) {
+                let message = '⚠️ No processed data available.';
+                if (!currentSheetData) {
+                    message += ' No sheet has been loaded yet.';
+                } else {
+                    message += ` Raw data has ${currentSheetData.data ? currentSheetData.data.length : 0} records but processing failed.`;
+                }
+                showStatus(message, 'warning');
+                return;
+            }
+            
+            if (currentProcessedData.length === 0) {
+                showStatus('⚠️ Processing completed but no valid scorecards were generated. Check the validation section for issues.', 'warning');
+                return;
+            }
+            
+            // Group by round and table for display
+            const groupedData = new Map();
+            
+            for (const scorecard of currentProcessedData) {
+                const roundKey = scorecard.Round;
+                const tableKey = scorecard.Table;
+                
+                if (!groupedData.has(roundKey)) {
+                    groupedData.set(roundKey, new Map());
+                }
+                
+                if (!groupedData.get(roundKey).has(tableKey)) {
+                    groupedData.get(roundKey).set(tableKey, []);
+                }
+                
+                groupedData.get(roundKey).get(tableKey).push(scorecard);
+            }
+            
+            let html = '';
+            
+            // Sort rounds
+            const sortedRounds = Array.from(groupedData.keys()).sort((a, b) => a - b);
+            
+            for (const round of sortedRounds) {
+                const tables = groupedData.get(round);
+                const trumpSuit = currentProcessedData.find(sc => sc.Round === round)?.Trump_Suit || 'Unknown';
+                
+                html += `
+                    <div class="round-group">
+                        <div class="round-header">
+                            Round ${round} - Trump: ${trumpSuit}
+                        </div>
+                        <div class="round-content">
+                `;
+                
+                // Sort tables
+                const sortedTables = Array.from(tables.keys()).sort((a, b) => a - b);
+                
+                for (const table of sortedTables) {
+                    const scorecards = tables.get(table);
+                    
+                    html += `
+                        <div class="table-group">
+                            <div class="table-header">Table ${table}</div>
+                            <div class="table-content">
+                    `;
+                    
+                    // Show partnerships
+                    const partnerships = new Map();
+                    
+                    for (const scorecard of scorecards) {
+                        const key = `${scorecard.Player1} & ${scorecard.Player2}`;
+                        if (!partnerships.has(key)) {
+                            partnerships.set(key, {
+                                players: `${scorecard.Player1} & ${scorecard.Player2}`,
+                                tricks: scorecard.Tricks_Won,
+                                opponents: `${scorecard.Opponent1} & ${scorecard.Opponent2}`,
+                                opponentTricks: scorecard.Opponent_Tricks
+                            });
+                        }
+                    }
+                    
+                    for (const [key, partnership] of partnerships) {
+                        const isWinning = partnership.tricks > partnership.opponentTricks;
+                        const totalTricks = partnership.tricks + partnership.opponentTricks;
+                        const isValid = totalTricks === 13;
+                        
+                        html += `
+                            <div class="partnership ${isWinning ? 'winning' : ''}">
+                                <div class="partnership-players">${partnership.players}</div>
+                                <div class="partnership-score">${partnership.tricks} tricks</div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Add validation indicator
+                    const totalTricks = scorecards.length > 0 ? 
+                        scorecards[0].Tricks_Won + scorecards[0].Opponent_Tricks : 0;
+                    
+                    if (totalTricks !== 13) {
+                        html += `<div class="validation-issue">⚠️ Tricks sum to ${totalTricks}, expected 13</div>`;
+                    } else {
+                        html += `<div class="validation-success">✅ Tricks sum correctly to 13</div>`;
+                    }
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('processedDataContent').innerHTML = html;
+            document.getElementById('processedDataMeta').textContent = `${currentProcessedData.length} generated scorecards across ${sortedRounds.length} rounds`;
+            showSection('processedDataSection');
+        }
+        
+        function showValidation() {
+            if (!currentSheetData) {
+                showStatus('⚠️ No data loaded. Please debug a sheet first.', 'warning');
+                return;
+            }
+            
+            let html = '';
+            
+            // Validation summary
+            const validationSummary = analyzeValidation();
+            
+            html += `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" style="color: ${validationSummary.validTables > 0 ? '#059669' : '#dc2626'}">${validationSummary.validTables}</div>
+                        <div class="stat-label">Valid Tables</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" style="color: ${validationSummary.invalidTables > 0 ? '#dc2626' : '#059669'}">${validationSummary.invalidTables}</div>
+                        <div class="stat-label">Invalid Tables</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" style="color: ${validationSummary.tricksIssues > 0 ? '#dc2626' : '#059669'}">${validationSummary.tricksIssues}</div>
+                        <div class="stat-label">Tricks Sum Issues</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" style="color: ${validationSummary.playerCountIssues > 0 ? '#dc2626' : '#059669'}">${validationSummary.playerCountIssues}</div>
+                        <div class="stat-label">Player Count Issues</div>
+                    </div>
+                </div>
+            `;
+            
+            // Detailed validation issues
+            if (currentValidationIssues.length > 0) {
+                html += `
+                    <h3>🚨 Validation Issues Found:</h3>
+                    ${currentValidationIssues.map(issue => `
+                        <div class="validation-issue">${issue}</div>
+                    `).join('')}
+                `;
+            } else {
+                html += `<div class="validation-success">✅ No validation issues found! All data processed correctly.</div>`;
+            }
+            
+            // Table-by-table validation
+            html += `<h3>📋 Table-by-Table Validation:</h3>`;
+            html += generateTableValidation();
+            
+            document.getElementById('validationContent').innerHTML = html;
+            document.getElementById('validationMeta').textContent = `${currentValidationIssues.length} issues found`;
+            showSection('validationSection');
+        }
+        
+        function analyzeValidation() {
+            if (!currentSheetData) return { validTables: 0, invalidTables: 0, tricksIssues: 0, playerCountIssues: 0 };
+            
+            const summary = { validTables: 0, invalidTables: 0, tricksIssues: 0, playerCountIssues: 0 };
+            
+            // Group by round and table
+            const tableGroups = new Map();
+            
+            for (const record of currentSheetData.data) {
+                const key = `${record.Round}_${record.Table}`;
+                if (!tableGroups.has(key)) {
+                    tableGroups.set(key, []);
+                }
+                tableGroups.get(key).push(record);
+            }
+            
+            for (const [key, records] of tableGroups) {
+                let isValid = true;
+                
+                // Check player count
+                if (records.length !== 4) {
+                    summary.playerCountIssues++;
+                    isValid = false;
+                }
+                
+                // Check tricks sum
+                const totalTricks = records.reduce((sum, r) => sum + r.Tricks_Won, 0);
+                if (totalTricks !== 13) {
+                    summary.tricksIssues++;
+                    isValid = false;
+                }
+                
+                if (isValid) {
+                    summary.validTables++;
+                } else {
+                    summary.invalidTables++;
+                }
+            }
+            
+            return summary;
+        }
+        
+        function generateTableValidation() {
+            if (!currentSheetData) return '';
+            
+            // Group by round and table
+            const tableGroups = new Map();
+            
+            for (const record of currentSheetData.data) {
+                const key = `Round ${record.Round}, Table ${record.Table}`;
+                if (!tableGroups.has(key)) {
+                    tableGroups.set(key, []);
+                }
+                tableGroups.get(key).push(record);
+            }
+            
+            let html = '';
+            
+            for (const [key, records] of tableGroups) {
+                const playerCount = records.length;
+                const totalTricks = records.reduce((sum, r) => sum + r.Tricks_Won, 0);
+                const tricksDistribution = records.map(r => `${r.Player}: ${r.Tricks_Won}`).join(', ');
+                
+                const isPlayerCountValid = playerCount === 4;
+                const isTricksValid = totalTricks === 13;
+                const isValid = isPlayerCountValid && isTricksValid;
+                
+                html += `
+                    <div class="${isValid ? 'validation-success' : 'validation-issue'}">
+                        <strong>${key}</strong><br>
+                        Players: ${playerCount}/4 ${isPlayerCountValid ? '✅' : '❌'}<br>
+                        Tricks: ${totalTricks}/13 ${isTricksValid ? '✅' : '❌'}<br>
+                        Distribution: ${tricksDistribution}
+                    </div>
+                `;
+            }
+            
+            return html;
+        }
+        
+        function debugConsole() {
+            console.log('=== DEBUG CONSOLE OUTPUT ===');
+            console.log('currentEngine:', currentEngine);
+            console.log('currentSheetData:', currentSheetData);
+            console.log('currentProcessedData:', currentProcessedData);
+            console.log('currentValidationIssues:', currentValidationIssues);
+            
+            if (currentSheetData) {
+                console.log('Raw data sample (first 3 records):', currentSheetData.data.slice(0, 3));
+                console.log('Raw data headers:', currentSheetData.headers);
+            }
+            
+            if (currentProcessedData) {
+                console.log('Processed data sample (first 2 scorecards):', currentProcessedData.slice(0, 2));
+            }
+            
+            if (currentEngine) {
+                console.log('Engine data issues:', currentEngine.dataIssues);
+            }
+            
+            showStatus('🔍 Debug information logged to browser console. Press F12 to view.', 'info');
+        }
+        
+        function clearAll() {
+            currentEngine = null;
+            currentSheetData = null;
+            currentProcessedData = null;
+            currentValidationIssues = [];
+            
+            document.getElementById('sheetSelect').innerHTML = '<option value="">Select a Scorecards_ sheet to debug...</option>';
+            
+            ['statsSection', 'rawDataSection', 'processedDataSection', 'validationSection'].forEach(hideSection);
+            hideStatus();
+        }
+        
+        // Auto-load sheets on page load
+        window.addEventListener('load', loadScorecardsSheets);
+    </script>
+</body>
+</html>

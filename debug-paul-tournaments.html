@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Paul's Tournament Appearances</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .tournament { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+        .missing { background-color: #ffeeee; }
+        .found { background-color: #eeffee; }
+        .name-variation { background-color: #ffffcc; padding: 2px 4px; margin: 2px; display: inline-block; }
+        pre { background-color: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Debug Paul's Tournament Appearances</h1>
+    <div id="debug-output"></div>
+
+    <script src="assets/js/tournament-engine.js"></script>
+    <script>
+        async function debugPaulTournaments() {
+            try {
+                const engine = new TournamentEngine();
+                await engine.initialize();
+                
+                const tournaments = engine.getAllTournaments();
+                const debugOutput = document.getElementById('debug-output');
+                
+                let output = `<h2>Found ${tournaments.length} tournaments</h2>`;
+                
+                let paulTournaments = [];
+                let missingTournaments = [];
+                
+                for (const tournament of tournaments) {
+                    const standings = engine.generateFinalStandings(tournament.id);
+                    const paulInStandings = standings.find(player => 
+                        player.name.toLowerCase().includes('paul') || 
+                        player.playerId.toLowerCase().includes('paul')
+                    );
+                    
+                    if (paulInStandings) {
+                        paulTournaments.push({
+                            tournament,
+                            paulName: paulInStandings.name,
+                            paulId: paulInStandings.playerId,
+                            position: standings.indexOf(paulInStandings) + 1
+                        });
+                    } else {
+                        missingTournaments.push(tournament);
+                    }
+                }
+                
+                output += `<h3>Paul appears in ${paulTournaments.length} tournaments:</h3>`;
+                
+                for (const entry of paulTournaments) {
+                    output += `<div class="tournament found">
+                        <h4>${entry.tournament.name} (${entry.tournament.year})</h4>
+                        <p><strong>Name in standings:</strong> "${entry.paulName}"</p>
+                        <p><strong>Player ID:</strong> "${entry.paulId}"</p>
+                        <p><strong>Position:</strong> ${entry.position}</p>
+                    </div>`;
+                }
+                
+                output += `<h3>Paul missing from ${missingTournaments.length} tournaments:</h3>`;
+                
+                for (const tournament of missingTournaments) {
+                    output += `<div class="tournament missing">
+                        <h4>${tournament.name} (${tournament.year})</h4>`;
+                    
+                    // Check raw scorecard data for Paul
+                    const scorecards = engine.getScorecardsForTournament(tournament.id);
+                    const paulNames = new Set();
+                    
+                    for (const scorecard of scorecards) {
+                        if (scorecard.player1.toLowerCase().includes('paul')) {
+                            paulNames.add(scorecard.player1);
+                        }
+                        if (scorecard.player2.toLowerCase().includes('paul')) {
+                            paulNames.add(scorecard.player2);
+                        }
+                        if (scorecard.opponent1.toLowerCase().includes('paul')) {
+                            paulNames.add(scorecard.opponent1);
+                        }
+                        if (scorecard.opponent2.toLowerCase().includes('paul')) {
+                            paulNames.add(scorecard.opponent2);
+                        }
+                    }
+                    
+                    if (paulNames.size > 0) {
+                        output += `<p><strong>Paul found in raw scorecard data:</strong></p>`;
+                        for (const name of paulNames) {
+                            const canonicalId = engine.getCanonicalPlayerId(name);
+                            output += `<span class="name-variation">"${name}" → "${canonicalId}"</span>`;
+                        }
+                    } else {
+                        output += `<p><strong>Paul NOT found in raw scorecard data</strong></p>`;
+                    }
+                    
+                    output += `</div>`;
+                }
+                
+                // Test getCanonicalPlayerId for various Paul name formats
+                output += `<h3>Testing getCanonicalPlayerId for Paul variations:</h3>`;
+                const paulVariations = ['Paul', 'Paul Ruston', 'Paul R', 'Paul R.', 'Paul Ruston Jr', 'Paul Jr', 'Paul Ruston Jr.'];
+                
+                for (const variation of paulVariations) {
+                    const canonical = engine.getCanonicalPlayerId(variation);
+                    output += `<p>"${variation}" → "${canonical}"</p>`;
+                }
+                
+                debugOutput.innerHTML = output;
+                
+            } catch (error) {
+                console.error('Error debugging Paul tournaments:', error);
+                document.getElementById('debug-output').innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+        
+        debugPaulTournaments();
+    </script>
+</body>
+</html>

@@ -121,7 +121,7 @@
         </div>
     </footer>
 
-            <script src="assets/js/tournament-engine.js?v=55"></script>
+            <script src="assets/js/tournament-engine.js?v=49"></script>
     <script>
         // Load real tournament data from Google Sheets
         document.addEventListener('DOMContentLoaded', async function() {
@@ -200,7 +200,7 @@
                     <div class="tournament-card">
                         <div class="tournament-year">${tournament.year}</div>
                         <h3 class="tournament-title">${tournament.name}</h3>
-                        <div class="tournament-winner">Champion: ${tournament.winner}</div>
+                        <div class="tournament-winner">Champion: ${tournamentEngine.getDisplayName(tournament.winner)}</div>
                         <div class="tournament-stats">${tournament.total_players} Players • ${tournament.final_standings.reduce((sum, s) => sum + s.total_tricks, 0)} Total Tricks</div>
                         <a href="tournaments/#${tournament.year}" class="tournament-link">Full Results</a>
                     </div>

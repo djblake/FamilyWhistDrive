@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="assets/js/tournament-engine.js"></script>
+</head>
+<body>
+    <script>
+        async function debugPaul() {
+            const tournamentEngine = new TournamentEngine();
+            const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+            
+            console.log('Loading tournament data...');
+            await tournamentEngine.loadFromGoogleSheets(sheetId);
+            
+            console.log('Getting all tournaments...');
+            const tournaments = Array.from(tournamentEngine.tournaments.values());
+            
+            console.log('Getting all players...');
+            const players = tournamentEngine.getAllPlayers('total_tricks');
+            
+            console.log('=== DEBUG INFO ===');
+            console.log('Total tournaments:', tournaments.length);
+            console.log('Total players:', players.length);
+            
+            // Find Paul in the players list
+            const paulPlayers = players.filter(p => p.name.toLowerCase().includes('paul'));
+            console.log('\nPlayers with "paul" in name:', paulPlayers.map(p => p.name));
+            
+            // For each tournament, check if Paul appears in final standings
+            console.log('\n=== TOURNAMENT ANALYSIS ===');
+            tournaments.forEach(tournament => {
+                console.log(`\n${tournament.name} (${tournament.year}):`);
+                console.log('Final standings player names:');
+                tournament.final_standings.forEach((s, i) => {
+                    console.log(`  ${i+1}. "${s.player}"`);
+                });
+                
+                // Check if any Paul variants appear
+                const paulInStandings = tournament.final_standings.filter(s => 
+                    s.player.toLowerCase().includes('paul')
+                );
+                console.log('Paul variants in this tournament:', paulInStandings.map(s => s.player));
+            });
+            
+            // Test the exact filtering logic from the profile page
+            console.log('\n=== FILTERING TEST ===');
+            paulPlayers.forEach(player => {
+                console.log(`\nTesting player: "${player.name}"`);
+                const playerTournaments = tournaments.filter(t => 
+                    t.final_standings.some(s => s.player === player.name)
+                );
+                console.log(`Found ${playerTournaments.length} tournaments for "${player.name}"`);
+                playerTournaments.forEach(t => {
+                    console.log(`  - ${t.name} (${t.year})`);
+                });
+            });
+        }
+        
+        debugPaul().catch(console.error);
+    </script>
+</body>
+</html>

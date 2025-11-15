@@ -34,9 +34,13 @@ Building a website to immortalize 40 years of family Partners Whist tournaments.
 ### Player Identification System (CRITICAL)
 **Primary Key**: Players sheet "Id" column is the canonical identifier for all players
 - **Matching**: ALWAYS use the Id field as the merge key when matching players across data sources
-- **Display**: Use Id field for display throughout the website (except Player Profile pages which show full names)
-- **Examples**: "David" (not "David Blake"), "Jennifer" (not "Jennifer Blake"), "David/Jennifer" for shared hands
-- **Data Sources**: Tournament data contains full names, but these must be converted to canonical Ids for consistency
+- **Display**: Use `getDisplayName()` function for all website display (except Player Profile pages which show full names)
+- **Data Structure**: Players sheet columns: Id | FirstName | DisplayName | LastName | Nickname
+- **Display Logic**: 
+  - Most website pages: Use `tournamentEngine.getDisplayName(playerId)` 
+  - Player Profile pages: Use full name display with nickname
+  - Shared hands: Display as "DisplayName1/DisplayName2"
+- **Function**: `getDisplayName(playerNameOrId)` abstracts display logic for easy updates
 
 ### Shared Hand Statistics Rules (IMPORTANT)
 When calculating individual player statistics for shared hand partnerships:

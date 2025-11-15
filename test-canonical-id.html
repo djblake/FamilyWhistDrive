@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Unit Tests for Canonical ID Functions</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin-bottom: 30px; border: 1px solid #ccc; padding: 15px; }
+        .test-pass { color: green; }
+        .test-fail { color: red; }
+        .test-info { color: blue; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Unit Tests for Canonical ID Functions</h1>
+    <div id="output"></div>
+    
+    <script src="assets/js/tournament-engine.js?v=54"></script>
+    <script>
+        class CanonicalIdTester {
+            constructor() {
+                this.output = document.getElementById('output');
+                this.engine = null;
+                this.testResults = [];
+            }
+            
+            log(message, type = 'info') {
+                const className = type === 'pass' ? 'test-pass' : type === 'fail' ? 'test-fail' : 'test-info';
+                this.output.innerHTML += `<div class="${className}">${message}</div>`;
+                console.log(message);
+            }
+            
+            async runAllTests() {
+                this.log('<h2>🧪 Starting Canonical ID Unit Tests</h2>');
+                
+                try {
+                    // Initialize engine
+                    this.log('1. Initializing Tournament Engine...');
+                    this.engine = new TournamentEngine();
+                    
+                    // Load data
+                    this.log('2. Loading Google Sheets data...');
+                    await this.engine.loadFromGoogleSheets('1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k');
+                    
+                    // Test 1: Examine Players sheet data
+                    this.testPlayersSheetData();
+                    
+                    // Test 2: Test canonical ID function
+                    this.testCanonicalIdFunction();
+                    
+                    // Test 3: Test display name function
+                    this.testDisplayNameFunction();
+                    
+                    // Test 4: Examine actual tournament data
+                    this.testTournamentData();
+                    
+                    // Summary
+                    this.showSummary();
+                    
+                } catch (error) {
+                    this.log(`❌ Error during testing: ${error.message}`, 'fail');
+                    console.error('Test error:', error);
+                }
+            }
+            
+            testPlayersSheetData() {
+                this.log('<div class="test-section"><h3>📋 Test 1: Players Sheet Data</h3>');
+                
+                this.log(`Players lookup size: ${this.engine.playersLookup.size}`);
+                
+                // Find all Steve/Stephen related entries
+                const steveEntries = [];
+                for (const [id, player] of this.engine.playersLookup) {
+                    if (id.toLowerCase().includes('steve') || 
+                        player.firstName?.toLowerCase().includes('steve') || 
+                        player.fullName?.toLowerCase().includes('steve') ||
+                        player.displayName?.toLowerCase().includes('steve') ||
+                        id.toLowerCase().includes('stephen') || 
+                        player.firstName?.toLowerCase().includes('stephen') || 
+                        player.fullName?.toLowerCase().includes('stephen') ||
+                        player.displayName?.toLowerCase().includes('stephen')) {
+                        steveEntries.push({id, player});
+                    }
+                }
+                
+                this.log(`Found ${steveEntries.length} Steve/Stephen related entries:`);
+                steveEntries.forEach(entry => {
+                    this.log(`  ID: "${entry.id}", firstName: "${entry.player.firstName}", fullName: "${entry.player.fullName}", displayName: "${entry.player.displayName}"`);
+                });
+                
+                // Check specific lookups
+                const testIds = ['Stephen', 'SteveBlake', 'Steve Blake', 'Stephen Blake'];
+                this.log('Direct ID lookups:');
+                testIds.forEach(id => {
+                    const exists = this.engine.playersLookup.has(id);
+                    const player = this.engine.playersLookup.get(id);
+                    this.log(`  "${id}": ${exists ? 'EXISTS' : 'NOT FOUND'} ${player ? `-> ${JSON.stringify(player)}` : ''}`);
+                });
+                
+                this.log('</div>');
+            }
+            
+            testCanonicalIdFunction() {
+                this.log('<div class="test-section"><h3>🔍 Test 2: getCanonicalPlayerId Function</h3>');
+                
+                const testCases = [
+                    'Stephen Blake',
+                    'Stephen',
+                    'Steve Blake', 
+                    'SteveBlake',
+                    'stephen blake',
+                    'STEPHEN BLAKE'
+                ];
+                
+                testCases.forEach(input => {
+                    const result = this.engine.getCanonicalPlayerId(input);
+                    this.log(`  getCanonicalPlayerId("${input}") -> "${result}"`);
+                    
+                    // Validate result
+                    if (input.toLowerCase().includes('stephen') || input.toLowerCase().includes('steve')) {
+                        if (result === 'SteveBlake' || this.engine.playersLookup.has(result)) {
+                            this.log(`    ✅ PASS: Valid canonical ID returned`, 'pass');
+                        } else {
+                            this.log(`    ❌ FAIL: Invalid canonical ID "${result}"`, 'fail');
+                        }
+                    }
+                });
+                
+                this.log('</div>');
+            }
+            
+            testDisplayNameFunction() {
+                this.log('<div class="test-section"><h3>🎭 Test 3: getDisplayName Function</h3>');
+                
+                const testCases = [
+                    'Stephen Blake',
+                    'Stephen',
+                    'Steve Blake',
+                    'SteveBlake'
+                ];
+                
+                testCases.forEach(input => {
+                    const result = this.engine.getDisplayName(input);
+                    this.log(`  getDisplayName("${input}") -> "${result}"`);
+                    
+                    // Check if we get "Steve Blake" for Stephen inputs
+                    if ((input === 'Stephen' || input === 'Stephen Blake') && result === 'Steve Blake') {
+                        this.log(`    ✅ PASS: Correctly displays "Steve Blake"`, 'pass');
+                    } else if ((input === 'Stephen' || input === 'Stephen Blake') && result !== 'Steve Blake') {
+                        this.log(`    ❌ FAIL: Expected "Steve Blake", got "${result}"`, 'fail');
+                    }
+                });
+                
+                this.log('</div>');
+            }
+            
+            testTournamentData() {
+                this.log('<div class="test-section"><h3>🏆 Test 4: Tournament Data Analysis</h3>');
+                
+                // Check 1985 tournament
+                const tournament1985 = Array.from(this.engine.tournaments.values()).find(t => t.year === 1985);
+                
+                if (tournament1985) {
+                    this.log('1985 Tournament found');
+                    this.log(`  Total players: ${tournament1985.final_standings.length}`);
+                    
+                    // Find Steve Blake entry
+                    const steveEntries = tournament1985.final_standings.filter(s => 
+                        s.player.toLowerCase().includes('stephen') || s.player.toLowerCase().includes('steve')
+                    );
+                    
+                    this.log(`  Found ${steveEntries.length} Steve/Stephen entries:`);
+                    steveEntries.forEach((entry, index) => {
+                        this.log(`    ${index + 1}. player: "${entry.player}", total_tricks: ${entry.total_tricks}`);
+                        
+                        // Test what display name this produces
+                        const displayName = this.engine.getDisplayName(entry.player);
+                        this.log(`       -> getDisplayName("${entry.player}") = "${displayName}"`);
+                        
+                        if (entry.player === 'Stephen' && displayName !== 'Steve Blake') {
+                            this.log(`       ❌ FAIL: Stephen should display as "Steve Blake", got "${displayName}"`, 'fail');
+                        } else if (entry.player === 'Stephen' && displayName === 'Steve Blake') {
+                            this.log(`       ✅ PASS: Stephen correctly displays as "Steve Blake"`, 'pass');
+                        }
+                    });
+                } else {
+                    this.log('❌ 1985 tournament not found', 'fail');
+                }
+                
+                this.log('</div>');
+            }
+            
+            showSummary() {
+                this.log('<div class="test-section"><h3>📊 Test Summary</h3>');
+                this.log('Unit tests completed. Check console for detailed logs.');
+                this.log('Key findings should be visible above.');
+                this.log('</div>');
+            }
+        }
+        
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', async () => {
+            const tester = new CanonicalIdTester();
+            await tester.runAllTests();
+        });
+    </script>
+</body>
+</html>

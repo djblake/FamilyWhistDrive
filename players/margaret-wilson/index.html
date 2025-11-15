@@ -541,11 +541,11 @@
         async function loadPartnerships() {
             // Calculate partnership statistics
             const partnerships = new Map();
-            
+
             Array.from(tournamentEngine.tournaments.values()).forEach(tournament => {
                 const playerResult = tournament.participants.find(p => p.name === playerData.name);
                 if (!playerResult) return;
-                
+
                 playerResult.rounds.forEach(round => {
                     const partner = round.partner;
                     if (partner && partner !== playerData.name) {
@@ -554,14 +554,30 @@
                                 name: partner,
                                 games: 0,
                                 totalTricks: 0,
-                                wins: 0
+                                wins: 0,
+                                bestScore: 0,
+                                worstScore: 13,
+                                roundsWon: 0
                             });
                         }
-                        
+
                         const partnershipData = partnerships.get(partner);
                         partnershipData.games++;
                         partnershipData.totalTricks += round.tricks_taken;
                         if (round.tricks_taken >= 7) partnershipData.wins++;
+
+                        // Track best and worst scores
+                        if (round.tricks_taken > partnershipData.bestScore) {
+                            partnershipData.bestScore = round.tricks_taken;
+                        }
+                        if (round.tricks_taken < partnershipData.worstScore) {
+                            partnershipData.worstScore = round.tricks_taken;
+                        }
+
+                        // Count rounds won (7+ tricks)
+                        if (round.tricks_taken >= 7) {
+                            partnershipData.roundsWon++;
+                        }
                     }
                 });
             });
@@ -603,12 +619,24 @@
                                 <span class="stat-value">${partnership.games}</span>
                             </div>
                             <div class="partnership-stat">
+                                <span class="stat-label">Rounds Won</span>
+                                <span class="stat-value">${partnership.roundsWon}</span>
+                            </div>
+                            <div class="partnership-stat">
                                 <span class="stat-label">Success Rate</span>
                                 <span class="stat-value">${successRate.toFixed(0)}%</span>
                             </div>
                             <div class="partnership-stat">
                                 <span class="stat-label">Average Score</span>
                                 <span class="stat-value">${avgScore.toFixed(1)}</span>
+                            </div>
+                            <div class="partnership-stat">
+                                <span class="stat-label">Best Score</span>
+                                <span class="stat-value">${partnership.bestScore}</span>
+                            </div>
+                            <div class="partnership-stat">
+                                <span class="stat-label">Worst Score</span>
+                                <span class="stat-value">${partnership.worstScore}</span>
                             </div>
                         </div>
                         <p class="partnership-note">${getPartnershipNote(partnership, successRate)}</p>
@@ -1210,6 +1238,12 @@
             grid-template-columns: repeat(3, 1fr);
             gap: var(--spacing-md);
             margin-bottom: var(--spacing-lg);
+        }
+
+        @media (max-width: 768px) {
+            .partnership-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
         .partnership-stat {

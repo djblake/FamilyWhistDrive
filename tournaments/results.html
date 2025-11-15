@@ -163,66 +163,78 @@
 
     <!-- Load Chart.js first -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-            <script src="../assets/js/tournament-engine.js?v=47"></script>
+            <script src="../assets/js/tournament-engine.js?v=59"></script>
             <script src="../assets/js/charts.js?v=20"></script>
     
     <script>
-        // Helper function to extract individual round scores for a player
-        function extractPlayerRoundScores(tournament, playerName) {
+        // Helper function to extract individual round scores for a player or partnership
+        // playerCanonicalIds: either a string (single player canonical ID) or array (shared hand canonical IDs)
+        function extractPlayerRoundScores(tournament, playerCanonicalIds, engine) {
             const scores = [];
-            
-            // Check if playerName is a shared hand (contains "/")
-            const isSharedHandSearch = playerName.includes('/');
-            let searchPlayers = [];
-            
-            if (isSharedHandSearch) {
-                // Extract individual canonical IDs from shared hand format
-                searchPlayers = playerName.split('/').map(name => name.trim());
-            } else {
-                searchPlayers = [playerName];
-            }
-            
-            // Helper function to get canonical ID for comparison
-            function getCanonicalId(fullName) {
-                // Simple canonical ID extraction (first name)
-                return fullName.split(' ')[0];
-            }
-            
-            for (const round of tournament.rounds) {
-                let foundInRound = false;
-                
-                for (const table of round.tables) {
-                    if (foundInRound) break;
-                    
-                    for (const partnership of table.partnerships) {
-                        // For shared hands, check if this partnership contains our search players
-                        if (isSharedHandSearch) {
-                            // Check if this partnership contains all the players we're looking for
-                            const partnershipCanonicalIds = partnership.players.map(p => getCanonicalId(p));
-                            const allPlayersFound = searchPlayers.every(searchPlayer =>
-                                partnershipCanonicalIds.some(canonicalId => 
-                                    canonicalId.toLowerCase() === searchPlayer.toLowerCase()
-                                )
-                            );
-                            
-                            if (allPlayersFound && partnership.players.length === searchPlayers.length) {
+
+            // Convert to array for consistent handling
+            const searchIds = Array.isArray(playerCanonicalIds) ? playerCanonicalIds : [playerCanonicalIds];
+            const isSharedHand = searchIds.length > 1;
+
+            if (isSharedHand) {
+                // Sort for consistent comparison (data layer uses alphabetical order)
+                const sortedSearchIds = [...searchIds].sort();
+                console.log(`🔍 Searching for shared hand with canonical IDs: [${sortedSearchIds.join(', ')}]`);
+
+                for (const round of tournament.rounds) {
+                    let foundInRound = false;
+
+                    for (const table of round.tables) {
+                        if (foundInRound) break;
+
+                        for (const partnership of table.partnerships) {
+                            // partnership now has: position1 (array), position2 (array)
+                            // Check if the shared hand matches EITHER position
+                            const pos1Sorted = [...partnership.position1].sort();
+                            const pos2Sorted = [...partnership.position2].sort();
+
+                            // Debug first round
+                            if (round.round === 1) {
+                                console.log(`   Round 1: pos1=[${pos1Sorted.join(', ')}] pos2=[${pos2Sorted.join(', ')}]`);
+                            }
+
+                            // Check if our search IDs match position1
+                            const matchesPos1 = sortedSearchIds.length === pos1Sorted.length &&
+                                              sortedSearchIds.every((id, idx) => id === pos1Sorted[idx]);
+
+                            // Check if our search IDs match position2
+                            const matchesPos2 = sortedSearchIds.length === pos2Sorted.length &&
+                                              sortedSearchIds.every((id, idx) => id === pos2Sorted[idx]);
+
+                            if (matchesPos1 || matchesPos2) {
                                 scores.push(partnership.tricks);
                                 foundInRound = true;
+                                console.log(`✅ Found shared hand [${sortedSearchIds.join(', ')}] in round ${round.round}: ${partnership.tricks} tricks`);
                                 break;
                             }
-                        } else {
-                            // Individual player search
-                            const found = partnership.players.some(partnershipPlayer => {
-                                // Direct match
-                                if (partnershipPlayer.toLowerCase() === playerName.toLowerCase()) {
-                                    return true;
-                                }
-                                // Canonical ID match
-                                const canonicalId = getCanonicalId(partnershipPlayer);
-                                return canonicalId.toLowerCase() === playerName.toLowerCase();
-                            });
-                            
-                            if (found) {
+                        }
+                    }
+                }
+
+                if (scores.length === 0) {
+                    console.warn(`⚠️ No scores found for shared hand: [${sortedSearchIds.join(', ')}]`);
+                }
+            } else {
+                // Individual player search using canonical ID
+                const playerId = searchIds[0];
+
+                for (const round of tournament.rounds) {
+                    let foundInRound = false;
+
+                    for (const table of round.tables) {
+                        if (foundInRound) break;
+
+                        for (const partnership of table.partnerships) {
+                            // Check if this player's canonical ID is in either position
+                            const inPos1 = partnership.position1.includes(playerId);
+                            const inPos2 = partnership.position2.includes(playerId);
+
+                            if (inPos1 || inPos2) {
                                 scores.push(partnership.tricks);
                                 foundInRound = true;
                                 break;
@@ -231,7 +243,7 @@
                     }
                 }
             }
-            
+
             return scores;
         }
 
@@ -250,27 +262,30 @@
             return playerName;
         }
 
-        // Helper function to get display name (partnership name if applicable) in normalized format
-        function getDisplayPlayerName(tournament, playerName) {
-            // Check if this player is part of a partnership in final standings
-            for (const standing of tournament.final_standings) {
-                if (standing.player === playerName) {
-                    // Direct match - return the standing name (normalized format)
-                    return normalizeHandSharingDisplay(standing.player);
-                }
-                
-                // Check if they're part of a partnership (reverse lookup)
-                if (standing.is_partnership && standing.partnership_players) {
-                    const isPartner = standing.partnership_players.some(
-                        partner => partner.toLowerCase() === playerName.toLowerCase()
-                    );
-                    if (isPartner) {
-                        return normalizeHandSharingDisplay(standing.player); // Return normalized partnership name
-                    }
-                }
+        // Helper function to get display name using tournament engine
+        function getDisplayPlayerName(tournament, playerName, tournamentEngine) {
+            // Debug logging for Steve Blake shared hand issue
+            if (playerName && (playerName.includes('Steve') || playerName.includes('Blake'))) {
+                console.log(`🔍 getDisplayPlayerName called with: "${playerName}"`);
             }
             
-            return normalizeHandSharingDisplay(playerName); // Fallback to normalized original name
+            if (tournamentEngine && tournamentEngine.getDisplayName) {
+                const result = tournamentEngine.getDisplayName(playerName);
+                
+                if (playerName && (playerName.includes('Steve') || playerName.includes('Blake'))) {
+                    console.log(`  ✅ tournamentEngine.getDisplayName("${playerName}") -> "${result}"`);
+                }
+                
+                return result;
+            }
+            // Fallback to original behavior if tournamentEngine not available
+            const fallbackResult = normalizeHandSharingDisplay(playerName);
+            
+            if (playerName && (playerName.includes('Steve') || playerName.includes('Blake'))) {
+                console.log(`  ⚠️ Using fallback for "${playerName}" -> "${fallbackResult}"`);
+            }
+            
+            return fallbackResult;
         }
 
         // Load tournament results based on URL parameter
@@ -321,6 +336,16 @@
                     return name.split(' ').map(word => word[0]).join('');
                 }
                 
+                // Helper function to create player link (handles shared hands)
+                function createPlayerLink(playerName, displayName, cssClass = 'player-name-link') {
+                    const isSharedHand = playerName.includes('/') || playerName.includes('+') || playerName.includes('&');
+                    if (isSharedHand) {
+                        return `<span class="${cssClass} shared-hand">${displayName}</span>`;
+                    } else {
+                        return `<a href="../players/profile.html?player=${encodeURIComponent(playerName)}" class="${cssClass}">${displayName}</a>`;
+                    }
+                }
+                
                 const podiumHTML = `
                     <div class="spacer-left"></div>
                     <div class="podium-places">
@@ -328,13 +353,11 @@
                             <div class="podium-player">
                                 <div class="podium-avatar">
                                     <div class="avatar-placeholder small">
-                                        <span class="avatar-initial">${getInitials(getDisplayPlayerName(tournament, tournament.final_standings[1].player))}</span>
+                                        <span class="avatar-initial">${getInitials(getDisplayPlayerName(tournament, tournament.final_standings[1].player, tournamentEngine))}</span>
                                     </div>
                                 </div>
                                 <h3 class="podium-name">
-                                    <a href="../players/profile.html?player=${encodeURIComponent(tournament.final_standings[1].player)}" class="player-name-link">
-                                        ${getDisplayPlayerName(tournament, tournament.final_standings[1].player)}
-                                    </a>
+                                    ${createPlayerLink(tournament.final_standings[1].player, getDisplayPlayerName(tournament, tournament.final_standings[1].player, tournamentEngine), 'player-name-link')}
                                 </h3>
                                 <div class="podium-score">${tournament.final_standings[1].total_tricks} tricks</div>
                             </div>
@@ -348,14 +371,12 @@
                             <div class="podium-player">
                                 <div class="podium-avatar">
                                     <div class="avatar-placeholder large">
-                                        <span class="avatar-initial">${getInitials(getDisplayPlayerName(tournament, tournament.final_standings[0].player))}</span>
+                                        <span class="avatar-initial">${getInitials(getDisplayPlayerName(tournament, tournament.final_standings[0].player, tournamentEngine))}</span>
                                     </div>
                                     <div class="champion-crown">👑</div>
                                 </div>
                                 <h3 class="podium-name">
-                                    <a href="../players/profile.html?player=${encodeURIComponent(tournament.final_standings[0].player)}" class="player-name-link">
-                                        ${getDisplayPlayerName(tournament, tournament.final_standings[0].player)}
-                                    </a>
+                                    ${createPlayerLink(tournament.final_standings[0].player, getDisplayPlayerName(tournament, tournament.final_standings[0].player, tournamentEngine), 'player-name-link')}
                                 </h3>
                                 <div class="podium-score">${tournament.final_standings[0].total_tricks} tricks</div>
                             </div>
@@ -370,13 +391,11 @@
                             <div class="podium-player">
                                 <div class="podium-avatar">
                                     <div class="avatar-placeholder small">
-                                        <span class="avatar-initial">${getInitials(getDisplayPlayerName(tournament, thirdPlace.player))}</span>
+                                        <span class="avatar-initial">${getInitials(getDisplayPlayerName(tournament, thirdPlace.player, tournamentEngine))}</span>
                                     </div>
                                 </div>
                                 <h3 class="podium-name">
-                                    <a href="../players/profile.html?player=${encodeURIComponent(thirdPlace.player)}" class="player-name-link">
-                                        ${getDisplayPlayerName(tournament, thirdPlace.player)}
-                                    </a>
+                                    ${createPlayerLink(thirdPlace.player, getDisplayPlayerName(tournament, thirdPlace.player, tournamentEngine), 'player-name-link')}
                                 </h3>
                                 <div class="podium-score">${thirdPlace.total_tricks} tricks</div>
                             </div>
@@ -394,13 +413,11 @@
                             <div class="podium-player">
                                 <div class="podium-avatar">
                                     <div class="avatar-placeholder tiny">
-                                        <span class="avatar-initial">${getInitials(getDisplayPlayerName(tournament, lastPlace.player))}</span>
+                                        <span class="avatar-initial">${getInitials(getDisplayPlayerName(tournament, lastPlace.player, tournamentEngine))}</span>
                                     </div>
                                 </div>
                                 <h3 class="podium-name">
-                                    <a href="../players/profile.html?player=${encodeURIComponent(lastPlace.player)}" class="player-name-link">
-                                        ${getDisplayPlayerName(tournament, lastPlace.player)}
-                                    </a>
+                                    ${createPlayerLink(lastPlace.player, getDisplayPlayerName(tournament, lastPlace.player, tournamentEngine), 'player-name-link')}
                                 </h3>
                                 <div class="podium-score">${lastPlace.total_tricks} tricks</div>
                                 <div class="booby-badge">
@@ -414,12 +431,33 @@
                 `;
                 document.getElementById('summary-grid').innerHTML = podiumHTML;
                 
+                // Debug: Check what's actually in final standings
+                console.log('🔍 Tournament final standings - ALL ENTRIES:');
+                tournament.final_standings.forEach((standing, index) => {
+                    console.log(`  ${index + 1}. standing.player: "${standing.player}" (${standing.total_tricks} tricks)`);
+                    if (standing.player.includes('Steve') || standing.player.includes('Blake')) {
+                        console.log(`     *** STEVE/BLAKE ENTRY: getDisplayPlayerName result: "${getDisplayPlayerName(tournament, standing.player, tournamentEngine)}"`);
+                    }
+                });
+                
                 // Generate rankings table
                 const rankingsHTML = tournament.final_standings.map((player, index) => {
                     const playerStats = tournamentEngine.getPlayerStats(player.player);
-                    
+
+                    // Determine canonical IDs to search for
+                    // If this is a shared hand partnership, use the partnership_players array
+                    // Otherwise, use the player's canonical ID
+                    let searchIds;
+                    if (player.is_partnership && player.partnership_players) {
+                        searchIds = player.partnership_players; // Array of canonical IDs, already sorted alphabetically
+                        console.log(`🔍 DEBUG: Partnership "${player.player}" uses canonical IDs:`, searchIds);
+                    } else {
+                        searchIds = player.player; // Single canonical ID
+                    }
+
                     // Extract individual round scores from tournament rounds data
-                    const roundScores = extractPlayerRoundScores(tournament, player.player);
+                    const roundScores = extractPlayerRoundScores(tournament, searchIds, tournamentEngine);
+                    console.log(`📊 Player: "${player.player}" - Scores: [${roundScores.join(', ')}]`);
                     const bestScore = roundScores.length > 0 ? Math.max(...roundScores) : 0;
                     const worstScore = roundScores.length > 0 ? Math.min(...roundScores) : 0;
                     const roundsWon = roundScores.filter(score => score >= 7).length;
@@ -454,12 +492,15 @@
                                 ${isLastPlace && tournament.final_standings.length > 3 ? '<span class="medal">🎭</span>' : ''}
                             </td>
                             <td class="player-cell">
-                                <a href="../players/profile.html?player=${encodeURIComponent(player.player)}" class="player-name-link">
-                                    <strong>${getDisplayPlayerName(tournament, player.player)}</strong>
-                                </a>
+                                ${player.player.includes('/') || player.player.includes('+') || player.player.includes('&') ? 
+                                    `<strong>${getDisplayPlayerName(tournament, player.player, tournamentEngine)}</strong>` :
+                                    `<a href="../players/profile.html?player=${encodeURIComponent(player.player)}" class="player-name-link">
+                                        <strong>${getDisplayPlayerName(tournament, player.player, tournamentEngine)}</strong>
+                                    </a>`
+                                }
                             </td>
                             <td class="tricks-cell">${player.total_tricks}</td>
-                            <td>${(player.total_tricks / tournament.total_rounds).toFixed(1)}</td>
+                            <td>${(player.total_tricks / tournament.total_rounds).toFixed(2)}</td>
                             <td class="best-round">${bestScoreDisplay}</td>
                             <td class="worst-round">${worstScoreDisplay}</td>
                             <td>${roundsWon}</td>

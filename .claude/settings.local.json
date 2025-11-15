@@ -19,7 +19,16 @@
       "Bash(npx serve:*)",
       "Bash(grep:*)",
       "WebFetch(domain:rustonwhistdrive.pages.dev)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(rg:*)",
+      "WebFetch(domain:localhost)",
+      "mcp__ide__executeCode",
+      "Bash(curl:*)",
+      "Bash(rm:*)",
+      "Bash(open debug-paul-tournaments.html)",
+      "Bash(python:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(lsof:*)"
     ],
     "deny": []
   }

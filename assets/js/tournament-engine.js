@@ -663,6 +663,12 @@ class TournamentEngine {
             // Clear existing players data
             this.playersLookup = new Map();
             
+            // Debug: Show first few lines of raw CSV data
+            console.log('🔍 First few lines of Players CSV:');
+            lines.slice(0, Math.min(5, lines.length)).forEach((line, index) => {
+                console.log(`  Line ${index}: "${line}"`);
+            });
+            
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
@@ -670,12 +676,24 @@ class TournamentEngine {
                 const values = this.parseCSVLine(line);
                 if (values.length < 3 || !values[0]) continue;
                 
+                // Debug logging for SteveBlake specifically
+                if (values[0] === 'SteveBlake' || line.includes('Steve') || line.includes('Stephen')) {
+                    console.log(`🔍 Processing player line: "${line}"`);
+                    console.log(`  Parsed values: [${values.map(v => `"${v}"`).join(', ')}]`);
+                    console.log(`  values[0] (ID): "${values[0]}"`);
+                    console.log(`  values[1] (displayName): "${values[1]}"`);
+                    console.log(`  values[2] (firstName): "${values[2]}"`);
+                    console.log(`  values[3] (lastName): "${values[3]}"`);
+                    console.log(`  values[4] (nickname): "${values[4]}"`);
+                }
+                
                 const player = {
                     id: values[0],
-                    firstName: values[1] || '',
-                    lastName: values[2] || '',
-                    nickname: values[3] || '', // New nickname field
-                    fullName: `${values[1] || ''} ${values[2] || ''}`.trim()
+                    displayName: values[1] || values[0], // DisplayName is column 1, fallback to ID
+                    firstName: values[2] || '', // FirstName is column 2
+                    lastName: values[3] || '', // LastName is column 3
+                    nickname: values[4] || '', // Nickname field is column 4
+                    fullName: `${values[2] || ''} ${values[3] || ''}`.trim() // firstName + lastName
                 };
                 
                 
@@ -683,6 +701,7 @@ class TournamentEngine {
             }
             
             console.log(`✅ Loaded ${this.playersLookup.size} players`);
+            
             
         } catch (error) {
             console.error('❌ Error loading players data:', error);
@@ -1128,30 +1147,169 @@ class TournamentEngine {
 
     /**
      * Get canonical player ID from Players sheet lookup
-     * This handles cases where tournament data might have "Stephen" but Players sheet has "Steve Blake"
+     * This handles cases where tournament data might have "Stephen Blake" but Players sheet has "SteveBlake" ID
      */
     getCanonicalPlayerId(playerName) {
         if (!playerName) return playerName;
         
         const trimmedName = playerName.trim();
         
+        // Debug logging for SteveBlake specifically
+        if (trimmedName === 'SteveBlake') {
+            console.log(`🔍 getCanonicalPlayerId("${trimmedName}") - EXACT STEVEBLAKE MATCH TEST`);
+            console.log(`  Players lookup has SteveBlake: ${this.playersLookup.has('SteveBlake')}`);
+            console.log(`  Players lookup has Steve: ${this.playersLookup.has('Steve')}`);
+        }
+        
         // First, try exact match with the Players sheet
         if (this.playersLookup.has(trimmedName)) {
+            if (trimmedName === 'SteveBlake') {
+                console.log(`🔍 getCanonicalPlayerId("${trimmedName}") -> EXACT MATCH FOUND: "${trimmedName}"`);
+            }
             return trimmedName;
         }
         
-        // If no exact match, try to find by first name
-        const firstName = trimmedName.split(/\s+/)[0];
-        
-        // Look for a player ID that starts with this first name
+        // If no exact match, try to find by full name match
+        // Look for a player where the full name matches the input
         for (const [playerId, player] of this.playersLookup) {
-            if (player.firstName === firstName || playerId === firstName) {
+            if (player.fullName === trimmedName) {
+                return playerId;
+            }
+        }
+        
+        // Special handling for known problematic mappings
+        // This ensures that "Stephen Blake", "Stephen", and "Steve Blake" all map to the correct player ID
+        if (trimmedName === 'Stephen Blake' || trimmedName === 'Stephen' || trimmedName === 'Steve Blake') {
+            // Look for SteveBlake player ID first
+            if (this.playersLookup.has('SteveBlake')) {
+                return 'SteveBlake';
+            }
+            // Look for a player with displayName "Steve Blake"
+            for (const [playerId, player] of this.playersLookup) {
+                if (player.displayName === 'Steve Blake') {
+                    return playerId;
+                }
+            }
+            // Look for a player with fullName "Stephen Blake"
+            for (const [playerId, player] of this.playersLookup) {
+                if (player.fullName === 'Stephen Blake') {
+                    return playerId;
+                }
+            }
+        }
+        
+        // If no full name match, try to find by first name (but be more careful)
+        // ONLY do firstName matching for single word inputs, not full names
+        const firstName = trimmedName.split(/\s+/)[0];
+        const isFullName = trimmedName.includes(' ');
+        
+        // Only do firstName matching if the input is a single name, not a full name
+        if (!isFullName) {
+            // Look for a player where firstName matches
+            let firstNameMatch = null;
+            for (const [playerId, player] of this.playersLookup) {
+                if (player.firstName === firstName) {
+                    firstNameMatch = playerId;
+                    break; // Prefer firstName matches over playerId matches
+                }
+            }
+            
+            if (firstNameMatch) {
+                return firstNameMatch;
+            }
+        }
+        
+        // Finally, check if the playerId itself matches the firstName
+        // But only if we haven't found a better match above
+        for (const [playerId, player] of this.playersLookup) {
+            if (playerId === firstName) {
                 return playerId;
             }
         }
         
         // If still no match, return the original name
+        if (trimmedName === 'SteveBlake') {
+            console.log(`🔍 getCanonicalPlayerId("${trimmedName}") -> FINAL RESULT: "${trimmedName}"`);
+        }
         return trimmedName;
+    }
+
+    /**
+     * Get display name for a player or partnership
+     * Uses DisplayName column from Players sheet for consistent display
+     * @param {string} playerNameOrId - Player name, ID, or partnership string
+     * @returns {string} Display name to show on the website
+     */
+    getDisplayName(playerNameOrId) {
+        if (!playerNameOrId) return playerNameOrId;
+        
+        // Debug logging for Steve Blake issues
+        if (playerNameOrId === 'SteveBlake' || playerNameOrId.includes('Steve')) {
+            console.log(`🔍 getDisplayName("${playerNameOrId}")`);
+        }
+        
+        // Handle shared hand partnerships (contains delimiters)
+        const delimiters = ['+', '/', '&'];
+        for (const delimiter of delimiters) {
+            if (playerNameOrId.includes(delimiter)) {
+                const players = playerNameOrId.split(delimiter).map(name => name.trim());
+                const displayNames = players.map(player => this.getDisplayName(player));
+                return displayNames.join('/');
+            }
+        }
+        
+        // Individual player lookup
+        const canonicalId = this.getCanonicalPlayerId(playerNameOrId);
+        let playerData = this.playersLookup.get(canonicalId);
+        
+        // Debug logging for Steve Blake lookup issue
+        if (playerNameOrId.includes('Steve') || canonicalId.includes('Steve')) {
+            console.log(`  canonicalId: "${canonicalId}"`);
+            console.log(`  playerData found:`, playerData);
+            if (playerData) {
+                console.log(`  playerData.displayName: "${playerData.displayName}"`);
+            }
+        }
+        
+        // If no player data found with canonical ID, try alternative lookups
+        if (!playerData) {
+            // Try exact match with input
+            playerData = this.playersLookup.get(playerNameOrId.trim());
+            
+            // If still no match, try finding by full name or firstName
+            if (!playerData) {
+                for (const [playerId, player] of this.playersLookup) {
+                    if (player.fullName === playerNameOrId.trim() || 
+                        player.firstName === playerNameOrId.trim()) {
+                        playerData = player;
+                        break;
+                    }
+                }
+            }
+            
+            // Special case for Stephen/Steve Blake mapping
+            if (!playerData && (playerNameOrId === 'Stephen' || playerNameOrId === 'Stephen Blake')) {
+                for (const [playerId, player] of this.playersLookup) {
+                    if (playerId === 'SteveBlake' || player.fullName === 'Stephen Blake') {
+                        playerData = player;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if (playerData && playerData.displayName) {
+            if (playerNameOrId === 'SteveBlake' || playerNameOrId.includes('Steve')) {
+                console.log(`  ✅ Found playerData, returning displayName: "${playerData.displayName}"`);
+            }
+            return playerData.displayName;
+        }
+        
+        // Fallback to canonical ID if no display name found
+        if (playerNameOrId === 'SteveBlake' || playerNameOrId.includes('Steve')) {
+            console.log(`  ⚠️ No playerData found, returning canonicalId: "${canonicalId}"`);
+        }
+        return canonicalId;
     }
 
     /**
@@ -1702,6 +1860,7 @@ class TournamentEngine {
         // Calculate final standings
         const finalStandings = this.calculateFinalStandings(playerScores);
         
+        
         // Store tournament data
         const tournament = {
             id: tournamentKey.toLowerCase().replace(/\s+/g, '_'),
@@ -1754,21 +1913,34 @@ class TournamentEngine {
                 const tricksWon = parseInt(card.Tricks_Won);
                 const opponentTricks = parseInt(card.Opponent_Tricks || (13 - tricksWon));
                 const trumpSuit = card.Trump_Suit; // Preserve trump suit for this specific partnership
-                
-                // Partnership A: Player1 + Player2 (keep original names to preserve shared hand detection)
+
+                // Parse shared hands and convert to PlayerEntity structure
+                // A partnership has 2 POSITIONS, each position can have 1+ players (shared hand)
+                const p1Parsed = this.parseSharedHand(player1);
+                const p2Parsed = this.parseSharedHand(player2);
+                const o1Parsed = this.parseSharedHand(opponent1);
+                const o2Parsed = this.parseSharedHand(opponent2);
+
+                // Convert each position to canonical IDs (sorted)
+                const partnershipA_pos1 = p1Parsed.players.map(name => this.getCanonicalPlayerId(name)).sort();
+                const partnershipA_pos2 = p2Parsed.players.map(name => this.getCanonicalPlayerId(name)).sort();
+                const partnershipB_pos1 = o1Parsed.players.map(name => this.getCanonicalPlayerId(name)).sort();
+                const partnershipB_pos2 = o2Parsed.players.map(name => this.getCanonicalPlayerId(name)).sort();
+
+                // Partnership A: 2 positions
                 partnerships.push({
-                    players: [player1, player2],
+                    position1: partnershipA_pos1,  // Array of canonical IDs
+                    position2: partnershipA_pos2,  // Array of canonical IDs
                     tricks: tricksWon,
-                    opponents: [opponent1, opponent2],
-                    trump_suit: trumpSuit // Store trump suit with partnership
+                    trump_suit: trumpSuit
                 });
-                
-                // Partnership B: Opponent1 + Opponent2 (keep original names to preserve shared hand detection)
+
+                // Partnership B: 2 positions
                 partnerships.push({
-                    players: [opponent1, opponent2],
+                    position1: partnershipB_pos1,  // Array of canonical IDs
+                    position2: partnershipB_pos2,  // Array of canonical IDs
                     tricks: opponentTricks,
-                    opponents: [player1, player2],
-                    trump_suit: trumpSuit // Store trump suit with partnership
+                    trump_suit: trumpSuit
                 });
             }
             
@@ -1811,10 +1983,23 @@ class TournamentEngine {
         
         if (foundDelimiter) {
             const players = playerName.split(foundDelimiter).map(name => name.trim());
-            // Convert to canonical IDs for display (e.g., "David Blake" → "David")
-            const canonicalPlayers = players.map(p => this.getCanonicalPlayerId(p));
-            // Always display with "/" using canonical IDs
-            const displayName = canonicalPlayers.join('/');
+            // Convert to display names for consistent website display
+            const displayNames = players.map(p => {
+                const displayName = this.getDisplayName(p);
+                // Debug logging for Steve Blake shared hand issue
+                if (p === 'SteveBlake' || p.includes('Steve') || displayName.includes('Steve')) {
+                    console.log(`🔍 parseSharedHand: "${p}" -> display name: "${displayName}"`);
+                }
+                return displayName;
+            });
+            // Always display with "/" using display names
+            const displayName = displayNames.join('/');
+            
+            // Debug logging for shared hand output
+            if (playerName.includes('Steve')) {
+                console.log(`🔍 parseSharedHand result: "${playerName}" -> "${displayName}"`);
+            }
+            
             return { players, isShared: true, displayName };
         }
         return { players: [playerName], isShared: false, displayName: playerName };
@@ -1827,73 +2012,64 @@ class TournamentEngine {
     updatePlayerScores(playerScores, roundData) {
         for (const table of roundData.tables) {
             for (const partnership of table.partnerships) {
-                // Process partnership as a whole rather than individual players
-                // This prevents double-counting when we have hand sharing partnerships
-                
-                const processedPlayers = new Set(); // Track which hand sharing partnerships we've already processed
-                
-                for (const playerName of partnership.players) {
-                    const parsedPlayer = this.parseSharedHand(playerName);
-                    
-                    if (parsedPlayer.isShared) {
-                        // For hand sharing partnerships, only process once per partnership
-                        const displayKey = parsedPlayer.displayName;
-                        
-                        if (processedPlayers.has(displayKey)) {
-                            continue; // Skip if we've already processed this hand sharing partnership
-                        }
-                        processedPlayers.add(displayKey);
-                        
+                // partnership now has: position1 (array), position2 (array), tricks
+                // Each position represents one PlayerEntity - process them separately
+
+                for (const position of [partnership.position1, partnership.position2]) {
+                    const isShared = position.length > 1;
+
+                    if (isShared) {
+                        // This position is a shared hand (multiple people sharing one position)
+                        const displayNames = position.map(id => this.getDisplayName(id));
+                        const displayKey = displayNames.join('/');
+
                         if (!playerScores.has(displayKey)) {
-                            // Convert partnership players to canonical IDs
-                            const canonicalPartners = parsedPlayer.players.map(p => this.getCanonicalPlayerId(p));
-                            
-                            playerScores.set(displayKey, { 
-                                total_tricks: 0, 
+                            playerScores.set(displayKey, {
+                                total_tricks: 0,
                                 rounds_played: 0,
                                 individual_tricks: 0,
                                 individual_rounds: 0,
                                 shared_tricks: 0,
                                 shared_rounds: 0,
                                 is_partnership: true,
-                                partnership_players: canonicalPartners
+                                partnership_players: [...position].sort() // Canonical IDs, sorted
                             });
                         }
-                        
+
                         const partnershipData = playerScores.get(displayKey);
                         partnershipData.shared_tricks += partnership.tricks;
                         partnershipData.shared_rounds += 1;
                         partnershipData.rounds_played += 1;
-                        
-                        // Also track individual participation for personal scorecards
-                        for (const actualPlayer of parsedPlayer.players) {
-                            const canonicalId = this.getCanonicalPlayerId(actualPlayer);
+
+                        // Track individual participation for each person in the shared hand
+                        for (const canonicalId of position) {
                             const individualKey = `__individual_${canonicalId}`;
                             if (!playerScores.has(individualKey)) {
-                                playerScores.set(individualKey, { 
-                                    total_tricks: 0, 
+                                playerScores.set(individualKey, {
+                                    total_tricks: 0,
                                     rounds_played: 0,
                                     individual_tricks: 0,
                                     individual_rounds: 0,
                                     shared_tricks: 0,
                                     shared_rounds: 0,
                                     is_individual_tracker: true,
-                                    actual_player_name: actualPlayer
+                                    actual_player_name: canonicalId
                                 });
                             }
-                            
+
                             const individualData = playerScores.get(individualKey);
-                            const splitTricks = partnership.tricks / parsedPlayer.players.length;
-                            individualData.shared_tricks += splitTricks; // Split credit for sums
+                            const splitTricks = partnership.tricks / position.length;
+                            individualData.shared_tricks += splitTricks;
                             individualData.shared_rounds += 1;
                             individualData.rounds_played += 1;
                         }
                     } else {
-                        // Individual player - normalize to canonical ID
-                        const canonicalPlayerId = this.getCanonicalPlayerId(playerName);
+                        // Single player in this position
+                        const canonicalPlayerId = position[0];
+
                         if (!playerScores.has(canonicalPlayerId)) {
-                            playerScores.set(canonicalPlayerId, { 
-                                total_tricks: 0, 
+                            playerScores.set(canonicalPlayerId, {
+                                total_tricks: 0,
                                 rounds_played: 0,
                                 individual_tricks: 0,
                                 individual_rounds: 0,
@@ -1901,7 +2077,7 @@ class TournamentEngine {
                                 shared_rounds: 0
                             });
                         }
-                        
+
                         const playerData = playerScores.get(canonicalPlayerId);
                         playerData.individual_tricks += partnership.tricks;
                         playerData.individual_rounds += 1;
@@ -1928,6 +2104,13 @@ class TournamentEngine {
             // Use combined tricks for tournament standings (individual + split shared)
             const combinedTricks = data.individual_tricks + data.shared_tricks;
             
+            
+            // Debug logging for Steve Blake case in final standings
+            if (player.includes('Stephen') || player.includes('Steve') || player.includes('Blake')) {
+                console.log(`🔍 calculateFinalStandings: Adding player "${player}" to final standings`);
+                console.log(`  Combined tricks: ${combinedTricks}, Rounds played: ${data.rounds_played}`);
+                console.log(`  Data source - individual_tricks: ${data.individual_tricks}, shared_tricks: ${data.shared_tricks}`);
+            }
             
             standings.push({
                 player: player,
@@ -2115,39 +2298,23 @@ class TournamentEngine {
                     for (const round of tournament.rounds) {
                         for (const table of round.tables) {
                             for (const partnership of table.partnerships) {
-                                let playerParticipated = false;
-                                let roundTricks = 0;
-                                let isSharedRound = false;
-                                
-                                // Check if this player participated in this partnership
-                                for (const partnershipPlayer of partnership.players) {
-                                    const parsedPlayer = this.parseSharedHand(partnershipPlayer);
-                                    
-                                    if (parsedPlayer.isShared) {
-                                        // Check if target player is in shared hand
-                                        if (parsedPlayer.players.some(p => p.toLowerCase() === player.toLowerCase())) {
-                                            playerParticipated = true;
-                                            roundTricks = partnership.tricks;
-                                            isSharedRound = true;
-                                            break;
-                                        }
-                                    } else {
-                                        // Individual player
-                                        if (partnershipPlayer.toLowerCase() === player.toLowerCase()) {
-                                            playerParticipated = true;
-                                            roundTricks = partnership.tricks;
-                                            isSharedRound = false;
-                                            break;
-                                        }
-                                    }
-                                }
-                                
+                                // partnership now has position1 and position2 arrays
+                                const allPartnershipPlayers = [...partnership.position1, ...partnership.position2];
+                                const pos1IsShared = partnership.position1.length > 1;
+                                const pos2IsShared = partnership.position2.length > 1;
+                                const hasSharedHand = pos1IsShared || pos2IsShared;
+
+                                // Check if this player participated (their canonical ID is in either position)
+                                const playerParticipated = allPartnershipPlayers.some(id =>
+                                    id.toLowerCase() === player.toLowerCase()
+                                );
+
                                 // If player participated and scored 7+ tricks, count as round won
-                                if (playerParticipated && roundTricks >= 7) {
+                                if (playerParticipated && partnership.tricks >= 7) {
                                     data.rounds_won++;
-                                    
+
                                     // Count towards individual stats only if not a shared round
-                                    if (!isSharedRound) {
+                                    if (!hasSharedHand) {
                                         data.individual.rounds_won++;
                                     }
                                 }
@@ -2494,17 +2661,24 @@ class TournamentEngine {
             for (const round of tournament.rounds) {
                 for (const table of round.tables) {
                     for (const partnership of table.partnerships) {
-                        const partnershipKey = partnership.players.sort().join('_');
-                        
+                        // Skip shared hand partnerships - only track normal 2-player partnerships
+                        const pos1IsShared = partnership.position1.length > 1;
+                        const pos2IsShared = partnership.position2.length > 1;
+                        if (pos1IsShared || pos2IsShared) continue;
+
+                        // Normal partnership: get the 2 player IDs
+                        const players = [partnership.position1[0], partnership.position2[0]].sort();
+                        const partnershipKey = players.join('_');
+
                         if (!this.partnerships.has(partnershipKey)) {
                             this.partnerships.set(partnershipKey, {
-                                players: partnership.players.sort(),
+                                players: players,
                                 times_partnered: 0,
                                 total_tricks: 0,
                                 rounds_played: 0
                             });
                         }
-                        
+
                         const partnershipData = this.partnerships.get(partnershipKey);
                         partnershipData.times_partnered++;
                         partnershipData.total_tricks += partnership.tricks;
@@ -2792,36 +2966,26 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
                 for (const table of round.tables) {
                     for (const partnership of table.partnerships) {
                         // Check if player participated in this partnership
-                        let playerParticipated = false;
-                        let playerTricks = 0;
-                        let playerRounds = 0;
-
-                        for (const player of partnership.players) {
-                            const parsedPlayer = this.parseSharedHand(player);
-                            
-                            if (parsedPlayer.isShared) {
-                                // Check if target player is in shared hand
-                                if (parsedPlayer.players.some(p => p.toLowerCase() === playerName.toLowerCase())) {
-                                    playerParticipated = true;
-                                    // For shared hands, divide tricks and rounds by number of partners
-                                    playerTricks = Math.floor(partnership.tricks / parsedPlayer.players.length);
-                                    playerRounds = Math.floor(1 / parsedPlayer.players.length);
-                                    break;
-                                }
-                            } else {
-                                // Individual player
-                                if (player.toLowerCase() === playerName.toLowerCase()) {
-                                    playerParticipated = true;
-                                    playerTricks = partnership.tricks;
-                                    playerRounds = 1;
-                                    break;
-                                }
-                            }
-                        }
+                        const allPartnershipPlayers = [...partnership.position1, ...partnership.position2];
+                        const playerParticipated = allPartnershipPlayers.some(id =>
+                            id.toLowerCase() === playerName.toLowerCase()
+                        );
 
                         if (playerParticipated && trumpStats[trumpSuit]) {
-                            trumpStats[trumpSuit].total_tricks += playerTricks;
-                            trumpStats[trumpSuit].rounds_played += playerRounds;
+                            // Check if this is a shared hand
+                            const hasSharedHand = partnership.position1.length > 1 || partnership.position2.length > 1;
+
+                            if (hasSharedHand) {
+                                // For shared hands, divide tricks by number of people sharing
+                                const playerTricks = Math.floor(partnership.tricks / allPartnershipPlayers.length);
+                                const playerRounds = Math.floor(1 / allPartnershipPlayers.length);
+                                trumpStats[trumpSuit].total_tricks += playerTricks;
+                                trumpStats[trumpSuit].rounds_played += playerRounds;
+                            } else {
+                                // Normal partnership - full credit
+                                trumpStats[trumpSuit].total_tricks += partnership.tricks;
+                                trumpStats[trumpSuit].rounds_played += 1;
+                            }
                         }
                     }
                 }
@@ -2849,11 +3013,15 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
             for (const round of tournament.rounds) {
                 for (const table of round.tables) {
                     for (const partnership of table.partnerships) {
-                        if (partnership.players.length !== 2) continue;
+                        // Skip shared hand partnerships - only track normal 2-player partnerships
+                        const pos1IsShared = partnership.position1.length > 1;
+                        const pos2IsShared = partnership.position2.length > 1;
+                        if (pos1IsShared || pos2IsShared) continue;
 
-                        const sortedPlayers = partnership.players.slice().sort();
+                        // Normal partnership: get the 2 player IDs
+                        const sortedPlayers = [partnership.position1[0], partnership.position2[0]].sort();
                         const partnershipKey = sortedPlayers.join(' & ');
-                        
+
                         if (!partnerships.has(partnershipKey)) {
                             partnerships.set(partnershipKey, {
                                 players: sortedPlayers,
@@ -2864,24 +3032,10 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
                         }
 
                         const partnershipData = partnerships.get(partnershipKey);
-                        
-                        // Handle shared hands
+
+                        // Normal partnership - full credit
                         let tricksToAdd = partnership.tricks;
                         let roundsToAdd = 1;
-                        
-                        // Check if this is a shared hand partnership
-                        const player1Parsed = this.parseSharedHand(partnership.players[0]);
-                        const player2Parsed = this.parseSharedHand(partnership.players[1]);
-                        
-                        if (player1Parsed.isShared || player2Parsed.isShared) {
-                            // For shared hands, use pro-rated values (divided by partners, rounded down)
-                            const maxPartners = Math.max(
-                                player1Parsed.players.length, 
-                                player2Parsed.players.length
-                            );
-                            tricksToAdd = Math.floor(partnership.tricks / maxPartners);
-                            roundsToAdd = Math.floor(1 / maxPartners);
-                        }
 
                         partnershipData.total_tricks += tricksToAdd;
                         partnershipData.total_rounds += roundsToAdd;
