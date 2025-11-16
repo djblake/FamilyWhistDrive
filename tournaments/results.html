@@ -505,7 +505,7 @@
                             <td class="worst-round">${worstScoreDisplay}</td>
                             <td>${roundsWon}</td>
                             <td>
-                                <a href="scorecard.html?year=${year}&player=${encodeURIComponent(player.player)}" 
+                                <a href="scorecard.html?year=${year}&player=${encodeURIComponent(player.is_partnership && player.partnership_players ? player.partnership_players.join('/') : player.player)}" 
                                    class="scorecard-btn">See Scorecard</a>
                             </td>
                         </tr>

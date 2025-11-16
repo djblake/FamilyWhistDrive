@@ -229,15 +229,58 @@
                     throw new Error(`Tournament for year ${params.year} not found`);
                 }
 
-                // Use the new method to get individual player data (handles partnerships)
-                const playerStanding = engine.getIndividualPlayerData(tournament, params.player);
+                // Debug: log all players in final_standings
+                console.log('📋 All players in final_standings:');
+                tournament.final_standings.forEach((s, idx) => {
+                    console.log(`  ${idx + 1}. "${s.player}" (is_partnership: ${s.is_partnership}, partnership_players: ${s.partnership_players})`);
+                });
+                console.log(`🔍 Searching for: "${params.player}"`);
+
+                // Resolve the requested entry. Prefer individual lookup; if not found and this is a shared-hand query, resolve the partnership standing.
+                let playerStanding = engine.getIndividualPlayerData(tournament, params.player);
+
+                if (!playerStanding && isHandSharingPartnership(params.player)) {
+                    // Attempt to locate the partnership entry in final standings via canonical IDs
+                    const searchIds = params.player
+                        .split(/[\/+&]/)
+                        .map(n => engine.getCanonicalPlayerId(n.trim()))
+                        .sort();
+                    
+                    console.log('🔎 Shared-hand search canonical IDs:', searchIds);
+
+                    const partnershipStanding = tournament.final_standings.find(s => 
+                        s.is_partnership &&
+                        Array.isArray(s.partnership_players) &&
+                        s.partnership_players.length === searchIds.length &&
+                        s.partnership_players.slice().sort().every((id, idx) => id.toLowerCase() === searchIds[idx].toLowerCase())
+                    );
+
+                    if (partnershipStanding) {
+                        // Adapt partnership standing to the structure expected by generatePlayerScorecard
+                        playerStanding = {
+                            player: partnershipStanding.player,
+                            total_tricks: partnershipStanding.total_tricks,
+                            rounds_played: partnershipStanding.rounds_played,
+                            average_tricks: partnershipStanding.average_tricks,
+                            individual_tricks: partnershipStanding.individual_tricks || 0,
+                            shared_tricks: partnershipStanding.shared_tricks || 0,
+                            individual_rounds: partnershipStanding.individual_rounds || 0,
+                            shared_rounds: partnershipStanding.shared_rounds || 0,
+                            position: partnershipStanding.position,
+                            is_partnership_member: true,
+                            partnership_name: partnershipStanding.player,
+                            partnership_players: partnershipStanding.partnership_players
+                        };
+                        console.log('✅ Partnership standing resolved for scorecard:', playerStanding);
+                    } 
+                }
 
                 if (!playerStanding) {
                     throw new Error(`Player ${params.player} not found in ${params.year} tournament`);
                 }
 
                 // Generate scorecard
-                await generatePlayerScorecard(tournament, playerStanding, params);
+                await generatePlayerScorecard(tournament, playerStanding, params, engine);
 
                 // Try to load photos
                 await loadScorecardPhotos(params.year, params.player.toLowerCase().replace(/\s+/g, '-'));
@@ -252,7 +295,7 @@
             }
         }
 
-        async function generatePlayerScorecard(tournament, playerStanding, params) {
+        async function generatePlayerScorecard(tournament, playerStanding, params, engine) {
             const playerName = playerStanding.player;
 
             // Update player header - show partnership name if applicable (normalized format)
@@ -295,7 +338,7 @@
 
             // Get player's individual rounds - use original searched name, not partnership name
             const searchedPlayerName = params.player; // The name they searched for (e.g., "Paul")
-            const playerRounds = getPlayerRounds(tournament, searchedPlayerName);
+            const playerRounds = getPlayerRounds(tournament, searchedPlayerName, engine);
             const maxTricks = Math.max(...playerRounds.map(r => r.tricks));
             
             // Count how many times they achieved the maximum
@@ -316,144 +359,108 @@
             createRankProgressionChart(tournament, displayName);
         }
 
-        function getPlayerRounds(tournament, playerName) {
+        function getPlayerRounds(tournament, playerName, engine) {
             const playerRounds = [];
-            
+
             console.log(`🔍 Looking for rounds for player: "${playerName}"`);
+
+            // Check if searching for a shared hand (support '/', '+', '&')
+            const isSharedHandSearch = /[\/+&]/.test(playerName);
 
             for (const round of tournament.rounds) {
                 let foundInRound = false;
                 for (const table of round.tables) {
                     for (const partnership of table.partnerships) {
-                        console.log(`  Round ${round.round}, Table ${table.table}: Partnership players:`, partnership.players);
+                        // partnership now has position1 and position2 arrays
+                        console.log(`  Round ${round.round}, Table ${table.table}: pos1=[${partnership.position1.join(', ')}] pos2=[${partnership.position2.join(', ')}]`);
                         
                         let playerMatch = false;
-                        let partnerName = null;
-                        
-                        // Check each player slot in the partnership
-                        for (const partnershipPlayer of partnership.players) {
-                            // Normalize both names for comparison (handle spacing issues)
-                            const normalizePlayerName = (name) => name.toLowerCase().replace(/\s+/g, ' ').trim();
-                            const normalizedPlayerName = normalizePlayerName(playerName);
-                            const normalizedPartnershipPlayer = normalizePlayerName(partnershipPlayer);
-                            
-                            // Case 1: Direct exact match (handles both "Paul" and "Paul + Marci")
-                            if (normalizedPartnershipPlayer === normalizedPlayerName) {
-                                playerMatch = true;
-                                
-                                // Always find the actual whist partner (person sitting across)
-                                partnerName = partnership.players.find(p => normalizePlayerName(p) !== normalizedPlayerName) || 'Unknown';
-                                console.log(`    ✓ Direct match found! Partner: ${partnerName}`);
-                                break;
-                            }
-                            
-                            // Case 2: Individual player is part of a combined name (e.g., searching "Paul" but data has "Paul + Marci")
-                            if (isHandSharingPartnership(partnershipPlayer) && !isHandSharingPartnership(playerName)) {
-                                // Split using any hand sharing delimiter
-                                const delimiters = ['+', '/', '&'];
-                                let foundDelimiter = null;
-                                
-                                for (const delimiter of delimiters) {
-                                    if (partnershipPlayer.includes(delimiter)) {
-                                        foundDelimiter = delimiter;
-                                        break;
-                                    }
-                                }
-                                
-                                if (foundDelimiter) {
-                                    const partnershipMembers = partnershipPlayer.split(foundDelimiter).map(name => name.trim());
-                                    console.log(`    Checking combined name "${partnershipPlayer}" -> [${partnershipMembers.join(', ')}]`);
-                                    
-                                    if (partnershipMembers.some(member => normalizePlayerName(member) === normalizedPlayerName)) {
-                                        playerMatch = true;
-                                        // Find the actual whist partner (person sitting across from this partnership)
-                                        partnerName = partnership.players.find(p => normalizePlayerName(p) !== normalizedPartnershipPlayer) || 'Unknown';
-                                        console.log(`    ✓ Found in combined name! Whist partner: ${partnerName}`);
-                                        break;
-                                    }
-                                }
-                            }
-                            
-                            // Case 3: Searching for hand sharing name but need fuzzy matching (handle spacing differences)
-                            if (isHandSharingPartnership(playerName) && isHandSharingPartnership(partnershipPlayer)) {
-                                // Extract members from both names using any delimiter
-                                const getMembers = (name) => {
-                                    const delimiters = ['+', '/', '&'];
-                                    for (const delimiter of delimiters) {
-                                        if (name.includes(delimiter)) {
-                                            return name.split(delimiter).map(n => normalizePlayerName(n)).sort();
-                                        }
-                                    }
-                                    return [normalizePlayerName(name)];
-                                };
-                                
-                                const searchMembers = getMembers(playerName);
-                                const dataMembers = getMembers(partnershipPlayer);
-                                
-                                if (searchMembers.length === dataMembers.length && 
-                                    searchMembers.every((member, index) => member === dataMembers[index])) {
-                                    playerMatch = true;
-                                    // Find the actual whist partner (person sitting across)
-                                    partnerName = partnership.players.find(p => normalizePlayerName(p) !== normalizedPartnershipPlayer) || 'Unknown';
-                                    console.log(`    ✓ Fuzzy match for hand sharing: "${playerName}" matches "${partnershipPlayer}". Partner: ${partnerName}`);
-                                    break;
-                                }
-                            }
-                            
+                        let partnerPosition = null; // Which position (1 or 2) this player is in
+                        let matchedPosition = null; // The actual position array that matched
 
+                        if (isSharedHandSearch) {
+                            // Searching for a shared hand like "David/Jennifer" (also supports "David+Jennifer" or "David & Jennifer")
+                            // Extract canonical IDs from search using the tournament engine for reliable matching
+                            const searchIds = playerName
+                                .split(/[\/+&]/)
+                                .map(n => engine.getCanonicalPlayerId(n.trim()))
+                                .sort();
+
+                            // Check if position1 matches
+                            const pos1Sorted = [...partnership.position1].sort();
+                            const matchesPos1 = searchIds.length === pos1Sorted.length &&
+                                              searchIds.every((id, idx) => id.toLowerCase() === pos1Sorted[idx].toLowerCase());
+
+                            // Check if position2 matches
+                            const pos2Sorted = [...partnership.position2].sort();
+                            const matchesPos2 = searchIds.length === pos2Sorted.length &&
+                                              searchIds.every((id, idx) => id.toLowerCase() === pos2Sorted[idx].toLowerCase());
+
+                            if (matchesPos1) {
+                                playerMatch = true;
+                                playerPosition = 1;
+                                matchedPosition = partnership.position1;
+                            } else if (matchesPos2) {
+                                playerMatch = true;
+                                playerPosition = 2;
+                                matchedPosition = partnership.position2;
+                            }
+                        } else {
+                            // Searching for individual player - check if they're in either position
+                            // Normalize to canonical ID for matching
+                            const searchIdLower = engine.getCanonicalPlayerId(playerName).toLowerCase();
+
+                            if (partnership.position1.some(id => id.toLowerCase() === searchIdLower)) {
+                                playerMatch = true;
+                                playerPosition = 1;
+                                matchedPosition = partnership.position1;
+                            } else if (partnership.position2.some(id => id.toLowerCase() === searchIdLower)) {
+                                playerMatch = true;
+                                playerPosition = 2;
+                                matchedPosition = partnership.position2;
+                            }
                         }
-                        
+
                         if (playerMatch) {
-                            // Normalize partner and opponent names for consistent display
-                            const normalizedPartner = partnerName ? normalizeHandSharingDisplay(partnerName) : 'Unknown';
-                            const normalizedOpponents = partnership.opponents 
-                                ? partnership.opponents.map(opp => normalizeHandSharingDisplay(opp)) 
-                                : [];
-                            
-                            // Get actual opponent partnership data from the same table
+                            // Get the partner position (the OTHER position in this partnership)
+                            const partnerPositionArray = playerPosition === 1 ? partnership.position2 : partnership.position1;
+
+                            // Create display name for partner
+                            const partnerDisplayNames = partnerPositionArray.map(id => engine.getDisplayName(id));
+                            const partnerName = partnerDisplayNames.length > 1
+                                ? partnerDisplayNames.join('/')
+                                : partnerDisplayNames[0];
+
+                            console.log(`    ✓ Match found in position ${playerPosition}! Partner: ${partnerName}`);
+
+                            // Find opponent partnership (the other partnership at this table)
                             let actualOpponentTricks = 13 - partnership.tricks; // Default fallback
-                            
-                            // Find the opponent partnership in the same table/round
+                            let opponentNames = [];
+
                             for (const otherPartnership of table.partnerships) {
                                 if (otherPartnership !== partnership) {
-                                    // Check if this partnership contains our opponents
-                                    const opponentNames = partnership.opponents.map(name => name.toLowerCase().trim());
-                                    const otherNames = otherPartnership.players.map(name => name.toLowerCase().trim());
-                                    
-                                    // Check if any opponent matches any player in the other partnership
-                                    const hasMatchingOpponent = opponentNames.some(oppName => 
-                                        otherNames.some(otherName => {
-                                            // Handle both direct matches and hand sharing names
-                                            if (oppName === otherName) return true;
-                                            if (oppName.includes('/') || oppName.includes('+')) {
-                                                const oppParts = oppName.split(/[\/+]/).map(p => p.trim().toLowerCase());
-                                                return oppParts.includes(otherName);
-                                            }
-                                            if (otherName.includes('/') || otherName.includes('+')) {
-                                                const otherParts = otherName.split(/[\/+]/).map(p => p.trim().toLowerCase());
-                                                return otherParts.includes(oppName);
-                                            }
-                                            return false;
-                                        })
-                                    );
-                                    
-                                    if (hasMatchingOpponent) {
-                                        actualOpponentTricks = otherPartnership.tricks;
-                                        break;
-                                    }
+                                    // This is the opponent partnership
+                                    actualOpponentTricks = otherPartnership.tricks;
+                                    // Get all opponent IDs
+                                    opponentNames = [...otherPartnership.position1, ...otherPartnership.position2];
+                                    actualOpponentTricks = otherPartnership.tricks;
+                                    break; // Only one other partnership per table
                                 }
                             }
-                            
+
+                            // Format opponent names for display
+                            const opponentDisplayNames = opponentNames.map(id => engine.getDisplayName(id));
+
                             // Check for data quality issues
                             const totalTricks = partnership.tricks + actualOpponentTricks;
                             const isDataError = totalTricks !== 13;
-                            
+
                             playerRounds.push({
                                 round: round.round,
                                 trump: partnership.trump_suit || round.trump_suit,
                                 table: table.table,
-                                partner: normalizedPartner,
-                                opponents: normalizedOpponents,
+                                partner: partnerName,
+                                opponents: opponentDisplayNames,
                                 tricks: partnership.tricks,
                                 opponentTricks: actualOpponentTricks,
                                 totalTricks: totalTricks,
