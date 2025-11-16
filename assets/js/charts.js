@@ -649,7 +649,6 @@ class TournamentCharts {
         
         // Process tournament data for rank progression
         const rankData = this.processRankProgression(tournamentData, tournamentEngine);
-        const highlightedFinalRank = highlightPlayer ? this.getFinalRankForPlayer(rankData, highlightPlayer) : null;
         
         if (!rankData || !rankData.players || rankData.players.length === 0) {
             console.error('❌ No rank data generated');

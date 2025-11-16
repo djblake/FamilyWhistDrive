@@ -10,39 +10,93 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        .title-with-year {
-            display: flex;
-            align-items: baseline;
-            gap: 1.5rem;
-            flex-wrap: wrap;
-        }
-
-        .tournament-year {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
-            color: white;
-            font-size: 2.5rem;
-            font-weight: 900;
-            padding: 0.5rem 1.2rem;
-            border-radius: 16px;
-            font-family: 'Playfair Display', serif;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-            min-width: 120px;
+        .hero-heading {
             text-align: center;
+            margin-bottom: 1.5rem;
         }
 
-        @media (max-width: 768px) {
-            .title-with-year {
-                flex-direction: column;
-                align-items: center;
-                gap: 1rem;
-            }
+        .hero-year {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(3rem, 12vw, 5.5rem);
+            font-weight: 900;
+            letter-spacing: 0.2rem;
+            text-transform: uppercase;
+            color: #f0fdf4;
+            text-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+            margin-bottom: 0.75rem;
+        }
 
-            .tournament-year {
-                font-size: 2rem;
-                padding: 0.4rem 1rem;
-                min-width: 100px;
-            }
+        .hero-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2rem, 6vw, 3.5rem);
+            margin: 0;
+            color: #ffffff;
+            text-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+        }
+
+        .hero-stats {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .hero-stat {
+            display: inline-flex;
+            flex-direction: column;
+            padding: 0.8rem 1.2rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            min-width: 160px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .hero-stat__label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .hero-stat__value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .hero-stat--muted {
+            background: rgba(255, 255, 255, 0.12);
+            border-style: dashed;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .hero-comment {
+            margin-top: 1.75rem;
+            text-align: center;
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.85);
+            max-width: 720px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-comment .comment-label {
+            display: block;
+            font-style: normal;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.25em;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 0.4rem;
+        }
+
+        .hero-comment .comment-body {
+            font-size: 1.1rem;
+            color: #f8fafc;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
         }
     </style>
 </head>
@@ -73,11 +127,12 @@
             <div class="container">
                 <div class="hero-content">
                     <div class="tournament-badge" id="tournament-badge">🏆 TOURNAMENT RESULTS</div>
-                    <div class="title-with-year">
+                    <div class="hero-heading">
+                        <div class="hero-year" id="tournament-year">20XX</div>
                         <h1 class="hero-title" id="tournament-title">Loading Tournament...</h1>
-                        <div class="tournament-year" id="tournament-year">20XX</div>
                     </div>
-                    <p class="hero-subtitle" id="tournament-subtitle">Loading details...</p>
+                    <div class="hero-stats" id="tournament-stats"></div>
+                    <p class="hero-comment" id="tournament-comment" style="display: none;"></p>
                 </div>
             </div>
         </section>
@@ -290,6 +345,74 @@
             return fallbackResult;
         }
 
+        function renderHeroStats(statChips) {
+            const container = document.getElementById('tournament-stats');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const chips = Array.isArray(statChips) ? statChips.filter(chip => chip && chip.label && chip.value) : [];
+
+            if (chips.length === 0) {
+                const placeholder = document.createElement('span');
+                placeholder.className = 'hero-stat hero-stat--muted';
+                placeholder.textContent = 'Awaiting tournament data';
+                container.appendChild(placeholder);
+                return;
+            }
+
+            chips.forEach(chip => {
+                const pill = document.createElement('span');
+                pill.className = 'hero-stat';
+
+                const labelEl = document.createElement('span');
+                labelEl.className = 'hero-stat__label';
+                labelEl.textContent = chip.label;
+
+                const valueEl = document.createElement('span');
+                valueEl.className = 'hero-stat__value';
+                valueEl.textContent = chip.value;
+
+                pill.append(labelEl, valueEl);
+                container.appendChild(pill);
+            });
+        }
+
+        function renderTournamentComment(commentText) {
+            const commentEl = document.getElementById('tournament-comment');
+            if (!commentEl) return;
+
+            commentEl.innerHTML = '';
+
+            if (!commentText) {
+                commentEl.style.display = 'none';
+                return;
+            }
+
+            const label = document.createElement('span');
+            label.className = 'comment-label';
+            label.textContent = 'Tournament Notes';
+
+            const body = document.createElement('span');
+            body.className = 'comment-body';
+            body.textContent = `"${commentText}"`;
+
+            commentEl.append(label, body);
+            commentEl.style.display = 'block';
+        }
+
+        function formatTournamentDate(rawDate) {
+            if (!rawDate) return '';
+            const parsed = new Date(rawDate);
+            if (!isNaN(parsed)) {
+                return parsed.toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+            }
+            return rawDate;
+        }
+
         // Load tournament results based on URL parameter
         document.addEventListener('DOMContentLoaded', async function() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -315,8 +438,9 @@
                 
                 if (!tournament) {
                     document.getElementById('tournament-title').textContent = `Tournament ${year} Not Found`;
-                document.getElementById('tournament-year').textContent = year || '20XX';
-                    document.getElementById('tournament-subtitle').textContent = 'This tournament was not found in our records.';
+                    document.getElementById('tournament-year').textContent = year || '20XX';
+                    renderHeroStats([{ label: 'Status', value: 'Tournament not found' }]);
+                    renderTournamentComment('');
                     return;
                 }
                 
@@ -333,8 +457,30 @@
                 // Update hero section
                 document.getElementById('tournament-title').textContent = tournament.name;
                 document.getElementById('tournament-year').textContent = year;
-                document.getElementById('tournament-subtitle').textContent = 
-                    `Champion: ${tournament.winner} • ${tournament.total_players} players • ${tournament.total_rounds} rounds`;
+                const tournamentMetadata = tournamentEngine.getTournamentMetadata(tournament.id) 
+                    || tournamentEngine.getTournamentMetadata(tournament.key);
+                const tournamentComment = tournament.comments || tournamentMetadata?.comments || '';
+
+                const championId = tournament.winner || tournament.final_standings[0]?.player || '';
+                const championDisplay = championId ? getDisplayPlayerName(tournament, championId, tournamentEngine) : 'TBD';
+                const stats = [
+                    { label: 'Champion', value: championDisplay || 'TBD' }
+                ];
+
+                if (tournament.total_players) {
+                    stats.push({ label: 'Players', value: `${tournament.total_players} players` });
+                }
+
+                if (tournament.total_rounds) {
+                    stats.push({ label: 'Rounds', value: `${tournament.total_rounds} rounds` });
+                }
+
+                if (tournament.date) {
+                    stats.push({ label: 'Date', value: formatTournamentDate(tournament.date) });
+                }
+
+                renderHeroStats(stats);
+                renderTournamentComment(tournamentComment);
                 
                 // Generate podium-style tournament summary
                 const thirdPlace = tournament.final_standings.length >= 3 ? tournament.final_standings[2] : null;
@@ -535,7 +681,8 @@
                 console.error('❌ Error loading tournament results:', error);
                 document.getElementById('tournament-title').textContent = 'Error Loading Tournament';
                 document.getElementById('tournament-year').textContent = year || '20XX';
-                document.getElementById('tournament-subtitle').textContent = 'Please try refreshing the page.';
+                renderHeroStats([{ label: 'Status', value: 'Please refresh the page' }]);
+                renderTournamentComment('');
             }
         });
 
@@ -616,7 +763,8 @@
         function displayTournamentError(message, year) {
             document.getElementById('tournament-title').textContent = 'Tournament Data Error';
             document.getElementById('tournament-year').textContent = year || '—';
-            document.getElementById('tournament-subtitle').textContent = message || 'Unable to display tournament details.';
+            renderHeroStats([{ label: 'Data Integrity', value: message || 'Display unavailable' }]);
+            renderTournamentComment('');
             
             const sections = document.querySelectorAll('.tournament-summary, .tournament-rankings, .tournament-chart');
             sections.forEach(section => {
@@ -633,6 +781,15 @@
             background: linear-gradient(135deg, var(--bg-primary) 0%, var(--primary-dark) 100%);
             color: var(--text-primary);
             padding: var(--spacing-3xl) 0;
+        }
+
+        .tournament-hero .hero-comment {
+            margin-top: var(--spacing-md);
+            font-size: 1rem;
+            color: var(--text-primary);
+            max-width: 720px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .tournament-summary {

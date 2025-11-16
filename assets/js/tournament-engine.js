@@ -16,6 +16,8 @@ class TournamentEngine {
         this.rawScorecards = [];
         this.playersLookup = new Map(); // Maps player ID to player info
         this.dataIssues = []; // Track data validation issues
+        this.lastReportedDataIssues = [];
+        this.tournamentMetadata = new Map();
         
         // Trump suit rotation
         this.trumpSuits = ['Hearts', 'Diamonds', 'Spades', 'Clubs'];
@@ -57,6 +59,16 @@ class TournamentEngine {
             }
             return value;
         });
+    }
+
+    normalizeHeaderName(header) {
+        if (typeof header !== 'string') {
+            return '';
+        }
+        return header
+            .replace(/\ufeff/g, '') // strip BOM if present
+            .replace(/^"|"$/g, '') // remove surrounding quotes
+            .trim();
     }
 
     /**
@@ -176,6 +188,13 @@ class TournamentEngine {
         try {
             console.log(`📊 Loading complete tournament data from Google Sheets: ${sheetId}`);
             this.dataIssues = [];
+            this.lastReportedDataIssues = [];
+            this.rawScorecards = [];
+            this.tournaments = new Map();
+            this.players = new Map();
+            this.partnerships = new Map();
+            this.tournamentMetadata = new Map();
+            this.dataIssues = [];
             
             // Read the Index sheet to get list of sheets to process
             const indexSheetNames = await this.readIndexSheet(sheetId);
@@ -183,6 +202,7 @@ class TournamentEngine {
             
             // Categorize sheets based on their names (no need to fetch metadata)
             let playersSheet = null;
+            let tournamentsSheet = null;
             const tournamentSheets = [];
             const scorecardsSheets = [];
             
@@ -192,6 +212,8 @@ class TournamentEngine {
                 
                 if (sheetName === 'Players') {
                     playersSheet = sheet;
+                } else if (sheetName === 'Tournaments') {
+                    tournamentsSheet = sheet;
                 } else if (sheetName.startsWith('WhistGame_')) {
                     tournamentSheets.push(sheet);
                 } else if (sheetName.startsWith('Scorecards_')) {
@@ -199,6 +221,19 @@ class TournamentEngine {
                 } else {
                     console.warn(`⚠️  Unknown sheet type for: ${sheetName}`);
                 }
+            }
+            
+            // Load tournament metadata first (always attempt Tournaments sheet by name)
+            if (!tournamentsSheet) {
+                console.warn('⚠️  No "Tournaments" sheet listed in Index. Attempting direct load by name.');
+                tournamentsSheet = { name: 'Tournaments' };
+            }
+            try {
+                console.log('📅 Loading Tournaments metadata sheet...');
+                await this.loadTournamentMetadata(sheetId, tournamentsSheet);
+            } catch (metadataError) {
+                console.error('❌ Failed to load Tournaments metadata sheet:', metadataError);
+                console.warn('⚠️  Title/year/comments will rely on scorecard data until metadata loads correctly.');
             }
             
             // Load players data if available
@@ -710,6 +745,103 @@ class TournamentEngine {
     }
 
     /**
+     * Load tournament metadata (title, year, date, comments) from Tournaments sheet
+     */
+    async loadTournamentMetadata(sheetId, sheetInfo) {
+        try {
+            // Construct URL similar to other loaders
+            let csvUrl;
+            if (sheetInfo.url) {
+                csvUrl = sheetInfo.url;
+            } else if (sheetInfo.name && !sheetInfo.gid) {
+                const encodedName = encodeURIComponent(sheetInfo.name);
+                csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodedName}`;
+            } else if (sheetInfo.gid && sheetInfo.gid.startsWith('name:')) {
+                const actualSheetName = sheetInfo.gid.substring(5);
+                const encodedName = encodeURIComponent(actualSheetName);
+                csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodedName}`;
+            } else {
+                csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${sheetInfo.gid || sheetInfo}`;
+            }
+            
+            console.log(`📅 Loading tournament metadata from ${sheetInfo.name || sheetInfo.gid || sheetInfo}`);
+            
+            const response = await fetch(csvUrl);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch tournament metadata: ${response.statusText}`);
+            }
+            
+            const csvData = await response.text();
+            const lines = csvData.trim().split('\n');
+            if (lines.length <= 1) {
+                console.warn('⚠️  Tournaments sheet contains no data rows.');
+                return 0;
+            }
+            
+            const headers = this.parseCSVLine(lines[0]).map(h => this.normalizeHeaderName(h));
+            let recordsLoaded = 0;
+            const metadataIdsDebug = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const row = this.parseCSVLine(lines[i]);
+                if (!row || row.length === 0) continue;
+                
+                const record = {};
+                headers.forEach((header, index) => {
+                    const key = this.normalizeHeaderName(header);
+                    if (!key) return;
+                    record[key] = row[index] ? row[index].trim() : '';
+                });
+                
+                const rawId = (record.Id || record.ID || '').trim();
+                if (!rawId) continue;
+                
+                metadataIdsDebug.push(`${rawId} (len=${rawId.length})`);
+                
+                const key = rawId;
+                const title = (record.Title || '').trim();
+                const date = (record.Date || '').trim();
+                const yearValue = (record.Year || '').trim();
+                const comments = (record.Comments || '').trim();
+                
+                let year = yearValue ? parseInt(yearValue, 10) : null;
+                if (!year || isNaN(year)) {
+                    year = this.extractYearFromId(rawId);
+                }
+                
+                const metadata = {
+                    id: rawId,
+                    key,
+                    title: title || rawId,
+                    year,
+                    date,
+                    comments
+                };
+                
+                console.log('🗂️ Tournaments row parsed:', metadata);
+                this.tournamentMetadata.set(key, metadata);
+                recordsLoaded++;
+            }
+            
+            console.log('📄 Tournament metadata entries snapshot:',
+                Array.from(this.tournamentMetadata.values()).map(entry => ({
+                    id: entry.id,
+                    title: entry.title,
+                    year: entry.year,
+                    date: entry.date,
+                    comments: entry.comments
+                }))
+            );
+            console.log('🆔 Tournaments Id column values:', metadataIdsDebug);
+            console.log(`✅ Loaded metadata for ${recordsLoaded} tournaments`);
+            return recordsLoaded;
+        } catch (error) {
+            console.error('❌ Error loading tournament metadata:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Load a specific tournament sheet
      */
     async loadTournamentSheet(sheetId, sheetInfo, sheetName) {
@@ -786,19 +918,24 @@ class TournamentEngine {
                 }
                 return trimmed;
             });
-            const scorecard = {};
-            
-            headers.forEach((header, index) => {
-                let headerName = header;
-                // Remove quotes from header names too
+        const scorecard = { SourceSheet: sheetName };
+        
+        headers.forEach((header, index) => {
+            let headerName = header;
+            if (headerName) {
                 if (headerName.startsWith('"') && headerName.endsWith('"')) {
                     headerName = headerName.slice(1, -1);
                 }
-                scorecard[headerName] = values[index] || '';
-            });
+                headerName = headerName.trim();
+            }
+            if (!headerName) {
+                return;
+            }
+            scorecard[headerName] = values[index] !== undefined ? values[index] : '';
+        });
             
             // Skip empty rows (now that quotes are removed)
-            if (!scorecard.Id || !scorecard.Tournament) {
+            if (!scorecard.Id) {
                 emptyRows++;
                 console.log(`🔍 DEBUG: Skipping empty row ${i + 1}:`, scorecard);
                 continue;
@@ -807,6 +944,10 @@ class TournamentEngine {
             console.log(`🔍 DEBUG: Processing row ${i + 1}:`, scorecard);
             
             try {
+                if (!this.applyTournamentMetadata(scorecard, sheetName, i + 1)) {
+                    continue;
+                }
+                
                 // Handle date parsing - if blank, use Jan 2 of following year
                 if (!scorecard.Date) {
                     const year = parseInt(scorecard.Year) || new Date().getFullYear();
@@ -912,18 +1053,11 @@ class TournamentEngine {
             return 0;
         }
         
-        const headers = lines[0].split(',').map(h => {
-            let trimmed = h.trim();
-            if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-                trimmed = trimmed.slice(1, -1);
-            }
-            return trimmed;
-        });
+        const headers = lines[0].split(',').map(h => this.normalizeHeaderName(h));
         
         console.log(`📊 Headers found: ${headers.join(', ')}`);
         
-        // Expected headers: Id, Date, Tournament, Year, Round, Trump_Suit, Table, Player, Tricks_Won
-        const requiredHeaders = ['Id', 'Date', 'Tournament', 'Year', 'Round', 'Trump_Suit', 'Table', 'Player', 'Tricks_Won'];
+        const requiredHeaders = ['Id', 'Round', 'Trump_Suit', 'Table', 'Player', 'Tricks_Won'];
         const missingHeaders = requiredHeaders.filter(header => !headers.includes(header));
         
         if (missingHeaders.length > 0) {
@@ -932,6 +1066,7 @@ class TournamentEngine {
         
         // Parse individual scorecards
         const individualScores = [];
+        const scorecardIdsDebug = new Set();
         let validRows = 0;
         let emptyRows = 0;
         const errors = [];
@@ -950,15 +1085,23 @@ class TournamentEngine {
                     continue;
                 }
                 
-                const scorecard = {};
+                const scorecard = { SourceSheet: sheetName };
                 headers.forEach((header, index) => {
-                    scorecard[header] = values[index];
+                    const key = this.normalizeHeaderName(header);
+                    if (!key) return;
+                    scorecard[key] = values[index];
                 });
                 
-                // Validate required fields
-                if (!scorecard.Tournament || !scorecard.Year || !scorecard.Round || 
-                    !scorecard.Table || !scorecard.Player || !scorecard.Tricks_Won) {
+                if (scorecard.Id) {
+                    scorecardIdsDebug.add(`${scorecard.Id} (len=${scorecard.Id.length})`);
+                }
+                
+                if (!scorecard.Round || !scorecard.Table || !scorecard.Player || !scorecard.Tricks_Won) {
                     errors.push(`Row ${i + 1}: Missing required data`);
+                    continue;
+                }
+                
+                if (!this.applyTournamentMetadata(scorecard, sheetName, i + 1)) {
                     continue;
                 }
                 
@@ -982,6 +1125,7 @@ class TournamentEngine {
             }
         }
         
+        console.log(`🆔 Scorecard Id values for ${sheetName}:`, Array.from(scorecardIdsDebug));
         console.log(`📊 Parsed ${validRows} individual scorecard records from ${sheetName}`);
         
         if (errors.length > 0) {
@@ -1406,7 +1550,11 @@ class TournamentEngine {
                 Opponent_Tricks: p2Tricks,
                 Source: 'reverse-engineered',
                 Table: baseData.Table,
-                Date: baseData.Date
+                Date: baseData.Date,
+                TournamentId: baseData.TournamentId,
+                Id: baseData.TournamentId,
+                TournamentKey: baseData.TournamentId,
+                SourceSheet: baseData.SourceSheet || baseData.Source || 'Scorecards'
             };
             
             // Debug: Log first few created scorecards
@@ -1798,6 +1946,70 @@ class TournamentEngine {
         };
     }
 
+    getTournamentMetadata(tournamentId) {
+        if (!tournamentId) return null;
+        return this.tournamentMetadata.get(tournamentId) || null;
+    }
+
+    extractYearFromId(identifier) {
+        if (!identifier) return null;
+        const match = identifier.match(/(19|20)\d{2}/);
+        return match ? parseInt(match[0], 10) : null;
+    }
+
+    applyTournamentMetadata(scorecard, sheetName, rowNumber) {
+        const rawId = (scorecard.Id || '').toString().trim();
+        if (!rawId) {
+            this.dataIssues.push({
+                type: 'missing_tournament_id',
+                severity: 'error',
+                sheet: sheetName,
+                row: rowNumber,
+                message: 'Scorecard row missing tournament Id'
+            });
+            return false;
+        }
+        
+        const metadata = this.getTournamentMetadata(rawId);
+        if (!metadata) {
+            this.dataIssues.push({
+                type: 'missing_tournament_metadata',
+                severity: 'error',
+                sheet: sheetName,
+                row: rowNumber,
+                message: `Tournament metadata not found for Id "${rawId}"`
+            });
+            return false;
+        }
+        
+        scorecard.TournamentId = metadata.id;
+        scorecard.TournamentKey = metadata.id;
+        scorecard.Tournament = metadata.title || scorecard.Tournament || metadata.id;
+        let year = metadata.year;
+        if (!year || isNaN(year)) {
+            year = this.extractYearFromId(metadata.id);
+        }
+        if (!year || isNaN(year)) {
+            year = scorecard.Year ? parseInt(scorecard.Year, 10) : null;
+        }
+        scorecard.Year = year ? parseInt(year, 10) : null;
+        scorecard.Date = metadata.date || scorecard.Date || null;
+        scorecard.TournamentComments = metadata.comments || '';
+        
+        if (!scorecard.Year || isNaN(scorecard.Year)) {
+            this.dataIssues.push({
+                type: 'missing_tournament_year',
+                severity: 'error',
+                sheet: sheetName,
+                row: rowNumber,
+                message: `Year missing for tournament "${metadata.id}"`
+            });
+            return false;
+        }
+        
+        return true;
+    }
+
     /**
      * Process raw scorecards into structured tournament data
      */
@@ -1824,13 +2036,24 @@ class TournamentEngine {
         const groups = new Map();
         
         for (const scorecard of this.rawScorecards) {
-            const key = `${scorecard.Tournament}_${scorecard.Year}`;
+            const tournamentId = scorecard.TournamentId;
             
-            if (!groups.has(key)) {
-                groups.set(key, []);
+            if (!tournamentId) {
+                this.dataIssues.push({
+                    type: 'missing_tournament_id',
+                    severity: 'error',
+                    sheet: scorecard.SourceSheet || scorecard.sheetName || 'Unknown',
+                    gameId: scorecard.Tournament || scorecard.Id || null,
+                    message: 'Scorecard missing canonical TournamentId during grouping'
+                });
+                continue;
             }
             
-            groups.get(key).push(scorecard);
+            if (!groups.has(tournamentId)) {
+                groups.set(tournamentId, []);
+            }
+            
+            groups.get(tournamentId).push(scorecard);
         }
         
         return groups;
@@ -1839,8 +2062,20 @@ class TournamentEngine {
     /**
      * Process individual tournament
      */
-    processTournament(tournamentKey, scorecards) {
-        const [tournamentName, year] = tournamentKey.split('_');
+    processTournament(tournamentId, scorecards) {
+        const firstScorecard = scorecards[0];
+        const metadata = this.getTournamentMetadata(tournamentId);
+        const fallbackName = firstScorecard?.Tournament || tournamentId;
+        let tournamentName = metadata?.title || fallbackName;
+        let tournamentYear = metadata?.year || (firstScorecard ? parseInt(firstScorecard.Year, 10) : this.extractYearFromId(tournamentId));
+        const tournamentDate = metadata?.date || firstScorecard?.Date || null;
+        const tournamentComments = metadata?.comments || firstScorecard?.TournamentComments || '';
+        const canonicalTournamentId = metadata?.id || firstScorecard?.TournamentId || tournamentId;
+        const storageKey = canonicalTournamentId;
+        
+        if (!tournamentYear || isNaN(tournamentYear)) {
+            tournamentYear = this.extractYearFromId(tournamentId) || null;
+        }
         
         // Group by rounds
         const rounds = new Map();
@@ -1873,9 +2108,13 @@ class TournamentEngine {
         
         // Store tournament data
         const tournament = {
-            id: tournamentKey.toLowerCase().replace(/\s+/g, '_'),
+            id: canonicalTournamentId,
+            key: storageKey,
             name: tournamentName,
-            year: parseInt(year),
+            title: tournamentName,
+            year: tournamentYear ? parseInt(tournamentYear, 10) : null,
+            date: tournamentDate,
+            comments: tournamentComments,
             rounds: processedRounds.sort((a, b) => a.round - b.round),
             final_standings: finalStandings,
             total_players: finalStandings.length,
@@ -1884,7 +2123,10 @@ class TournamentEngine {
             total_rounds: processedRounds.length
         };
         
-        this.tournaments.set(tournamentKey, tournament);
+        this.tournaments.set(storageKey, tournament);
+        if (storageKey !== tournamentId) {
+            this.tournaments.set(tournamentId, tournament);
+        }
     }
 
     /**
@@ -2717,7 +2959,8 @@ class TournamentEngine {
      * Get tournament data by key
      */
     getTournament(tournamentKey) {
-        return this.tournaments.get(tournamentKey);
+        if (!tournamentKey) return null;
+        return this.tournaments.get(tournamentKey) || this.tournaments.get(tournamentKey.toLowerCase()) || null;
     }
 
     /**
@@ -3454,8 +3697,12 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
      */
     calculateRankingsExcludingTournament(excludeTournamentKey, rankingType) {
         // Temporarily remove the tournament
-        const originalTournament = this.tournaments.get(excludeTournamentKey);
+        const originalTournament = this.tournaments.get(excludeTournamentKey) || this.tournaments.get(excludeTournamentKey.toLowerCase());
+        if (!originalTournament) {
+            return this.calculateRankingsForType(rankingType);
+        }
         this.tournaments.delete(excludeTournamentKey);
+        this.tournaments.delete(excludeTournamentKey.toLowerCase());
         
         // Recalculate player statistics without this tournament
         this.players.clear();
@@ -3466,6 +3713,9 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
         
         // Restore the tournament
         this.tournaments.set(excludeTournamentKey, originalTournament);
+        if (excludeTournamentKey !== excludeTournamentKey.toLowerCase()) {
+            this.tournaments.set(excludeTournamentKey.toLowerCase(), originalTournament);
+        }
         
         // Recalculate with all tournaments
         this.players.clear();
