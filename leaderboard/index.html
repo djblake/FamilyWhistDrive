@@ -48,6 +48,7 @@
                     <button class="filter-btn" data-ranking="championships">Tournament Wins</button>
                     <button class="filter-btn" data-ranking="career_stats">Career Wins</button>
                     <button class="filter-btn" data-ranking="recent_form">Recent Form</button>
+                    <button class="filter-btn" data-ranking="performance">Performance</button>
                 </div>
 
                 <div class="rankings-header">
@@ -329,6 +330,7 @@
         let showingAllPlayers = false;
         let currentSortedPlayers = [];
         let recentFormScores = new Map();
+        let performanceScores = new Map();
         
         document.addEventListener('DOMContentLoaded', function() {
             initializeLeaderboard();
@@ -346,12 +348,13 @@
                 // Get all players with comprehensive stats from real data
                 allPlayers = tournamentEngine.getAllPlayers('overall');
                 
-                // Pre-calculate recent form scores from actual tournament results
-                if (typeof tournamentEngine.calculateRecentFormScores === 'function') {
-                    recentFormScores = tournamentEngine.calculateRecentFormScores(5);
-                } else {
-                    recentFormScores = new Map();
-                }
+                // Pre-calculate recent form and performance scores from actual tournament results
+                recentFormScores = typeof tournamentEngine.calculateRecentFormScores === 'function'
+                    ? tournamentEngine.calculateRecentFormScores(5)
+                    : new Map();
+                performanceScores = typeof tournamentEngine.calculatePerformanceScores === 'function'
+                    ? tournamentEngine.calculatePerformanceScores()
+                    : new Map();
                 
                 // Initialize rankings display
                 updateRankingsDisplay('overall');
@@ -494,6 +497,13 @@
                     // Use recent form scores derived from latest tournaments
                     return recentFormScores.get(player.name) || 0;
                 
+                case 'performance':
+                    if (!performanceScores.size) return 0;
+                    const percentile = performanceScores.get(player.name);
+                    if (typeof percentile !== 'number') return 0;
+                    // Lower percentile is better, so convert to performance score where higher is better
+                    return 100 - percentile;
+                
                 default:
                     return 0;
             }
@@ -519,6 +529,10 @@
                 recent_form: {
                     title: 'Recent Form Rankings',
                     desc: 'Current performance and momentum based on last 5 tournaments'
+                },
+                performance: {
+                    title: 'Performance Rankings',
+                    desc: 'Average tournament finish position as a top percentile adjusted for tournament size (lower percentile = better — e.g., top 10%)'
                 }
             };
             
@@ -564,6 +578,45 @@
                             <div class="trend-col">${trend}</div>
                         </div>
                     `;
+                } else if (currentRankingType === 'performance') {
+                    return `
+                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
+                            <div class="rank-col">
+                                <span class="rank-number">${index + 1}</span>
+                                <span class="rank-medal">${medalIcon}</span>
+                            </div>
+                            <div class="player-col">
+                                <a href="../players/profile.html?player=${encodeURIComponent(player.name)}" class="player-link">
+                                    <span class="player-name">${tournamentEngine.getDisplayName(player.name)}</span>
+                                    <span class="player-nickname">${getPlayerNickname(player.name)}</span>
+                                </a>
+                            </div>
+                            <div class="score-col">${formatScoreDisplay(player, currentRankingType)}</div>
+                            <div class="tournaments-col">${player.tournaments_played || 0}</div>
+                            <div class="trend-col">${trend}</div>
+                        </div>
+                    `;
+                } else if (currentRankingType === 'overall') {
+                    return `
+                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
+                            <div class="rank-col">
+                                <span class="rank-number">${index + 1}</span>
+                                <span class="rank-medal">${medalIcon}</span>
+                            </div>
+                            <div class="player-col">
+                                <a href="../players/profile.html?player=${encodeURIComponent(player.name)}" class="player-link">
+                                    <span class="player-name">${tournamentEngine.getDisplayName(player.name)}</span>
+                                    <span class="player-nickname">${getPlayerNickname(player.name)}</span>
+                                </a>
+                            </div>
+                            <div class="score-col">${formatScoreDisplay(player, currentRankingType)}</div>
+                            <div class="recent-col">${player.tournaments_in_period ?? 0}</div>
+                            <div class="wins-col">${player.championships ?? 0}</div>
+                            <div class="podium-col">${player.podium_finishes ?? 0}</div>
+                            <div class="avg-finish-col">${player.avg_finish ?? '—'}</div>
+                            <div class="trend-col">${trend}</div>
+                        </div>
+                    `;
                 } else {
                     // Standard layout for other ranking types
                     return `
@@ -595,9 +648,10 @@
             const tableHeader = document.querySelector('.rankings-table-header');
             const rankingsTable = document.querySelector('.full-rankings');
             
-            if (rankingType === 'career_stats') {
+                if (rankingType === 'career_stats') {
                 // Add career-stats class for special layout
                 rankingsTable.classList.add('career-stats');
+                rankingsTable.classList.remove('performance-stats');
                 
                 // Special layout for Career Wins
                 tableHeader.innerHTML = `
@@ -608,20 +662,47 @@
                     <div class="score-col">Round Win %</div>
                     <div class="trend-col">Trend</div>
                 `;
-            } else {
-                // Remove career-stats class for standard layout
+            } else if (rankingType === 'performance') {
                 rankingsTable.classList.remove('career-stats');
+                rankingsTable.classList.add('performance-stats');
                 
-                // Standard layout for other ranking types
                 tableHeader.innerHTML = `
                     <div class="rank-col">Rank</div>
                     <div class="player-col">Player</div>
                     <div class="score-col">${getScoreHeaderText(rankingType)}</div>
                     <div class="tournaments-col">Tournaments</div>
-                    <div class="wins-col">Wins</div>
-                    <div class="percentage-col">Win %</div>
                     <div class="trend-col">Trend</div>
                 `;
+            } else {
+                // Remove career-stats class for standard layout
+                rankingsTable.classList.remove('career-stats');
+                rankingsTable.classList.remove('performance-stats');
+                rankingsTable.classList.remove('seed-stats');
+                
+                // Standard layout for other ranking types
+                if (rankingType === 'overall') {
+                    rankingsTable.classList.add('seed-stats');
+                    tableHeader.innerHTML = `
+                        <div class="rank-col">Rank</div>
+                        <div class="player-col">Player</div>
+                        <div class="score-col">${getScoreHeaderText(rankingType)}</div>
+                        <div class="recent-col">Recent (6)</div>
+                        <div class="wins-col">Championships</div>
+                        <div class="podium-col">Podiums</div>
+                        <div class="avg-finish-col">Avg Finish</div>
+                        <div class="trend-col">Trend</div>
+                    `;
+                } else {
+                    tableHeader.innerHTML = `
+                        <div class="rank-col">Rank</div>
+                        <div class="player-col">Player</div>
+                        <div class="score-col">${getScoreHeaderText(rankingType)}</div>
+                        <div class="tournaments-col">Tournaments</div>
+                        <div class="wins-col">Wins</div>
+                        <div class="percentage-col">Win %</div>
+                        <div class="trend-col">Trend</div>
+                    `;
+                }
             }
         }
         
@@ -633,6 +714,8 @@
                     return 'Championships';
                 case 'recent_form':
                     return 'Form Score';
+                case 'performance':
+                    return 'Top Percentile Finish Position';
                 default:
                     return 'Score';
             }
@@ -651,6 +734,9 @@
                     return `${winPct}%`;
                 case 'recent_form':
                     return Math.round(player.rankingScore || 0);
+                case 'performance':
+                    const percentile = performanceScores.get(player.name);
+                    return typeof percentile === 'number' ? `${percentile.toFixed(1)}%` : '—';
                 default:
                     return '0';
             }
@@ -950,6 +1036,21 @@
 
         .career-stats .ranking-row {
             grid-template-columns: 80px 1.2fr 140px 140px 120px 80px;
+        }
+
+        .performance-stats .rankings-table-header {
+            grid-template-columns: 80px 1.5fr 160px 120px 80px;
+        }
+        .seed-stats .rankings-table-header {
+            grid-template-columns: 80px 1.5fr 120px 120px 120px 120px 120px 80px;
+        }
+
+        .seed-stats .ranking-row {
+            grid-template-columns: 80px 1.5fr 120px 120px 120px 120px 120px 80px;
+        }
+
+        .performance-stats .ranking-row {
+            grid-template-columns: 80px 1.5fr 160px 120px 80px;
         }
 
         .ranking-insights {

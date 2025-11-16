@@ -2987,6 +2987,45 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
     }
 
     /**
+     * Calculate average performance percentile per player across all tournaments
+     * Percentile = (position / total_players) * 100 (lower is better)
+     * @returns {Map<string, number>} Map of playerId -> average percentile
+     */
+    calculatePerformanceScores() {
+        const performanceTotals = new Map();
+
+        for (const tournament of this.tournaments.values()) {
+            if (!tournament.final_standings || tournament.final_standings.length === 0) continue;
+            const totalPlayers = tournament.final_standings.length;
+
+            tournament.final_standings.forEach(standing => {
+                const percentile = (standing.position / totalPlayers) * 100;
+                const players = standing.is_partnership && standing.partnership_players
+                    ? standing.partnership_players
+                    : [standing.player];
+
+                players.forEach(playerId => {
+                    if (!performanceTotals.has(playerId)) {
+                        performanceTotals.set(playerId, { sum: 0, count: 0 });
+                    }
+                    const stats = performanceTotals.get(playerId);
+                    stats.sum += percentile;
+                    stats.count += 1;
+                });
+            });
+        }
+
+        const averages = new Map();
+        for (const [playerId, stats] of performanceTotals.entries()) {
+            if (stats.count > 0) {
+                averages.set(playerId, stats.sum / stats.count);
+            }
+        }
+
+        return averages;
+    }
+
+    /**
      * Get position emoji for tournament ranking
      * @param {number} position - Player's position (1-based)
      * @param {number} totalPlayers - Total number of players
