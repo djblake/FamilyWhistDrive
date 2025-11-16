@@ -8,7 +8,6 @@
  * - Partnership performance rankings
  * - Family statistics grouping
  */
-
 class TournamentEngine {
     constructor() {
         this.tournaments = new Map();
@@ -3023,6 +3022,37 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
         }
 
         return averages;
+    }
+
+    /**
+     * Get performance stats for a player (seed rank, seed points, avg tricks, top percentile, podium rate)
+     */
+    getPlayerPerformanceStats(playerName) {
+        const playerStats = this.getPlayerStats(playerName, true);
+        if (!playerStats) return null;
+        
+        const seedRankings = this.getOfficialSeedRankings(true);
+        const seedEntry = seedRankings.find(entry => entry.name === playerName);
+        
+        const percentileScores = this.calculatePerformanceScores();
+        const avgPercentile = percentileScores.get(playerName);
+        
+        const tournaments = this.getAllTournaments();
+        const topThreeCount = tournaments.filter(t => {
+            const standing = t.final_standings.find(s => s.player === playerName);
+            if (standing && standing.position <= 3) return true;
+            const sharedEntry = t.final_standings.find(s => s.is_partnership && s.partnership_players && s.partnership_players.includes(playerName));
+            return sharedEntry && sharedEntry.position <= 3;
+        }).length;
+        const topThreeRate = playerStats.tournaments_played > 0 ? (topThreeCount / playerStats.tournaments_played) * 100 : 0;
+        
+        return {
+            seed_rank: seedEntry ? seedEntry.seed_rank : null,
+            seed_points: seedEntry ? seedEntry.seed_points : null,
+            average_tricks: playerStats.average_tricks,
+            top_percentile: typeof avgPercentile === 'number' ? avgPercentile : null,
+            top_three_rate: topThreeRate
+        };
     }
 
     /**

@@ -973,69 +973,56 @@ class TournamentCharts {
 
             // Add this round's tricks
             let roundTricksAdded = 0;
-            const processedPartnerships = new Set(); // Track processed shared hands to avoid double counting
             
             round.tables.forEach(table => {
                 table.partnerships.forEach(partnership => {
                     const tricks = partnership.tricks || 0;
-                    console.log(`    Partnership [${partnership.players.join(', ')}]: ${tricks} tricks`);
-                    
-                    partnership.players.forEach(player => {
-                        // Use tournament engine to parse shared hands properly
+                    const seatGroups = [];
+                    if (Array.isArray(partnership.position1) && partnership.position1.length > 0) {
+                        seatGroups.push(partnership.position1);
+                    }
+                    if (Array.isArray(partnership.position2) && partnership.position2.length > 0) {
+                        seatGroups.push(partnership.position2);
+                    }
+
+                    seatGroups.forEach(positionPlayers => {
+                        if (!positionPlayers || positionPlayers.length === 0) return;
+                        
+                        const isSharedSeat = positionPlayers.length > 1;
                         let playerKey;
-                        let isSharedHand = false;
-                        
-                        if (tournamentEngine && tournamentEngine.parseSharedHand) {
-                            const parsedPlayer = tournamentEngine.parseSharedHand(player);
-                            isSharedHand = parsedPlayer.isShared;
-                            playerKey = parsedPlayer.displayName; // This will be "David/Jennifer" for shared hands
-                            
-                            if (isSharedHand) {
-                                // Skip if already processed in this round
-                                if (processedPartnerships.has(playerKey)) {
-                                    console.log(`    ⏭️ Skipping already processed shared hand: ${playerKey}`);
-                                    return;
-                                }
-                                processedPartnerships.add(playerKey);
-                            }
+
+                        if (isSharedSeat) {
+                            const displayNames = positionPlayers.map(id => 
+                                tournamentEngine && tournamentEngine.getDisplayName ? 
+                                    tournamentEngine.getDisplayName(id) : id
+                            );
+                            playerKey = displayNames.join('/');
                         } else {
-                            // Fallback logic for shared hands
-                            const delimiters = ['+', '&'];
-                            for (const delimiter of delimiters) {
-                                if (player.includes(delimiter)) {
-                                    isSharedHand = true;
-                                    const regex = new RegExp(`\\s*\\${delimiter}\\s*`, 'g');
-                                    playerKey = player.replace(regex, '/');
-                                    
-                                    if (processedPartnerships.has(playerKey)) {
-                                        console.log(`    ⏭️ Skipping already processed shared hand: ${playerKey}`);
-                                        return;
-                                    }
-                                    processedPartnerships.add(playerKey);
-                                    break;
+                            playerKey = positionPlayers[0];
+                        }
+
+                        // Resolve to the key used in playerScores map
+                        let resolvedKey = playerKey;
+                        if (!roundScores.has(resolvedKey)) {
+                            if (!isSharedSeat && tournamentEngine && tournamentEngine.getDisplayName) {
+                                const displayName = tournamentEngine.getDisplayName(resolvedKey);
+                                if (roundScores.has(displayName)) {
+                                    resolvedKey = displayName;
                                 }
                             }
-                            
-                            if (!isSharedHand) {
-                                playerKey = player.split(' ')[0]; // First name fallback
-                            }
                         }
-                        
-                        // For individual players, get canonical ID
-                        if (!isSharedHand && tournamentEngine && tournamentEngine.getCanonicalPlayerId) {
-                            playerKey = tournamentEngine.getCanonicalPlayerId(player);
-                        }
-                        
-                        if (roundScores.has(playerKey)) {
-                            const currentScore = roundScores.get(playerKey);
-                            const newScore = currentScore + partnership.tricks;
-                            roundScores.set(playerKey, newScore);
-                            roundTricksAdded += partnership.tricks;
-                            console.log(`    ✅ Added ${partnership.tricks} tricks to ${playerKey} (from ${player})`);
-                        } else {
-                            console.warn(`    ⚠️ No match found for player: ${player} → ${playerKey}`);
+
+                        if (!roundScores.has(resolvedKey)) {
+                            console.warn(`    ⚠️ No match found for player seat: ${playerKey}`);
                             console.log(`    Available players: ${Array.from(roundScores.keys()).join(', ')}`);
+                            return;
                         }
+
+                        const currentScore = roundScores.get(resolvedKey);
+                        const newScore = currentScore + tricks;
+                        roundScores.set(resolvedKey, newScore);
+                        roundTricksAdded += partnership.tricks;
+                        console.log(`    ✅ Added ${partnership.tricks} tricks to ${resolvedKey} (shared seat: ${isSharedSeat})`);
                     });
                 });
             });

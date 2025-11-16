@@ -126,6 +126,16 @@
 
                     <div class="stats-section">
                         <h3 class="section-title">
+                            <span class="title-icon">📊</span>
+                            Performance
+                        </h3>
+                        <div class="stats-table" id="performance-stats">
+                            <div class="loading-message">Loading performance metrics...</div>
+                        </div>
+                    </div>
+
+                    <div class="stats-section">
+                        <h3 class="section-title">
                             <span class="title-icon">🃏</span>
                             Trump Suit Performance
                         </h3>
@@ -379,10 +389,14 @@
                 document.getElementById('current-ranking').textContent = `#${playerRanking}`;
                 
                 // Update career highlights
+                const performanceStats = tournamentEngine.getPlayerPerformanceStats(player.name) || {};
+                
                 document.getElementById('tournament-victories').textContent = championships;
                 document.getElementById('total-tricks').textContent = player.total_tricks.toLocaleString();
                 document.getElementById('avg-tricks').textContent = avgTricks;
                 document.getElementById('top-finishes').textContent = topThreeFinishes;
+                
+                updatePerformanceStats(performanceStats);
                 
                 // Generate career statistics table
                 generateCareerStats(player, playerTournaments);
@@ -416,10 +430,6 @@
 
             const statsHTML = `
                 <div class="stats-row">
-                    <div class="stat-label">Total Tournaments</div>
-                    <div class="stat-value">${player.tournaments_played}</div>
-                </div>
-                <div class="stats-row">
                     <div class="stat-label">Tournament Victories</div>
                     <div class="stat-value">${victories}</div>
                 </div>
@@ -428,23 +438,49 @@
                     <div class="stat-value">${top3Finishes}</div>
                 </div>
                 <div class="stats-row">
+                    <div class="stat-label">Total Tournaments</div>
+                    <div class="stat-value">${player.tournaments_played}</div>
+                </div>
+                <div class="stats-row">
                     <div class="stat-label">Total Tricks</div>
                     <div class="stat-value">${player.total_tricks.toLocaleString()}</div>
                 </div>
-                <div class="stats-row">
-                    <div class="stat-label">Average Tricks/Round</div>
-                    <div class="stat-value">${(player.total_rounds > 0 ? (player.total_tricks / player.total_rounds) : 0).toFixed(2)}</div>
-                </div>
-                <div class="stats-row">
-                    <div class="stat-label">Win Rate</div>
-                    <div class="stat-value">${winRate.toFixed(1)}%</div>
-                </div>
             `;
             
-            document.getElementById('career-stats').innerHTML = statsHTML;
+                document.getElementById('career-stats').innerHTML = statsHTML;
             
-            // Generate trump suit statistics
-            generateTrumpSuitStats(player.name);
+                // Generate trump suit statistics
+                generateTrumpSuitStats(player.name);
+        }
+
+        function updatePerformanceStats(performanceStats) {
+            const performanceContainer = document.getElementById('performance-stats');
+            if (!performanceContainer) return;
+            
+            const seedRank = performanceStats.seed_rank ? `#${performanceStats.seed_rank}` : 'Unranked';
+            const seedScore = performanceStats.seed_points ? `${performanceStats.seed_points} pts` : '—';
+            const avgTricks = performanceStats.average_tricks ?? '0.00';
+            const topPercentile = typeof performanceStats.top_percentile === 'number' ? `${performanceStats.top_percentile.toFixed(1)}%` : '—';
+            const topThreeRate = `${(performanceStats.top_three_rate ?? 0).toFixed(1)}%`;
+            
+            performanceContainer.innerHTML = `
+                <div class="stats-row">
+                    <div class="stat-label">Seed Ranking</div>
+                    <div class="stat-value">${seedRank} <span class="stat-detail">(${seedScore})</span></div>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-label">Average Tricks/Round</div>
+                    <div class="stat-value">${avgTricks}</div>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-label">Top Percentile Finish Position</div>
+                    <div class="stat-value">${topPercentile}</div>
+                </div>
+                <div class="stats-row">
+                    <div class="stat-label">Top 3 Win Rate</div>
+                    <div class="stat-value">${topThreeRate}</div>
+                </div>
+            `;
         }
 
         function generateTrumpSuitStats(playerName) {
