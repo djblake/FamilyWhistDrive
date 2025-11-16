@@ -506,7 +506,8 @@
                                 opponentTricks: actualOpponentTricks,
                                 totalTricks: totalTricks,
                                 isDataError: isDataError,
-                                won: partnership.tricks > 6
+                                won: partnership.tricks > 6,
+                                inconsistency: partnership.inconsistency || ''
                             });
                             foundInRound = true;
                             break;
@@ -536,12 +537,18 @@
                 const theirTricksClass = round.opponentTricks >= 7 ? 'their-tricks tricks-majority' : 'their-tricks';
 
                 // Add data error highlighting
-                const rowClass = round.isDataError ? 'round-row data-error' : 'round-row';
+                let rowClass = round.isDataError ? 'round-row data-error' : 'round-row';
+                let rowAttributes = '';
+                if (round.inconsistency) {
+                    rowClass += ' data-inconsistency';
+                    const tooltip = round.inconsistency.replace(/"/g, '&quot;');
+                    rowAttributes = ` data-inconsistency="${tooltip}" title="${tooltip}"`;
+                }
                 const errorWarning = round.isDataError ? 
                     `<span class="data-error-icon" title="Data error: Total tricks = ${round.totalTricks} (should be 13)">⚠️</span>` : '';
 
                 return `
-                    <tr class="${rowClass} ${resultClass}">
+                    <tr class="${rowClass} ${resultClass}"${rowAttributes}>
                         <td class="round-number">${round.round}${errorWarning}</td>
                         <td class="trump-suit">
                             <span class="trump-symbol ${round.trump.toLowerCase()}">${trumpSymbol}</span>
@@ -1084,6 +1091,16 @@
 
         .round-row.data-error:hover {
             background-color: #fde68a !important;
+        }
+
+        .round-row.data-inconsistency {
+            border-left: 4px solid #f97316;
+            position: relative;
+            cursor: help;
+        }
+
+        .round-row.data-inconsistency:hover {
+            background-color: rgba(249, 115, 22, 0.08);
         }
 
         /* Player name link styles for scorecard */

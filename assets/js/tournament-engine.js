@@ -1083,9 +1083,9 @@ class TournamentEngine {
             }
             
             try {
-                const values = line.split(',').map(v => v.replace(/^"|"$/g, '').trim());
-                if (values.length !== headers.length) {
-                    errors.push(`Row ${i + 1}: Expected ${headers.length} values, got ${values.length}`);
+                const rawValues = line.split(',').map(v => v.replace(/^"|"$/g, '').trim());
+                if (rawValues.length < headers.length) {
+                    errors.push(`Row ${i + 1}: Expected at least ${headers.length} values, got ${rawValues.length}`);
                     continue;
                 }
                 
@@ -1093,7 +1093,7 @@ class TournamentEngine {
                 headers.forEach((header, index) => {
                     const key = this.normalizeHeaderName(header);
                     if (!key) return;
-                    scorecard[key] = values[index];
+                    scorecard[key] = rawValues[index] !== undefined ? rawValues[index] : '';
                 });
 
                 if (scorecard.Tie_Break !== undefined && scorecard.Tie_Break !== '') {
@@ -1131,12 +1131,38 @@ class TournamentEngine {
                 scorecard.Table = parseInt(scorecard.Table);
                 scorecard.Tricks_Won = parseInt(scorecard.Tricks_Won);
                 
-                if (isNaN(scorecard.Year) || isNaN(scorecard.Round) || 
-                    isNaN(scorecard.Table) || isNaN(scorecard.Tricks_Won)) {
+                if (isNaN(scorecard.Round) || isNaN(scorecard.Table) || isNaN(scorecard.Tricks_Won)) {
                     errors.push(`Row ${i + 1}: Invalid numeric values`);
                     continue;
                 }
                 
+                // Tie-break numeric if present
+                if (scorecard.Tie_Break !== undefined && scorecard.Tie_Break !== '') {
+                    const tieBreakValue = parseFloat(scorecard.Tie_Break);
+                    if (!isNaN(tieBreakValue)) {
+                        scorecard.Tie_Break = tieBreakValue;
+                    } else {
+                        scorecard.Tie_Break = null;
+                    }
+                } else {
+                    scorecard.Tie_Break = null;
+                }
+
+                // Track inconsistencies
+                if (scorecard.Inconsistency && scorecard.Inconsistency.trim() !== '') {
+                    const issueMessage = `Inconsistency flagged: ${scorecard.Inconsistency.trim()}`;
+                    console.warn(`⚠️ ${issueMessage} [${sheetName} Row ${i + 1}]`);
+                    this.dataIssues.push({
+                        type: 'scorecard_inconsistency',
+                        severity: 'warning',
+                        sheet: sheetName,
+                        row: i + 1,
+                        message: issueMessage,
+                        playerId: scorecard.Player,
+                        gameId: scorecard.Id
+                    });
+                }
+
                 individualScores.push(scorecard);
                 validRows++;
                 
@@ -1553,13 +1579,40 @@ class TournamentEngine {
         // Process in groups of 4 (each table)
         for (let i = 0; i < sortedScores.length; i += 4) {
             const tableGroup = sortedScores.slice(i, i + 4);
+            const firstEntry = tableGroup[0];
+            const sourceSheet = firstEntry?.SourceSheet || 'Scorecards';
+            const roundNum = firstEntry?.Round ?? '?';
+            const tableNum = firstEntry?.Table ?? '?';
             
-            if (tableGroup.length !== 4) continue;
+            if (tableGroup.length !== 4) {
+                const message = `Round ${roundNum}, Table ${tableNum}: Expected 4 player records, got ${tableGroup.length}`;
+                console.error(`❌ ${message}`);
+                this.dataIssues.push({
+                    type: 'table_player_count_mismatch',
+                    severity: 'error',
+                    sheet: sourceSheet,
+                    round: roundNum,
+                    table: tableNum,
+                    message,
+                    players: tableGroup.map(p => p?.Player).filter(Boolean)
+                });
+                continue;
+            }
             
             // Verify all 4 players are from same round/table
-            const roundTable = `${tableGroup[0].Round}_${tableGroup[0].Table}`;
+            const roundTable = `${firstEntry.Round}_${firstEntry.Table}`;
             if (!tableGroup.every(p => `${p.Round}_${p.Table}` === roundTable)) {
-                console.warn(`⚠️  Mixed round/table in group: ${tableGroup.map(p => `${p.Round}_${p.Table}`).join(', ')}`);
+                const message = `Mixed round/table grouping detected: ${tableGroup.map(p => `${p.Round}_${p.Table}`).join(', ')}`;
+                console.error(`❌ ${message}`);
+                this.dataIssues.push({
+                    type: 'table_player_count_mismatch',
+                    severity: 'error',
+                    sheet: sourceSheet,
+                    round: roundNum,
+                    table: tableNum,
+                    message,
+                    players: tableGroup.map(p => p?.Player).filter(Boolean)
+                });
                 continue;
             }
             
@@ -1605,7 +1658,8 @@ class TournamentEngine {
                 Id: baseData.TournamentId,
                 TournamentKey: baseData.TournamentId,
                     SourceSheet: baseData.SourceSheet || baseData.Source || 'Scorecards',
-                    Tie_Break: baseData.Tie_Break !== undefined ? baseData.Tie_Break : null
+                    Tie_Break: baseData.Tie_Break !== undefined ? baseData.Tie_Break : null,
+                    Inconsistency: baseData.Inconsistency || ''
             };
             
             // Debug: Log first few created scorecards
@@ -2319,12 +2373,15 @@ class TournamentEngine {
                 const partnershipB_pos1 = o1Parsed.players.map(name => this.getCanonicalPlayerId(name)).sort();
                 const partnershipB_pos2 = o2Parsed.players.map(name => this.getCanonicalPlayerId(name)).sort();
 
+                const inconsistencyNote = card.Inconsistency || '';
+
                 // Partnership A: 2 positions
                 partnerships.push({
                     position1: partnershipA_pos1,  // Array of canonical IDs
                     position2: partnershipA_pos2,  // Array of canonical IDs
                     tricks: tricksWon,
-                    trump_suit: trumpSuit
+                    trump_suit: trumpSuit,
+                    inconsistency: inconsistencyNote
                 });
 
                 // Partnership B: 2 positions
@@ -2332,7 +2389,8 @@ class TournamentEngine {
                     position1: partnershipB_pos1,  // Array of canonical IDs
                     position2: partnershipB_pos2,  // Array of canonical IDs
                     tricks: opponentTricks,
-                    trump_suit: trumpSuit
+                    trump_suit: trumpSuit,
+                    inconsistency: inconsistencyNote
                 });
             }
             
