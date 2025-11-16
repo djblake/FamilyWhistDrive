@@ -649,6 +649,7 @@ class TournamentCharts {
         
         // Process tournament data for rank progression
         const rankData = this.processRankProgression(tournamentData, tournamentEngine);
+        const highlightedFinalRank = highlightPlayer ? this.getFinalRankForPlayer(rankData, highlightPlayer) : null;
         
         if (!rankData || !rankData.players || rankData.players.length === 0) {
             console.error('❌ No rank data generated');
@@ -668,7 +669,8 @@ class TournamentCharts {
                 // Group players by final rank with their original colors
                 const rankGroups = new Map();
                 chart.data.datasets.forEach((dataset, index) => {
-                    const finalRank = dataset.data[dataset.data.length - 1];
+                    const pointCount = dataset.data.length;
+                    const finalRank = pointCount > 0 ? dataset.data[pointCount - 1] : null;
                     if (!rankGroups.has(finalRank)) {
                         rankGroups.set(finalRank, []);
                     }
@@ -952,6 +954,20 @@ class TournamentCharts {
 
         const rounds = Array.from({length: tournamentData.rounds.length}, (_, i) => i + 1);
         const playerScores = new Map();
+        const playerKeyLookup = new Map();
+
+        // Build lookup for canonical ID combinations → final standings key
+        tournamentData.final_standings.forEach(standing => {
+            if (standing.is_partnership && Array.isArray(standing.partnership_players)) {
+                const key = standing.partnership_players
+                    .map(id => (id || '').toLowerCase())
+                    .sort()
+                    .join('|');
+                playerKeyLookup.set(key, standing.player);
+            } else if (standing.player) {
+                playerKeyLookup.set((standing.player || '').toLowerCase(), standing.player);
+            }
+        });
 
         // Initialize player scores tracking
         tournamentData.final_standings.forEach(standing => {
@@ -989,40 +1005,34 @@ class TournamentCharts {
                         if (!positionPlayers || positionPlayers.length === 0) return;
                         
                         const isSharedSeat = positionPlayers.length > 1;
-                        let playerKey;
-
-                        if (isSharedSeat) {
-                            const displayNames = positionPlayers.map(id => 
-                                tournamentEngine && tournamentEngine.getDisplayName ? 
-                                    tournamentEngine.getDisplayName(id) : id
-                            );
-                            playerKey = displayNames.join('/');
-                        } else {
-                            playerKey = positionPlayers[0];
+                        const lookupKey = positionPlayers
+                            .map(id => (id || '').toLowerCase())
+                            .sort()
+                            .join('|');
+                        
+                        let playerKey = playerKeyLookup.get(lookupKey);
+                        
+                        if (!playerKey && !isSharedSeat) {
+                            // Try direct canonical ID match
+                            const canonicalId = positionPlayers[0];
+                            playerKey = canonicalId;
                         }
-
-                        // Resolve to the key used in playerScores map
-                        let resolvedKey = playerKey;
-                        if (!roundScores.has(resolvedKey)) {
-                            if (!isSharedSeat && tournamentEngine && tournamentEngine.getDisplayName) {
-                                const displayName = tournamentEngine.getDisplayName(resolvedKey);
-                                if (roundScores.has(displayName)) {
-                                    resolvedKey = displayName;
-                                }
-                            }
-                        }
-
-                        if (!roundScores.has(resolvedKey)) {
-                            console.warn(`    ⚠️ No match found for player seat: ${playerKey}`);
-                            console.log(`    Available players: ${Array.from(roundScores.keys()).join(', ')}`);
+                        
+                        if (!playerKey) {
+                            console.warn(`    ⚠️ No standings entry found for seat players: ${positionPlayers.join(', ')}`);
                             return;
                         }
 
-                        const currentScore = roundScores.get(resolvedKey);
+                        if (!roundScores.has(playerKey)) {
+                            console.warn(`    ⚠️ Player "${playerKey}" not initialized in round scores`);
+                            return;
+                        }
+
+                        const currentScore = roundScores.get(playerKey);
                         const newScore = currentScore + tricks;
-                        roundScores.set(resolvedKey, newScore);
+                        roundScores.set(playerKey, newScore);
                         roundTricksAdded += partnership.tricks;
-                        console.log(`    ✅ Added ${partnership.tricks} tricks to ${resolvedKey} (shared seat: ${isSharedSeat})`);
+                        console.log(`    ✅ Added ${partnership.tricks} tricks to ${playerKey} (shared seat: ${isSharedSeat})`);
                     });
                 });
             });
@@ -1072,11 +1082,16 @@ class TournamentCharts {
         }
 
         // Convert to chart format
-        const players = Array.from(playerRanks.entries()).map(([name, ranks]) => ({
-            name: name,
-            ranks: ranks,
-            scores: playerScores.get(name).slice(1) // Remove initial 0, keep scores after each round
-        }));
+        const players = Array.from(playerRanks.entries()).map(([name, ranks]) => {
+            const finalRank = ranks[ranks.length - 1] || null;
+            return {
+                name: name,
+                ranks: ranks,
+                scores: playerScores.get(name).slice(1), // Remove initial 0
+                finalRank: finalRank,
+                isSharedHand: name.includes('/')
+            };
+        });
 
         console.log('✅ Final rank progression data:', { rounds, players: players.slice(0, 3) });
         return { rounds, players };

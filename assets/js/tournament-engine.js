@@ -175,6 +175,7 @@ class TournamentEngine {
     async loadFromGoogleSheets(sheetId) {
         try {
             console.log(`📊 Loading complete tournament data from Google Sheets: ${sheetId}`);
+            this.dataIssues = [];
             
             // Read the Index sheet to get list of sheets to process
             const indexSheetNames = await this.readIndexSheet(sheetId);
@@ -985,6 +986,14 @@ class TournamentEngine {
         
         if (errors.length > 0) {
             console.warn(`⚠️  Parsing errors in ${sheetName}:`, errors.slice(0, 10)); // Show first 10 errors
+            errors.forEach(message => {
+                this.dataIssues.push({
+                    type: 'scorecard_parse_error',
+                    severity: 'error',
+                    sheet: sheetName,
+                    message
+                });
+            });
         }
         
         // Now reverse-engineer partnerships and convert to tournament format
@@ -1626,7 +1635,7 @@ class TournamentEngine {
             console.warn(`⚠️  HISTORICAL DATA ISSUE: ${issueMessage}. This is preserved for historical accuracy.`);
             
             // Track this issue
-            this.dataIssues.push({
+        this.dataIssues.push({
                 type: 'trick_count_mismatch',
                 severity: 'warning',
                 message: issueMessage,
@@ -1739,6 +1748,7 @@ class TournamentEngine {
     reportDataIssues() {
         if (this.dataIssues.length === 0) {
             console.log('✅ No data validation issues found');
+            this.lastReportedDataIssues = [];
             return;
         }
 
@@ -1771,6 +1781,7 @@ class TournamentEngine {
         });
 
         console.log(`⚠️  Note: Historical data issues are preserved for accuracy but flagged for reference.\n`);
+        this.lastReportedDataIssues = [...this.dataIssues];
     }
 
     /**

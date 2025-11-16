@@ -66,6 +66,8 @@
         </div>
     </header>
 
+    <div id="data-issues-banner" class="data-issues-banner" style="display: none;"></div>
+
     <main class="main-content">
         <section class="tournament-hero" id="tournament-hero">
             <div class="container">
@@ -305,6 +307,7 @@
             try {
                 console.log(`🏆 Loading tournament results for ${year}...`);
                 await tournamentEngine.loadFromGoogleSheets(sheetId);
+                renderDataIssuesBanner(tournamentEngine.getDataIssues());
                 
                 // Find the tournament for the specified year
                 const tournament = Array.from(tournamentEngine.tournaments.values())
@@ -314,6 +317,13 @@
                     document.getElementById('tournament-title').textContent = `Tournament ${year} Not Found`;
                 document.getElementById('tournament-year').textContent = year || '20XX';
                     document.getElementById('tournament-subtitle').textContent = 'This tournament was not found in our records.';
+                    return;
+                }
+                
+                const validationResult = validateTournamentStructure(tournament);
+                if (!validationResult.valid) {
+                    console.error(validationResult.error);
+                    displayTournamentError(validationResult.message, year);
                     return;
                 }
                 
@@ -546,6 +556,74 @@
                     chartSection.style.display = 'none';
                 }
             }
+        }
+        
+        function renderDataIssuesBanner(dataIssuesSummary) {
+            const banner = document.getElementById('data-issues-banner');
+            if (!banner || !dataIssuesSummary || !Array.isArray(dataIssuesSummary.issues)) {
+                return;
+            }
+            
+            const errorIssues = dataIssuesSummary.issues.filter(issue => issue.severity === 'error');
+            if (errorIssues.length === 0) {
+                banner.style.display = 'none';
+                banner.innerHTML = '';
+                return;
+            }
+            
+            const issueList = errorIssues.map(issue => {
+                const location = issue.sheet ? `${issue.sheet}${issue.row ? ` (Row ${issue.row})` : ''}` : '';
+                const message = issue.message || issue.details || 'An unknown parsing error occurred.';
+                return `<li>${location ? `<strong>${location}:</strong> ` : ''}${message}</li>`;
+            }).join('');
+            
+            banner.innerHTML = `
+                <div class="data-issues-banner__content">
+                    <strong>Data Import Errors Detected</strong>
+                    <ul>${issueList}</ul>
+                </div>
+            `;
+            banner.style.display = 'block';
+        }
+        
+        function validateTournamentStructure(tournament) {
+            if (!tournament || !Array.isArray(tournament.rounds)) {
+                return { valid: false, error: new Error('Tournament rounds data missing'), message: 'Tournament data is unavailable.' };
+            }
+            
+            for (const round of tournament.rounds) {
+                if (!round.tables || round.tables.length === 0) {
+                    return {
+                        valid: false,
+                        error: new Error(`Round ${round.round} has no tables defined.`),
+                        message: `Round ${round.round} is missing table data.`
+                    };
+                }
+                
+                const invalidTable = round.tables.find(table => !table.partnerships || table.partnerships.length === 0);
+                if (invalidTable) {
+                    return {
+                        valid: false,
+                        error: new Error(`Round ${round.round} table ${invalidTable.table || '?'} has no partnerships defined.`),
+                        message: `Round ${round.round} table data is incomplete.`
+                    };
+                }
+            }
+            
+            return { valid: true };
+        }
+        
+        function displayTournamentError(message, year) {
+            document.getElementById('tournament-title').textContent = 'Tournament Data Error';
+            document.getElementById('tournament-year').textContent = year || '—';
+            document.getElementById('tournament-subtitle').textContent = message || 'Unable to display tournament details.';
+            
+            const sections = document.querySelectorAll('.tournament-summary, .tournament-rankings, .tournament-chart');
+            sections.forEach(section => {
+                if (section) {
+                    section.style.display = 'none';
+                }
+            });
         }
     </script>
     
@@ -919,6 +997,20 @@
         .chart-container canvas {
             width: 100% !important;
             height: 100% !important;
+        }
+        
+        .data-issues-banner {
+            background: #fee2e2;
+            border: 1px solid #dc2626;
+            color: #7f1d1d;
+            padding: 1rem 1.5rem;
+            margin: 0;
+            text-align: left;
+        }
+        
+        .data-issues-banner__content ul {
+            margin: 0.5rem 0 0 1rem;
+            padding: 0;
         }
 
 
