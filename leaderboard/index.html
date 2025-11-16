@@ -328,6 +328,7 @@
         let tournamentEngine = null;
         let showingAllPlayers = false;
         let currentSortedPlayers = [];
+        let recentFormScores = new Map();
         
         document.addEventListener('DOMContentLoaded', function() {
             initializeLeaderboard();
@@ -344,6 +345,13 @@
 
                 // Get all players with comprehensive stats from real data
                 allPlayers = tournamentEngine.getAllPlayers('overall');
+                
+                // Pre-calculate recent form scores from actual tournament results
+                if (typeof tournamentEngine.calculateRecentFormScores === 'function') {
+                    recentFormScores = tournamentEngine.calculateRecentFormScores(5);
+                } else {
+                    recentFormScores = new Map();
+                }
                 
                 // Initialize rankings display
                 updateRankingsDisplay('overall');
@@ -483,10 +491,8 @@
                     return winRate;
                 
                 case 'recent_form':
-                    // Simulate recent form based on tournament wins and recency
-                    const recentBonus = (player.tournament_wins || 0) * 0.3;
-                    const winPct = parseFloat(player.win_percentage || 0) * 0.1;
-                    return recentBonus + winPct + Math.random() * 10; // Add some variance
+                    // Use recent form scores derived from latest tournaments
+                    return recentFormScores.get(player.name) || 0;
                 
                 default:
                     return 0;
@@ -538,6 +544,8 @@
                 
                 if (currentRankingType === 'career_stats') {
                     // Special layout for Career Wins
+                    const roundsWonDisplay = (player.rounds_won ?? 0).toFixed(1);
+                    const roundsPlayedDisplay = (player.total_rounds ?? 0).toFixed(1);
                     return `
                         <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
                             <div class="rank-col">
@@ -550,8 +558,8 @@
                                     <span class="player-nickname">${getPlayerNickname(player.name)}</span>
                                 </a>
                             </div>
-                            <div class="rounds-won-col">${player.rounds_won || 0}</div>
-                            <div class="rounds-played-col">${player.total_rounds || 0}</div>
+                            <div class="rounds-won-col">${roundsWonDisplay}</div>
+                            <div class="rounds-played-col">${roundsPlayedDisplay}</div>
                             <div class="score-col">${player.total_rounds > 0 ? ((player.rounds_won / player.total_rounds) * 100).toFixed(1) : '0.0'}%</div>
                             <div class="trend-col">${trend}</div>
                         </div>

@@ -350,8 +350,8 @@
                 const lastYear = Math.max(...playerTournaments.map(t => t.year));
                 const yearsActive = lastYear - firstYear + 1;
                 
-                const avgTricks = player.tournaments_played > 0 ? 
-                    (player.total_tricks / (player.tournaments_played * 13)).toFixed(2) : '0.00';
+                const avgTricks = player.total_rounds > 0 ? 
+                    (player.total_tricks / player.total_rounds).toFixed(2) : '0.00';
                 
                 // Update champion status
                 if (championships > 0) {
@@ -433,7 +433,7 @@
                 </div>
                 <div class="stats-row">
                     <div class="stat-label">Average Tricks/Round</div>
-                    <div class="stat-value">${(player.total_tricks / (player.tournaments_played * 13)).toFixed(2)}</div>
+                    <div class="stat-value">${(player.total_rounds > 0 ? (player.total_tricks / player.total_rounds) : 0).toFixed(2)}</div>
                 </div>
                 <div class="stats-row">
                     <div class="stat-label">Win Rate</div>

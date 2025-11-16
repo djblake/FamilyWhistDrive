@@ -194,11 +194,15 @@
                 const currentChampion = mostRecentTournament ? mostRecentTournament.winner : null;
                 
                 // Use pre-calculated stats from TournamentEngine and add additional data
-                allPlayers.forEach((player, index) => {
-                    // Find first tournament year
-                    const playerTournaments = tournaments.filter(t => 
-                        t.final_standings.some(s => s.player === player.name)
-                    );
+                allPlayers.forEach(player => {
+                    // Find first tournament year (include shared-hand partnerships)
+                    const playerTournaments = tournaments.filter(t => {
+                        const appearsIndividually = t.final_standings.some(s => s.player === player.name);
+                        const appearsInShared = t.final_standings.some(s => 
+                            s.is_partnership && s.partnership_players && s.partnership_players.some(p => p === player.name)
+                        );
+                        return appearsIndividually || appearsInShared;
+                    });
                     const firstYear = playerTournaments.length > 0 ? 
                         Math.min(...playerTournaments.map(t => t.year)) : '-';
                     
@@ -207,8 +211,23 @@
                     player.top_three = player.top_three_finishes; // Use pre-calculated value
                     player.avg_tricks = parseFloat(player.average_tricks).toFixed(2); // Format to 2 decimal places
                     player.first_year = firstYear;
-                    player.rank = index + 1;
                     player.isCurrentChampion = player.name === currentChampion;
+                });
+
+                // Default sorting: championships -> top three finishes -> average tricks
+                allPlayers.sort((a, b) => {
+                    if (b.championships !== a.championships) {
+                        return b.championships - a.championships;
+                    }
+                    if (b.top_three !== a.top_three) {
+                        return b.top_three - a.top_three;
+                    }
+                    return parseFloat(b.avg_tricks) - parseFloat(a.avg_tricks);
+                });
+
+                // Assign rank after initial sort
+                allPlayers.forEach((player, index) => {
+                    player.rank = index + 1;
                 });
                 
                 // Populate year filter

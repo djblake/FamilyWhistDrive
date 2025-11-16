@@ -2180,12 +2180,15 @@ class TournamentEngine {
                         
                         const individualPlayerData = this.players.get(individualPlayer);
                         
-                        // Combined stats (always updated for shared hands)
+                        // Combined stats (always updated for shared hands) - split equally among partners
+                        const numPartners = Array.isArray(standing.partnership_players) ? standing.partnership_players.length : 2;
+                        const splitTricks = standing.total_tricks / numPartners;
+                        const splitRounds = standing.rounds_played / numPartners;
                         individualPlayerData.tournaments_played++;
-                        individualPlayerData.total_tricks += standing.total_tricks; // Full shared hand credit
-                        individualPlayerData.total_rounds += standing.rounds_played;
+                        individualPlayerData.total_tricks += splitTricks;
+                        individualPlayerData.total_rounds += splitRounds;
                         individualPlayerData.shared_rounds += standing.shared_rounds || 0;
-                        individualPlayerData.shared_tricks += standing.shared_tricks || 0;
+                        individualPlayerData.shared_tricks += (standing.shared_tricks || 0) / numPartners;
                         
                         if (standing.position === 1) {
                             individualPlayerData.tournament_wins++;
@@ -2198,9 +2201,9 @@ class TournamentEngine {
                             tournament: tournament.name,
                             year: tournament.year,
                             position: standing.position,
-                            tricks: standing.total_tricks,
+                            tricks: splitTricks,
                             individual_tricks: 0,
-                            shared_tricks: standing.shared_tricks || 0,
+                            shared_tricks: (standing.shared_tricks || 0) / numPartners,
                             has_shared_rounds: true,
                             partnership_name: standing.player
                         });
@@ -2304,17 +2307,28 @@ class TournamentEngine {
                                 const pos2IsShared = partnership.position2.length > 1;
                                 const hasSharedHand = pos1IsShared || pos2IsShared;
 
-                                // Check if this player participated (their canonical ID is in either position)
-                                const playerParticipated = allPartnershipPlayers.some(id =>
-                                    id.toLowerCase() === player.toLowerCase()
-                                );
+                                // Determine if this player participated and their share factor
+                                let playerParticipated = false;
+                                let playerShareFactor = 1;
+                                let playerSharedPosition = false;
 
-                                // If player participated and scored 7+ tricks, count as round won
+                                if (partnership.position1.some(id => id.toLowerCase() === player.toLowerCase())) {
+                                    playerParticipated = true;
+                                    playerShareFactor = partnership.position1.length || 1;
+                                    playerSharedPosition = partnership.position1.length > 1;
+                                } else if (partnership.position2.some(id => id.toLowerCase() === player.toLowerCase())) {
+                                    playerParticipated = true;
+                                    playerShareFactor = partnership.position2.length || 1;
+                                    playerSharedPosition = partnership.position2.length > 1;
+                                }
+
+                                // If player participated and scored 7+ tricks, count as round won (fractionally for shared hands)
                                 if (playerParticipated && partnership.tricks >= 7) {
-                                    data.rounds_won++;
+                                    const roundCredit = 1 / playerShareFactor;
+                                    data.rounds_won += roundCredit;
 
-                                    // Count towards individual stats only if not a shared round
-                                    if (!hasSharedHand) {
+                                    // Count towards individual stats only if this player's position was not shared
+                                    if (!playerSharedPosition) {
                                         data.individual.rounds_won++;
                                     }
                                 }
@@ -2834,8 +2848,18 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
     getPlayerTop3Count(playerName) {
         return Array.from(this.tournaments.values())
             .filter(tournament => {
-                const ranking = tournament.final_standings.findIndex(s => s.player === playerName) + 1;
-                return ranking <= 3 && ranking > 0;
+                // Check individual ranking
+                const individualRank = tournament.final_standings.findIndex(s => s.player === playerName) + 1;
+                if (individualRank > 0 && individualRank <= 3) {
+                    return true;
+                }
+                // Check shared-hand partnership ranking
+                const sharedRank = tournament.final_standings.findIndex(s => 
+                    s.is_partnership &&
+                    s.partnership_players &&
+                    s.partnership_players.some(p => p === playerName)
+                ) + 1;
+                return sharedRank > 0 && sharedRank <= 3;
             })
             .length;
     }
@@ -2874,9 +2898,9 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
         );
         
         if (sharedHandEntry) {
-            // For shared hands, each player gets half credit for the partnership total
-            // This follows the rule: partnership total ÷ 2 (regardless of number of partners)
-            return sharedHandEntry.total_tricks / 2;
+            // For shared hands, split equally among number of partners
+            const numPartners = Array.isArray(sharedHandEntry.partnership_players) ? sharedHandEntry.partnership_players.length : 2;
+            return sharedHandEntry.total_tricks / numPartners;
         }
         
         return 0;
@@ -2917,6 +2941,49 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
         const rounds = this.getTournamentRoundsCount(tournament);
         
         return totalTricks > 0 ? totalTricks / rounds : 0;
+    }
+
+    /**
+     * Calculate recent form scores for players based on the most recent tournaments
+     * @param {number} recentCount - Number of most recent tournaments to consider
+     * @returns {Map<string, number>} Map of playerId -> recent form score
+     */
+    calculateRecentFormScores(recentCount = 5) {
+        const scores = new Map();
+        const tournaments = Array.from(this.tournaments.values())
+            .sort((a, b) => b.year - a.year)
+            .slice(0, recentCount);
+
+        if (tournaments.length === 0) {
+            return scores;
+        }
+
+        tournaments.forEach((tournament, index) => {
+            const weight = recentCount - index; // More recent tournaments carry more weight
+            const participantCount = tournament.final_standings ? tournament.final_standings.length : 0;
+
+            if (!participantCount || !tournament.final_standings) {
+                return;
+            }
+
+            tournament.final_standings.forEach((standing, positionIndex) => {
+                const baseScore = participantCount - positionIndex; // Winner gets highest base score
+                const score = baseScore * weight;
+
+                if (standing.is_partnership && standing.partnership_players) {
+                    standing.partnership_players.forEach(playerId => {
+                        const currentScore = scores.get(playerId) || 0;
+                        scores.set(playerId, currentScore + score);
+                    });
+                } else {
+                    const playerId = standing.player;
+                    const currentScore = scores.get(playerId) || 0;
+                    scores.set(playerId, currentScore + score);
+                }
+            });
+        });
+
+        return scores;
     }
 
     /**
@@ -2965,27 +3032,18 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
                 
                 for (const table of round.tables) {
                     for (const partnership of table.partnerships) {
-                        // Check if player participated in this partnership
-                        const allPartnershipPlayers = [...partnership.position1, ...partnership.position2];
-                        const playerParticipated = allPartnershipPlayers.some(id =>
-                            id.toLowerCase() === playerName.toLowerCase()
-                        );
+                        // Determine if player participated and which position they were in
+                        const inPos1 = partnership.position1.some(id => id.toLowerCase() === playerName.toLowerCase());
+                        const inPos2 = !inPos1 && partnership.position2.some(id => id.toLowerCase() === playerName.toLowerCase());
 
-                        if (playerParticipated && trumpStats[trumpSuit]) {
-                            // Check if this is a shared hand
-                            const hasSharedHand = partnership.position1.length > 1 || partnership.position2.length > 1;
+                        if ((inPos1 || inPos2) && trumpStats[trumpSuit]) {
+                            // Share count is the number of players sharing the player's position
+                            const shareCount = inPos1 ? partnership.position1.length : partnership.position2.length;
+                            const tricksShare = partnership.tricks / shareCount;
+                            const roundsShare = 1 / shareCount;
 
-                            if (hasSharedHand) {
-                                // For shared hands, divide tricks by number of people sharing
-                                const playerTricks = Math.floor(partnership.tricks / allPartnershipPlayers.length);
-                                const playerRounds = Math.floor(1 / allPartnershipPlayers.length);
-                                trumpStats[trumpSuit].total_tricks += playerTricks;
-                                trumpStats[trumpSuit].rounds_played += playerRounds;
-                            } else {
-                                // Normal partnership - full credit
-                                trumpStats[trumpSuit].total_tricks += partnership.tricks;
-                                trumpStats[trumpSuit].rounds_played += 1;
-                            }
+                            trumpStats[trumpSuit].total_tricks += tricksShare;
+                            trumpStats[trumpSuit].rounds_played += roundsShare;
                         }
                     }
                 }
@@ -3157,8 +3215,8 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
                 if (parsedPlayer.isShared) {
                     // Split partnership into individual players
                     const numPartners = parsedPlayer.players.length;
-                    const tricksPerPlayer = Math.floor(standing.total_tricks / numPartners);
-                    const roundsPerPlayer = Math.floor(standing.rounds_played / numPartners);
+                    const tricksPerPlayer = standing.total_tricks / numPartners;
+                    const roundsPerPlayer = standing.rounds_played / numPartners;
                     
                     for (const individualName of parsedPlayer.players) {
                         const canonicalId = this.getCanonicalPlayerId(individualName);
