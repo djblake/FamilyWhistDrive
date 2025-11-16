@@ -30,6 +30,8 @@
         </div>
     </header>
 
+    <div id="data-issues-banner" class="data-issues-banner" style="display: none;"></div>
+
     <main class="main-content">
         <!-- Loading State -->
         <section class="loading-section" id="loading-section">
@@ -152,7 +154,7 @@
 
     <!-- Load Chart.js first -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-            <script src="../assets/js/tournament-engine.js?v=47"></script>
+            <script src="../assets/js/tournament-engine.js?v=60"></script>
             <script src="../assets/js/charts.js?v=20"></script>
     <script src="../assets/js/photo-gallery.js"></script>
 </body>
@@ -196,12 +198,45 @@
             };
         }
 
+        function renderDataIssuesBanner(dataIssuesSummary) {
+            const banner = document.getElementById('data-issues-banner');
+            if (!banner) return;
+
+            if (!dataIssuesSummary || !Array.isArray(dataIssuesSummary.issues)) {
+                banner.style.display = 'none';
+                banner.innerHTML = '';
+                return;
+            }
+
+            const errorIssues = dataIssuesSummary.issues.filter(issue => issue.severity === 'error');
+            if (errorIssues.length === 0) {
+                banner.style.display = 'none';
+                banner.innerHTML = '';
+                return;
+            }
+
+            const issueList = errorIssues.map(issue => {
+                const location = issue.sheet ? `${issue.sheet}${issue.row ? ` (Row ${issue.row})` : ''}` : '';
+                const message = issue.message || issue.details || 'An unknown data error occurred.';
+                return `<li>${location ? `<strong>${location}:</strong> ` : ''}${message}</li>`;
+            }).join('');
+
+            banner.innerHTML = `
+                <div class="data-issues-banner__content">
+                    <strong>Data Import Errors Detected</strong>
+                    <ul>${issueList}</ul>
+                </div>
+            `;
+            banner.style.display = 'block';
+        }
+
         // Initialize scorecard page
         document.addEventListener('DOMContentLoaded', function() {
             initializeScorecardPage();
         });
 
         async function initializeScorecardPage() {
+            let engine;
             try {
                 const params = parseURLParameters();
                 
@@ -216,10 +251,11 @@
                 document.getElementById('photo-path').textContent = `tournaments/${params.year}/${params.player.toLowerCase().replace(/\s+/g, '-')}/`;
 
                 // Load tournament data
-                const engine = new TournamentEngine();
+                engine = new TournamentEngine();
                 const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
                 
                 await engine.loadFromGoogleSheets(sheetId);
+                renderDataIssuesBanner(engine.getDataIssues());
                 
                 // Find tournament and player
                 const tournaments = Array.from(engine.tournaments.values());
@@ -291,6 +327,11 @@
 
             } catch (error) {
                 console.error('Error loading scorecard:', error);
+                if (engine && typeof engine.getDataIssues === 'function') {
+                    renderDataIssuesBanner(engine.getDataIssues());
+                } else {
+                    renderDataIssuesBanner(null);
+                }
                 showError(error.message);
             }
         }
@@ -1071,5 +1112,33 @@
         .opponents-names .player-name-link:hover {
             color: var(--primary-color);
             background-color: rgba(79, 70, 229, 0.1);
+        }
+
+        .data-issues-banner {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border-bottom: 2px solid #ef4444;
+            padding: var(--spacing-md) 0;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.25);
+        }
+
+        .data-issues-banner__content {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-md);
+            color: #991b1b;
+        }
+
+        .data-issues-banner__content strong {
+            display: inline-block;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .data-issues-banner__content ul {
+            margin: 0;
+            padding-left: 1.25rem;
+        }
+
+        .data-issues-banner__content li {
+            margin-bottom: 0.35rem;
         }
     </style>

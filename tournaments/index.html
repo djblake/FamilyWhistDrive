@@ -30,6 +30,8 @@
         </div>
     </header>
 
+    <div id="data-issues-banner" class="data-issues-banner" style="display: none;"></div>
+
     <main class="main-content">
         <section class="tournaments-hero">
             <div class="container">
@@ -111,7 +113,7 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-            <script src="../assets/js/tournament-engine.js?v=49"></script>
+            <script src="../assets/js/tournament-engine.js?v=60"></script>
     <script src="../assets/js/charts.js?v=20"></script>
     
     <script>
@@ -123,6 +125,7 @@
             try {
                 console.log('🏆 Loading tournament archive data...');
                 await tournamentEngine.loadFromGoogleSheets(sheetId);
+                renderDataIssuesBanner(tournamentEngine.getDataIssues());
                 
                 const tournaments = Array.from(tournamentEngine.tournaments.values());
                 
@@ -249,8 +252,15 @@
                 
             } catch (error) {
                 console.error('❌ Error loading tournament data:', error);
+                const issuesSummary = typeof tournamentEngine?.getDataIssues === 'function'
+                    ? tournamentEngine.getDataIssues()
+                    : null;
+                renderDataIssuesBanner(issuesSummary);
+
+                const criticalIssue = issuesSummary?.issues?.find(issue => issue.severity === 'error');
+                const message = criticalIssue?.message || error?.message || 'Error loading tournament data.';
                 document.getElementById('tournaments-grid').innerHTML = 
-                    '<p style="text-align: center; color: #666; padding: 2rem;">Error loading tournament data. Please try refreshing the page.</p>';
+                    `<p style="text-align: center; color: #991b1b; padding: 2rem;">${message}</p>`;
             }
         });
 
@@ -285,6 +295,38 @@
             } catch (error) {
                 console.error('❌ Error creating tournament rank chart:', error);
             }
+        }
+        
+        function renderDataIssuesBanner(dataIssuesSummary) {
+            const banner = document.getElementById('data-issues-banner');
+            if (!banner || !dataIssuesSummary || !Array.isArray(dataIssuesSummary.issues)) {
+                if (banner) {
+                    banner.style.display = 'none';
+                    banner.innerHTML = '';
+                }
+                return;
+            }
+
+            const errorIssues = dataIssuesSummary.issues.filter(issue => issue.severity === 'error');
+            if (errorIssues.length === 0) {
+                banner.style.display = 'none';
+                banner.innerHTML = '';
+                return;
+            }
+
+            const issueList = errorIssues.map(issue => {
+                const location = issue.sheet ? `${issue.sheet}${issue.row ? ` (Row ${issue.row})` : ''}` : '';
+                const message = issue.message || issue.details || 'An unknown data error occurred.';
+                return `<li>${location ? `<strong>${location}:</strong> ` : ''}${message}</li>`;
+            }).join('');
+
+            banner.innerHTML = `
+                <div class="data-issues-banner__content">
+                    <strong>Data Import Errors Detected</strong>
+                    <ul>${issueList}</ul>
+                </div>
+            `;
+            banner.style.display = 'block';
         }
     </script>
     
@@ -376,6 +418,34 @@
             box-shadow: var(--shadow-xl);
             text-decoration: none;
             color: inherit;
+        }
+
+        .data-issues-banner {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border-bottom: 2px solid #ef4444;
+            padding: var(--spacing-md) 0;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.25);
+        }
+
+        .data-issues-banner__content {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-md);
+            color: #991b1b;
+        }
+
+        .data-issues-banner__content strong {
+            display: inline-block;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .data-issues-banner__content ul {
+            margin: 0;
+            padding-left: 1.25rem;
+        }
+
+        .data-issues-banner__content li {
+            margin-bottom: 0.35rem;
         }
 
         .tournament-year-column {

@@ -13,11 +13,13 @@ class TournamentEngine {
         this.tournaments = new Map();
         this.players = new Map();
         this.partnerships = new Map();
+        this.missingPlayerLog = new Set();
         this.rawScorecards = [];
         this.playersLookup = new Map(); // Maps player ID to player info
         this.dataIssues = []; // Track data validation issues
         this.lastReportedDataIssues = [];
         this.tournamentMetadata = new Map();
+        this.tieBreakers = new Map();
         
         // Trump suit rotation
         this.trumpSuits = ['Hearts', 'Diamonds', 'Spades', 'Clubs'];
@@ -195,6 +197,8 @@ class TournamentEngine {
             this.partnerships = new Map();
             this.tournamentMetadata = new Map();
             this.dataIssues = [];
+            this.tieBreakers = new Map();
+            this.missingPlayerLog = new Set();
             
             // Read the Index sheet to get list of sheets to process
             const indexSheetNames = await this.readIndexSheet(sheetId);
@@ -1091,6 +1095,22 @@ class TournamentEngine {
                     if (!key) return;
                     scorecard[key] = values[index];
                 });
+
+                if (scorecard.Tie_Break !== undefined && scorecard.Tie_Break !== '') {
+                    const tieBreakValue = parseFloat(scorecard.Tie_Break);
+                    if (!isNaN(tieBreakValue)) {
+                        scorecard.Tie_Break = tieBreakValue;
+                        const tieKey = this.getCombinationKeyFromPlayerName(scorecard.Player);
+                        if (tieKey) {
+                            const existing = this.tieBreakers.get(tieKey);
+                            if (existing === undefined || tieBreakValue < existing) {
+                                this.tieBreakers.set(tieKey, tieBreakValue);
+                            }
+                        }
+                    } else {
+                        delete scorecard.Tie_Break;
+                    }
+                }
                 
                 if (scorecard.Id) {
                     scorecardIdsDebug.add(`${scorecard.Id} (len=${scorecard.Id.length})`);
@@ -1379,7 +1399,28 @@ class TournamentEngine {
             }
         }
         
-        // If still no match, return the original name
+        const isSharedHand = /[\/+&]/.test(trimmedName);
+        
+        // If still no match and this isn't a shared hand, record the issue once
+        if (!isSharedHand && this.playersLookup && this.playersLookup.size > 0) {
+            if (!this.missingPlayerLog.has(trimmedName.toLowerCase())) {
+                const issue = {
+                    type: 'missing_player_id',
+                    severity: 'error',
+                    message: `Player ID "${trimmedName}" not found in Players sheet.`,
+                    playerId: trimmedName,
+                    sheet: 'Players'
+                };
+                console.warn(`⚠️ ${issue.message}`);
+                this.dataIssues.push(issue);
+                if (typeof window !== 'undefined') {
+                    window.lastDataIssues = window.lastDataIssues || [];
+                    window.lastDataIssues.push(issue);
+                }
+                this.missingPlayerLog.add(trimmedName.toLowerCase());
+            }
+        }
+
         if (trimmedName === 'SteveBlake') {
             console.log(`🔍 getCanonicalPlayerId("${trimmedName}") -> FINAL RESULT: "${trimmedName}"`);
         }
@@ -1525,18 +1566,27 @@ class TournamentEngine {
             // First 2 = Partnership 1, Next 2 = Partnership 2
             const partnership1 = tableGroup.slice(0, 2);
             const partnership2 = tableGroup.slice(2, 4);
+            const baseData = tableGroup[0];
             
             const p1Tricks = partnership1[0].Tricks_Won;
             const p2Tricks = partnership2[0].Tricks_Won;
             
-            // Validate tricks sum to 13
+            // Validate tricks sum to 13 (warn but do not skip data)
             if (p1Tricks + p2Tricks !== 13) {
-                console.warn(`⚠️  Table ${roundTable}: Tricks sum to ${p1Tricks + p2Tricks}, expected 13. P1: ${p1Tricks}, P2: ${p2Tricks}`);
-                continue;
+                const mismatchMessage = `Round ${baseData.Round}, Table ${baseData.Table}: Tricks sum to ${p1Tricks + p2Tricks}, expected 13 (P1: ${p1Tricks}, P2: ${p2Tricks})`;
+                console.warn(`⚠️  ${mismatchMessage}`);
+                this.dataIssues.push({
+                    type: 'reverse_engineer_trick_mismatch',
+                    severity: 'warning',
+                    sheet: baseData.SourceSheet || 'Scorecards',
+                    round: baseData.Round,
+                    table: baseData.Table,
+                    message: mismatchMessage,
+                    gameId: baseData.Id || baseData.Tournament
+                });
             }
             
             // Create WhistGame structure
-            const baseData = tableGroup[0];
             const scorecard = {
                 Tournament: baseData.Tournament,
                 Year: baseData.Year,
@@ -1554,7 +1604,8 @@ class TournamentEngine {
                 TournamentId: baseData.TournamentId,
                 Id: baseData.TournamentId,
                 TournamentKey: baseData.TournamentId,
-                SourceSheet: baseData.SourceSheet || baseData.Source || 'Scorecards'
+                    SourceSheet: baseData.SourceSheet || baseData.Source || 'Scorecards',
+                    Tie_Break: baseData.Tie_Break !== undefined ? baseData.Tie_Break : null
             };
             
             // Debug: Log first few created scorecards
@@ -1732,6 +1783,36 @@ class TournamentEngine {
         }
     }
 
+    getCombinationKeyFromIds(ids) {
+        if (!Array.isArray(ids) || ids.length === 0) return null;
+        return ids
+            .map(id => (id || '').trim().toLowerCase())
+            .filter(Boolean)
+            .sort()
+            .join('|');
+    }
+
+    getCombinationKeyFromPlayerName(playerName) {
+        if (!playerName) return null;
+        const delimiters = ['+', '/', '&'];
+        let parts = [playerName];
+        for (const delimiter of delimiters) {
+            if (playerName.includes(delimiter)) {
+                parts = playerName.split(delimiter);
+                break;
+            }
+        }
+        const canonicalParts = parts
+            .map(name => this.getCanonicalPlayerId(name.trim()))
+            .filter(Boolean)
+            .map(id => id.toLowerCase());
+        if (canonicalParts.length === 0) {
+            return null;
+        }
+        canonicalParts.sort();
+        return canonicalParts.join('|');
+    }
+
     /**
      * Get player name from ID using lookup table
      */
@@ -1743,7 +1824,23 @@ class TournamentEngine {
         // If we have a players lookup table, use it
         if (this.playersLookup && this.playersLookup.size > 0) {
             const player = this.playersLookup.get(trimmedId);
-            return player ? player.fullName : trimmedId; // Fallback to ID if not found
+            if (player) {
+                return player.fullName;
+            }
+            
+            const issue = {
+                type: 'missing_player_id',
+                severity: 'error',
+                message: `Player ID "${trimmedId}" not found in Players sheet.`,
+                playerId: trimmedId,
+                sheet: 'Players'
+            };
+            console.warn(`⚠️ ${issue.message}`);
+            this.dataIssues.push(issue);
+            if (typeof window !== 'undefined') {
+                window.lastDataIssues = window.lastDataIssues || [];
+                window.lastDataIssues.push(issue);
+            }
         }
         
         // If no players lookup, treat the ID as the name directly
@@ -1811,14 +1908,30 @@ class TournamentEngine {
         }
         
         // Validate player IDs exist in lookup
+        const hasPlayerLookup = this.playersLookup && this.playersLookup.size > 0;
         const playerFields = ['Player1', 'Player2', 'Opponent1', 'Opponent2'];
         for (const field of playerFields) {
             const playerInfo = scorecard[`${field}Names`];
-            if (playerInfo && playerInfo.playerIds) {
-                for (const playerId of playerInfo.playerIds) {
-                    if (playerId && !this.playersLookup.has(playerId.trim())) {
-                        console.warn(`⚠️  Player ID '${playerId}' not found in Players sheet${rowInfo}. Using ID as display name.`);
-                    }
+            if (!playerInfo || !playerInfo.playerIds) continue;
+            
+            for (const playerId of playerInfo.playerIds) {
+                const trimmedId = (playerId || '').trim();
+                if (!trimmedId) continue;
+                
+                if (hasPlayerLookup && !this.playersLookup.has(trimmedId)) {
+                    const issueMessage = `Player ID "${trimmedId}" not found in Players sheet${rowInfo}.`;
+                    console.error(`❌ ${issueMessage}`);
+                    
+                    this.dataIssues.push({
+                        type: 'missing_player_id',
+                        severity: 'error',
+                        sheet: sheetName,
+                        row: rowNumber,
+                        playerId: trimmedId,
+                        column: field,
+                        message: issueMessage,
+                        gameId: scorecard.Id
+                    });
                 }
             }
         }
@@ -1885,6 +1998,33 @@ class TournamentEngine {
         if (isNaN(tableNum) || tableNum < 1) {
             console.warn(`Invalid table number:`, scorecard.Table);
             return false;
+        }
+        
+        if (this.playersLookup && this.playersLookup.size > 0) {
+            const playerFields = ['Player1', 'Player2', 'Opponent1', 'Opponent2'];
+            for (const field of playerFields) {
+                const playerInfo = scorecard[`${field}Names`];
+                if (!playerInfo || !playerInfo.playerIds) continue;
+                
+                for (const playerId of playerInfo.playerIds) {
+                    const trimmedId = (playerId || '').trim();
+                    if (!trimmedId) continue;
+                    
+                    if (!this.playersLookup.has(trimmedId)) {
+                        const issueMessage = `Player ID "${trimmedId}" not found in Players sheet while processing legacy scorecard.`;
+                        console.error(`❌ ${issueMessage}`);
+                        this.dataIssues.push({
+                            type: 'missing_player_id',
+                            severity: 'error',
+                            message: issueMessage,
+                            playerId: trimmedId,
+                            column: field,
+                            sheet: scorecard.SourceSheet || 'Legacy Scorecards',
+                            gameId: scorecard.Id || scorecard.Tournament
+                        });
+                    }
+                }
+            }
         }
         
         return true;
@@ -2275,6 +2415,7 @@ class TournamentEngine {
                         const displayNames = position.map(id => this.getDisplayName(id));
                         const displayKey = displayNames.join('/');
 
+                        const combinationKey = this.getCombinationKeyFromIds(position);
                         if (!playerScores.has(displayKey)) {
                             playerScores.set(displayKey, {
                                 total_tricks: 0,
@@ -2284,11 +2425,15 @@ class TournamentEngine {
                                 shared_tricks: 0,
                                 shared_rounds: 0,
                                 is_partnership: true,
-                                partnership_players: [...position].sort() // Canonical IDs, sorted
+                                partnership_players: [...position].sort(), // Canonical IDs, sorted
+                                combination_key: combinationKey
                             });
                         }
 
                         const partnershipData = playerScores.get(displayKey);
+                        if (!partnershipData.combination_key && combinationKey) {
+                            partnershipData.combination_key = combinationKey;
+                        }
                         partnershipData.shared_tricks += partnership.tricks;
                         partnershipData.shared_rounds += 1;
                         partnershipData.rounds_played += 1;
@@ -2326,11 +2471,15 @@ class TournamentEngine {
                                 individual_tricks: 0,
                                 individual_rounds: 0,
                                 shared_tricks: 0,
-                                shared_rounds: 0
+                                shared_rounds: 0,
+                                combination_key: canonicalPlayerId.toLowerCase()
                             });
                         }
 
                         const playerData = playerScores.get(canonicalPlayerId);
+                        if (!playerData.combination_key) {
+                            playerData.combination_key = canonicalPlayerId.toLowerCase();
+                        }
                         playerData.individual_tricks += partnership.tricks;
                         playerData.individual_rounds += 1;
                         playerData.rounds_played += 1;
@@ -2364,6 +2513,9 @@ class TournamentEngine {
                 console.log(`  Data source - individual_tricks: ${data.individual_tricks}, shared_tricks: ${data.shared_tricks}`);
             }
             
+            const combinationKey = data.combination_key || this.getCombinationKeyFromPlayerName(player);
+            const tieBreakValue = combinationKey ? this.tieBreakers.get(combinationKey) : undefined;
+
             standings.push({
                 player: player,
                 total_tricks: combinedTricks, // Combined total for rankings
@@ -2374,12 +2526,23 @@ class TournamentEngine {
                 individual_rounds: data.individual_rounds || 0,
                 shared_rounds: data.shared_rounds || 0,
                 is_partnership: data.is_partnership || false,
-                partnership_players: data.partnership_players || [player]
+                partnership_players: data.partnership_players || [player],
+                tie_break: typeof tieBreakValue === 'number' ? tieBreakValue : null
             });
         }
         
-        // Sort by combined tricks (descending)
-        standings.sort((a, b) => b.total_tricks - a.total_tricks);
+        // Sort by combined tricks (descending) with tie-break support
+        standings.sort((a, b) => {
+            if (b.total_tricks !== a.total_tricks) {
+                return b.total_tricks - a.total_tricks;
+            }
+            const tieA = typeof a.tie_break === 'number' ? a.tie_break : Number.POSITIVE_INFINITY;
+            const tieB = typeof b.tie_break === 'number' ? b.tie_break : Number.POSITIVE_INFINITY;
+            if (tieA !== tieB) {
+                return tieA - tieB; // Lower tie-break value wins
+            }
+            return a.player.localeCompare(b.player);
+        });
         
         // Add positions
         standings.forEach((standing, index) => {

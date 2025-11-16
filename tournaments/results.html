@@ -142,6 +142,7 @@
                 <div class="summary-grid" id="summary-grid">
                     <!-- Tournament summary will be loaded dynamically -->
                 </div>
+                <p class="tie-break-message" id="tie-break-message" style="display: none;"></p>
             </div>
         </section>
 
@@ -220,7 +221,7 @@
 
     <!-- Load Chart.js first -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-            <script src="../assets/js/tournament-engine.js?v=59"></script>
+            <script src="../assets/js/tournament-engine.js?v=60"></script>
             <script src="../assets/js/charts.js?v=20"></script>
     
     <script>
@@ -413,6 +414,77 @@
             return rawDate;
         }
 
+        function getOrdinalWord(position) {
+            const ordinals = {
+                1: 'first',
+                2: 'second',
+                3: 'third'
+            };
+            if (ordinals[position]) return ordinals[position];
+            const suffixes = ['th', 'st', 'nd', 'rd'];
+            const value = position % 100;
+            if (value >= 11 && value <= 13) {
+                return `${position}th`;
+            }
+            const suffix = suffixes[position % 10] || 'th';
+            return `${position}${suffix}`;
+        }
+
+        function formatNameList(names) {
+            if (!names || names.length === 0) return '';
+            if (names.length === 1) return names[0];
+            if (names.length === 2) return `${names[0]} and ${names[1]}`;
+            return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
+        }
+
+        function buildTieBreakMessage(tournament, tournamentEngine) {
+            if (!tournament || !Array.isArray(tournament.final_standings)) return '';
+            const groupsByTricks = new Map();
+            tournament.final_standings.forEach(standing => {
+                const key = Number(standing.total_tricks).toFixed(3);
+                if (!groupsByTricks.has(key)) {
+                    groupsByTricks.set(key, []);
+                }
+                groupsByTricks.get(key).push(standing);
+            });
+
+            const sortedGroups = Array.from(groupsByTricks.values())
+                .filter(group => group.length > 1)
+                .map(group => group.sort((a, b) => a.position - b.position))
+                .sort((a, b) => a[0].position - b[0].position);
+
+            for (const group of sortedGroups) {
+                const hasTieBreakValue = group.some(entry => entry.tie_break !== null && entry.tie_break !== undefined);
+                if (!hasTieBreakValue) continue;
+
+                const leader = group[0];
+                const others = group.slice(1);
+                const leaderName = getDisplayPlayerName(tournament, leader.player, tournamentEngine);
+                const otherNames = others.map(entry => getDisplayPlayerName(tournament, entry.player, tournamentEngine));
+                const tieSize = group.length;
+                const ordinalWord = getOrdinalWord(leader.position);
+                const actionVerb = leader.position === 1 ? 'wins' : `comes ${ordinalWord}`;
+
+                return `${leaderName} ${actionVerb} in a ${tieSize}-way tie break against ${formatNameList(otherNames)}.`;
+            }
+
+            return '';
+        }
+
+        function renderTieBreakMessage(tournament, tournamentEngine) {
+            const messageEl = document.getElementById('tie-break-message');
+            if (!messageEl) return;
+
+            const message = buildTieBreakMessage(tournament, tournamentEngine);
+            if (message) {
+                messageEl.textContent = message;
+                messageEl.style.display = 'block';
+            } else {
+                messageEl.style.display = 'none';
+                messageEl.textContent = '';
+            }
+        }
+
         // Load tournament results based on URL parameter
         document.addEventListener('DOMContentLoaded', async function() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -502,7 +574,7 @@
                     }
                 }
                 
-                const podiumHTML = `
+        const podiumHTML = `
                     <div class="spacer-left"></div>
                     <div class="podium-places">
                         <div class="podium-place second">
@@ -586,6 +658,7 @@
                     ` : ''}
                 `;
                 document.getElementById('summary-grid').innerHTML = podiumHTML;
+                renderTieBreakMessage(tournament, tournamentEngine);
                 
                 // Debug: Check what's actually in final standings
                 console.log('🔍 Tournament final standings - ALL ENTRIES:');
@@ -679,10 +752,14 @@
                 
             } catch (error) {
                 console.error('❌ Error loading tournament results:', error);
-                document.getElementById('tournament-title').textContent = 'Error Loading Tournament';
-                document.getElementById('tournament-year').textContent = year || '20XX';
-                renderHeroStats([{ label: 'Status', value: 'Please refresh the page' }]);
-                renderTournamentComment('');
+                const issuesSummary = typeof tournamentEngine?.getDataIssues === 'function'
+                    ? tournamentEngine.getDataIssues()
+                    : null;
+                renderDataIssuesBanner(issuesSummary);
+
+                const criticalIssue = issuesSummary?.issues?.find(issue => issue.severity === 'error');
+                const errorMessage = criticalIssue?.message || error?.message || 'Unable to load tournament data.';
+                displayTournamentError(errorMessage, year);
             }
         });
 
@@ -804,6 +881,14 @@
             padding: var(--spacing-lg) 0;
             max-width: 900px;
             margin: 0 auto;
+        }
+
+        .tie-break-message {
+            margin-top: var(--spacing-md);
+            text-align: center;
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 1rem;
         }
 
         .spacer-left {

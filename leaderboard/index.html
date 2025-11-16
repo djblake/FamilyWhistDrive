@@ -30,6 +30,8 @@
         </div>
     </header>
 
+    <div id="data-issues-banner" class="data-issues-banner" style="display: none;"></div>
+
     <main class="main-content">
         <section class="leaderboard-hero">
             <div class="container">
@@ -320,7 +322,7 @@
         </div>
     </footer>
 
-            <script src="../assets/js/tournament-engine.js?v=55"></script>
+            <script src="../assets/js/tournament-engine.js?v=60"></script>
     
     <script>
         // Leaderboard specific JavaScript
@@ -344,6 +346,7 @@
 
                 console.log('🏆 Loading real tournament data for Hall of Fame...');
                 await tournamentEngine.loadFromGoogleSheets(sheetId);
+                renderDataIssuesBanner(tournamentEngine.getDataIssues());
 
                 // Get all players with comprehensive stats from real data
                 allPlayers = tournamentEngine.getAllPlayers('overall');
@@ -373,6 +376,11 @@
             } catch (error) {
                 console.error('Error loading leaderboard:', error);
                 loadFallbackData();
+                if (tournamentEngine && typeof tournamentEngine.getDataIssues === 'function') {
+                    renderDataIssuesBanner(tournamentEngine.getDataIssues());
+                } else {
+                    renderDataIssuesBanner(null);
+                }
             }
         }
 
@@ -414,6 +422,38 @@
                     }
                 });
             }
+        }
+
+        function renderDataIssuesBanner(dataIssuesSummary) {
+            const banner = document.getElementById('data-issues-banner');
+            if (!banner || !dataIssuesSummary || !Array.isArray(dataIssuesSummary.issues)) {
+                if (banner) {
+                    banner.style.display = 'none';
+                    banner.innerHTML = '';
+                }
+                return;
+            }
+
+            const errorIssues = dataIssuesSummary.issues.filter(issue => issue.severity === 'error');
+            if (errorIssues.length === 0) {
+                banner.style.display = 'none';
+                banner.innerHTML = '';
+                return;
+            }
+
+            const issueList = errorIssues.map(issue => {
+                const location = issue.sheet ? `${issue.sheet}${issue.row ? ` (Row ${issue.row})` : ''}` : '';
+                const message = issue.message || issue.details || 'An unknown data error occurred.';
+                return `<li>${location ? `<strong>${location}:</strong> ` : ''}${message}</li>`;
+            }).join('');
+
+            banner.innerHTML = `
+                <div class="data-issues-banner__content">
+                    <strong>Data Import Errors Detected</strong>
+                    <ul>${issueList}</ul>
+                </div>
+            `;
+            banner.style.display = 'block';
         }
 
         function updateToggleButton() {
@@ -596,6 +636,26 @@
                             <div class="trend-col">${trend}</div>
                         </div>
                     `;
+                } else if (currentRankingType === 'championships') {
+                    const topThreeDisplay = player.top_three_finishes ?? player.top_three ?? 0;
+                    return `
+                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
+                            <div class="rank-col">
+                                <span class="rank-number">${index + 1}</span>
+                                <span class="rank-medal">${medalIcon}</span>
+                            </div>
+                            <div class="player-col">
+                                <a href="../players/profile.html?player=${encodeURIComponent(player.name)}" class="player-link">
+                                    <span class="player-name">${tournamentEngine.getDisplayName(player.name)}</span>
+                                    <span class="player-nickname">${getPlayerNickname(player.name)}</span>
+                                </a>
+                            </div>
+                            <div class="wins-col">${player.tournament_wins || 0}</div>
+                            <div class="podium-col">${topThreeDisplay}</div>
+                            <div class="tournaments-col">${player.tournaments_played || 0}</div>
+                            <div class="trend-col">${trend}</div>
+                        </div>
+                    `;
                 } else if (currentRankingType === 'overall') {
                     return `
                         <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
@@ -648,10 +708,12 @@
             const tableHeader = document.querySelector('.rankings-table-header');
             const rankingsTable = document.querySelector('.full-rankings');
             
-                if (rankingType === 'career_stats') {
+            if (rankingType === 'career_stats') {
                 // Add career-stats class for special layout
                 rankingsTable.classList.add('career-stats');
+                rankingsTable.classList.remove('championships-layout');
                 rankingsTable.classList.remove('performance-stats');
+            rankingsTable.classList.remove('seed-stats');
                 
                 // Special layout for Career Wins
                 tableHeader.innerHTML = `
@@ -664,6 +726,8 @@
                 `;
             } else if (rankingType === 'performance') {
                 rankingsTable.classList.remove('career-stats');
+                rankingsTable.classList.remove('seed-stats');
+                rankingsTable.classList.remove('championships-layout');
                 rankingsTable.classList.add('performance-stats');
                 
                 tableHeader.innerHTML = `
@@ -673,11 +737,26 @@
                     <div class="tournaments-col">Tournaments</div>
                     <div class="trend-col">Trend</div>
                 `;
+            } else if (rankingType === 'championships') {
+                rankingsTable.classList.remove('career-stats');
+                rankingsTable.classList.remove('performance-stats');
+                rankingsTable.classList.remove('seed-stats');
+                rankingsTable.classList.add('championships-layout');
+
+                tableHeader.innerHTML = `
+                    <div class="rank-col">Rank</div>
+                    <div class="player-col">Player</div>
+                    <div class="wins-col">Wins</div>
+                    <div class="podium-col">Top 3</div>
+                    <div class="tournaments-col">Tournaments</div>
+                    <div class="trend-col">Trend</div>
+                `;
             } else {
                 // Remove career-stats class for standard layout
                 rankingsTable.classList.remove('career-stats');
                 rankingsTable.classList.remove('performance-stats');
                 rankingsTable.classList.remove('seed-stats');
+                rankingsTable.classList.remove('championships-layout');
                 
                 // Standard layout for other ranking types
                 if (rankingType === 'overall') {
@@ -936,10 +1015,16 @@
 
 
         .full-rankings {
+            display: flex;
+            flex-direction: column;
             background: var(--card-bg);
             border-radius: var(--border-radius-lg);
             box-shadow: var(--shadow-card);
             overflow: hidden;
+        }
+
+        .rankings-table {
+            width: 100%;
         }
 
         .rankings-table-header {
@@ -1041,6 +1126,9 @@
         .performance-stats .rankings-table-header {
             grid-template-columns: 80px 1.5fr 160px 120px 80px;
         }
+        .championships-layout .rankings-table-header {
+            grid-template-columns: 80px 1.2fr 120px 120px 120px 80px;
+        }
         .seed-stats .rankings-table-header {
             grid-template-columns: 80px 1.5fr 120px 120px 120px 120px 120px 80px;
         }
@@ -1051,6 +1139,9 @@
 
         .performance-stats .ranking-row {
             grid-template-columns: 80px 1.5fr 160px 120px 80px;
+        }
+        .championships-layout .ranking-row {
+            grid-template-columns: 80px 1.2fr 120px 120px 120px 80px;
         }
 
         .ranking-insights {
@@ -1213,18 +1304,51 @@
             color: var(--primary);
         }
 
+        .data-issues-banner {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border-bottom: 2px solid #ef4444;
+            padding: var(--spacing-md) 0;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.25);
+        }
+
+        .data-issues-banner__content {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-md);
+            color: #991b1b;
+        }
+
+        .data-issues-banner__content strong {
+            display: inline-block;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .data-issues-banner__content ul {
+            margin: 0;
+            padding-left: 1.25rem;
+        }
+
+        .data-issues-banner__content li {
+            margin-bottom: 0.35rem;
+        }
+
         /* Table Controls Styling */
         .table-controls {
             display: flex;
             justify-content: center;
+            align-items: center;
+            width: 100%;
             padding: var(--spacing-xl) 0;
             margin-top: var(--spacing-lg);
             border-top: 1px solid var(--border);
+            background: var(--bg-secondary);
         }
 
         .toggle-view-btn {
-            display: flex;
+            display: inline-flex;
             align-items: center;
+            justify-content: center;
+            flex-direction: row;
             gap: var(--spacing-sm);
             background: var(--card-bg);
             border: 2px solid var(--primary);
@@ -1236,6 +1360,9 @@
             cursor: pointer;
             transition: all 0.2s ease;
             box-shadow: var(--shadow-sm);
+            white-space: nowrap;
+            writing-mode: horizontal-tb;
+            min-width: 0;
         }
 
         .toggle-view-btn:hover {
