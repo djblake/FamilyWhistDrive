@@ -190,54 +190,55 @@
             return delimiters.some(delimiter => playerName.includes(delimiter));
         }
 
+        function splitSharedIdentifiers(identifier) {
+            if (!identifier) return [];
+            if (Array.isArray(identifier)) {
+                return identifier.flatMap(item => splitSharedIdentifiers(item));
+            }
+            return identifier
+                .split(/[\/+&]/)
+                .map(part => part.trim())
+                .filter(part => part.length > 0);
+        }
+
         function resolvePlayerIdentity(identifier, engine) {
-            if (!identifier) {
-                return { displayName: '', nickname: '', canonicalId: identifier };
-            }
+            const pieces = splitSharedIdentifiers(identifier);
+            const canonicalIds = (pieces.length > 0 ? pieces : [identifier]).map(id =>
+                engine && typeof engine.getCanonicalPlayerId === 'function'
+                    ? engine.getCanonicalPlayerId(id)
+                    : id
+            );
 
-            let canonicalId = identifier;
-            if (engine && typeof engine.getCanonicalPlayerId === 'function') {
-                canonicalId = engine.getCanonicalPlayerId(identifier);
-            }
+            const displayIds = canonicalIds.map(id =>
+                engine && typeof engine.getDisplayName === 'function'
+                    ? engine.getDisplayName(id)
+                    : normalizeHandSharingDisplay(id)
+            );
 
-            let displayName = '';
-            if (engine && typeof engine.getDisplayName === 'function') {
-                displayName = engine.getDisplayName(identifier);
-            }
-
-            if (!displayName && engine && typeof engine.getPlayerFullName === 'function') {
-                const fullName = engine.getPlayerFullName(canonicalId);
-                if (fullName && fullName.trim().length > 0) {
-                    displayName = fullName;
-                }
-            }
-
-            if (!displayName) {
-                displayName = normalizeHandSharingDisplay(identifier);
-            }
-
-            let nickname = '';
-            if (engine && typeof engine.getPlayerNameParts === 'function') {
-                const parts = engine.getPlayerNameParts(canonicalId);
-                nickname = parts?.nickname || '';
-            }
-
-            return { displayName, nickname, canonicalId };
+            return {
+                displayName: displayIds.join(' / '),
+                canonicalIds
+            };
         }
 
         function buildCombinedIdentity(identifiers, engine) {
-            if (!Array.isArray(identifiers)) {
-                return resolvePlayerIdentity(identifiers, engine);
-            }
+            const flatIdentifiers = splitSharedIdentifiers(identifiers);
+            const canonicalIds = (flatIdentifiers.length > 0 ? flatIdentifiers : [identifiers]).map(id =>
+                engine && typeof engine.getCanonicalPlayerId === 'function'
+                    ? engine.getCanonicalPlayerId(id)
+                    : id
+            );
 
-            const identities = identifiers.map(id => resolvePlayerIdentity(id, engine));
-            const displayName = identities.map(id => id.displayName).join(' / ');
-            const nickname = identities
-                .map(id => id.nickname)
-                .filter(Boolean)
-                .join(' / ');
-            const canonicalIds = identities.map(id => id.canonicalId);
-            return { displayName, nickname, canonicalIds };
+            const displayName = canonicalIds.map(id =>
+                engine && typeof engine.getDisplayName === 'function'
+                    ? engine.getDisplayName(id)
+                    : normalizeHandSharingDisplay(id)
+            ).join(' / ');
+
+            return {
+                displayName,
+                canonicalIds
+            };
         }
 
         // Parse URL parameters with proper handling of hand sharing partnerships
@@ -410,7 +411,32 @@
             }
 
             const displayName = displayIdentity.displayName || playerName;
-            document.getElementById('player-name').textContent = displayName;
+            const playerNameEl = document.getElementById('player-name');
+
+            const renderPlayerLink = (id, label) => {
+                if (!id || !label) {
+                    return label || id || '';
+                }
+                return `<a href="../players/profile.html?player=${encodeURIComponent(id)}" class="player-name-link">${label}</a>`;
+            };
+
+            const renderPlayerLinks = (identifiers) => {
+                const ids = splitSharedIdentifiers(identifiers);
+                const canonicalIds = ids.map(id =>
+                    engine && typeof engine.getCanonicalPlayerId === 'function'
+                        ? engine.getCanonicalPlayerId(id)
+                        : id
+                );
+                return canonicalIds
+                    .map(id => renderPlayerLink(id, engine.getDisplayName(id)))
+                    .join(' / ');
+            };
+
+            if (playerStanding.is_partnership_member && Array.isArray(playerStanding.partnership_players) && playerStanding.partnership_players.length > 0) {
+                playerNameEl.innerHTML = renderPlayerLinks(playerStanding.partnership_players);
+            } else {
+                playerNameEl.innerHTML = renderPlayerLinks(playerName);
+            }
 
             const chartLabelEl = document.getElementById('chart-player-name');
             if (chartLabelEl) {
@@ -551,31 +577,76 @@
                             // Get the partner position (the OTHER position in this partnership)
                             const partnerPositionArray = playerPosition === 1 ? partnership.position2 : partnership.position1;
 
-                            // Create display name for partner
-                            const partnerDisplayNames = partnerPositionArray.map(id => engine.getDisplayName(id));
-                            const partnerName = partnerDisplayNames.length > 1
-                                ? partnerDisplayNames.join('/')
-                                : partnerDisplayNames[0];
+                            // Create display data for partner(s)
+                            const partnerDetails = partnerPositionArray.flatMap(rawId => {
+                                const expandedIds = splitSharedIdentifiers(rawId);
+                                if (expandedIds.length === 0) {
+                                    return [{
+                                        id: rawId,
+                                        displayName: engine.getDisplayName(rawId)
+                                    }];
+                                }
+                                return expandedIds.map(id => {
+                                    const canonicalId = engine.getCanonicalPlayerId ? engine.getCanonicalPlayerId(id) : id;
+                                    return {
+                                        id: canonicalId,
+                                        displayName: engine.getDisplayName(canonicalId)
+                                    };
+                                });
+                            });
+                            const partnerName = partnerDetails.length > 1
+                                ? partnerDetails.map(p => p.displayName).join('/')
+                                : partnerDetails[0]?.displayName;
 
                             console.log(`    ✓ Match found in position ${playerPosition}! Partner: ${partnerName}`);
 
                             // Find opponent partnership (the other partnership at this table)
                             let actualOpponentTricks = 13 - partnership.tricks; // Default fallback
-                            let opponentNames = [];
+                            let opponentGroups = [];
 
                             for (const otherPartnership of table.partnerships) {
                                 if (otherPartnership !== partnership) {
                                     // This is the opponent partnership
                                     actualOpponentTricks = otherPartnership.tricks;
-                                    // Get all opponent IDs
-                                    opponentNames = [...otherPartnership.position1, ...otherPartnership.position2];
-                                    actualOpponentTricks = otherPartnership.tricks;
+                                    opponentGroups = [
+                                        Array.isArray(otherPartnership.position1) ? otherPartnership.position1.flatMap(rawId => {
+                                            const expandedIds = splitSharedIdentifiers(rawId);
+                                            if (expandedIds.length === 0) {
+                                                const canonicalId = engine.getCanonicalPlayerId ? engine.getCanonicalPlayerId(rawId) : rawId;
+                                                return [{
+                                                    id: canonicalId,
+                                                    displayName: engine.getDisplayName(canonicalId)
+                                                }];
+                                            }
+                                            return expandedIds.map(id => {
+                                                const canonicalId = engine.getCanonicalPlayerId ? engine.getCanonicalPlayerId(id) : id;
+                                                return {
+                                                    id: canonicalId,
+                                                    displayName: engine.getDisplayName(canonicalId)
+                                                };
+                                            });
+                                        }) : [],
+                                        Array.isArray(otherPartnership.position2) ? otherPartnership.position2.flatMap(rawId => {
+                                            const expandedIds = splitSharedIdentifiers(rawId);
+                                            if (expandedIds.length === 0) {
+                                                const canonicalId = engine.getCanonicalPlayerId ? engine.getCanonicalPlayerId(rawId) : rawId;
+                                                return [{
+                                                    id: canonicalId,
+                                                    displayName: engine.getDisplayName(canonicalId)
+                                                }];
+                                            }
+                                            return expandedIds.map(id => {
+                                                const canonicalId = engine.getCanonicalPlayerId ? engine.getCanonicalPlayerId(id) : id;
+                                                return {
+                                                    id: canonicalId,
+                                                    displayName: engine.getDisplayName(canonicalId)
+                                                };
+                                            });
+                                        }) : []
+                                    ].filter(group => group.length > 0);
                                     break; // Only one other partnership per table
                                 }
                             }
-
-                            // Format opponent names for display
-                            const opponentDisplayNames = opponentNames.map(id => engine.getDisplayName(id));
 
                             // Check for data quality issues
                             const totalTricks = partnership.tricks + actualOpponentTricks;
@@ -586,7 +657,8 @@
                                 trump: partnership.trump_suit || round.trump_suit,
                                 table: table.table,
                                 partner: partnerName,
-                                opponents: opponentDisplayNames,
+                                partnerDetails,
+                                opponentGroups,
                                 tricks: partnership.tricks,
                                 opponentTricks: actualOpponentTricks,
                                 totalTricks: totalTricks,
@@ -640,17 +712,25 @@
                         </td>
                         <td class="table-number">${round.table}</td>
                         <td class="partner-name">
-                            ${round.partner && round.partner !== 'Unknown' ? 
-                                `<a href="../players/profile.html?player=${encodeURIComponent(round.partner)}" class="player-name-link">${round.partner}</a>` : 
-                                'Unknown'
+                            ${Array.isArray(round.partnerDetails) && round.partnerDetails.length > 0
+                                ? round.partnerDetails.map(partner => 
+                                    `<a href="../players/profile.html?player=${encodeURIComponent(partner.id)}" class="player-name-link">${partner.displayName}</a>`
+                                  ).join(' / ')
+                                : (round.partner && round.partner !== 'Unknown'
+                                    ? `<a href="../players/profile.html?player=${encodeURIComponent(round.partner)}" class="player-name-link">${round.partner}</a>`
+                                    : 'Unknown')
                             }
                         </td>
                         <td class="${ourTricksClass}">${round.tricks}</td>
                         <td class="${theirTricksClass}">${round.opponentTricks}</td>
                         <td class="opponents-names">
-                            ${round.opponents.map(opponent => 
-                                `<a href="../players/profile.html?player=${encodeURIComponent(opponent)}" class="player-name-link">${opponent}</a>`
-                            ).join(' & ')}
+                            ${Array.isArray(round.opponentGroups) && round.opponentGroups.length > 0
+                                ? round.opponentGroups.map(group => 
+                                    group.map(opponent => 
+                                        `<a href="../players/profile.html?player=${encodeURIComponent(opponent.id)}" class="player-name-link">${opponent.displayName}</a>`
+                                    ).join(' / ')
+                                ).join(' & ')
+                                : 'Unknown'}
                         </td>
                         <td class="result ${resultClass}">${resultText}</td>
                         <td class="cumulative-total">${round.cumulativeTotal}</td>
