@@ -115,6 +115,7 @@
                                     <th>Their Tricks</th>
                                     <th>Opponents</th>
                                     <th>Result</th>
+                                    <th>Total</th>
                                 </tr>
                             </thead>
                             <tbody id="scorecard-body">
@@ -175,11 +176,68 @@
             return playerName;
         }
 
+        function formatPossessiveName(name) {
+            if (!name) return '';
+            const trimmed = name.trim();
+            if (trimmed.length === 0) return '';
+            return trimmed.endsWith('s') ? `${trimmed}'` : `${trimmed}'s`;
+        }
+
         // Check if a name represents a hand sharing partnership
         function isHandSharingPartnership(playerName) {
             if (!playerName) return false;
             const delimiters = ['+', '/', '&'];
             return delimiters.some(delimiter => playerName.includes(delimiter));
+        }
+
+        function resolvePlayerIdentity(identifier, engine) {
+            if (!identifier) {
+                return { displayName: '', nickname: '', canonicalId: identifier };
+            }
+
+            let canonicalId = identifier;
+            if (engine && typeof engine.getCanonicalPlayerId === 'function') {
+                canonicalId = engine.getCanonicalPlayerId(identifier);
+            }
+
+            let displayName = '';
+            if (engine && typeof engine.getDisplayName === 'function') {
+                displayName = engine.getDisplayName(identifier);
+            }
+
+            if (!displayName && engine && typeof engine.getPlayerFullName === 'function') {
+                const fullName = engine.getPlayerFullName(canonicalId);
+                if (fullName && fullName.trim().length > 0) {
+                    displayName = fullName;
+                }
+            }
+
+            if (!displayName) {
+                displayName = normalizeHandSharingDisplay(identifier);
+            }
+
+            let nickname = '';
+            if (engine && typeof engine.getPlayerNameParts === 'function') {
+                const parts = engine.getPlayerNameParts(canonicalId);
+                nickname = parts?.nickname || '';
+            }
+
+            return { displayName, nickname, canonicalId };
+        }
+
+        function buildCombinedIdentity(identifiers, engine) {
+            if (!Array.isArray(identifiers)) {
+                return resolvePlayerIdentity(identifiers, engine);
+            }
+
+            const identities = identifiers.map(id => resolvePlayerIdentity(id, engine));
+            const displayName = identities.map(id => id.displayName).join(' / ');
+            const nickname = identities
+                .map(id => id.nickname)
+                .filter(Boolean)
+                .join(' / ');
+            const canonicalIds = identities.map(id => id.canonicalId);
+            return { displayName, nickname, canonicalIds };
         }
 
         // Parse URL parameters with proper handling of hand sharing partnerships
@@ -338,24 +396,46 @@
 
         async function generatePlayerScorecard(tournament, playerStanding, params, engine) {
             const playerName = playerStanding.player;
+            const canonicalChartIdentifier = normalizeHandSharingDisplay(
+                playerStanding.is_partnership_member && playerStanding.partnership_name 
+                    ? playerStanding.partnership_name 
+                    : playerName
+            );
 
-            // Update player header - show partnership name if applicable (normalized format)
-            let displayName = playerStanding.is_partnership_member && playerStanding.partnership_name 
-                ? playerStanding.partnership_name 
-                : playerName;
-            displayName = normalizeHandSharingDisplay(displayName);
+            let displayIdentity;
+            if (playerStanding.is_partnership_member && Array.isArray(playerStanding.partnership_players) && playerStanding.partnership_players.length > 0) {
+                displayIdentity = buildCombinedIdentity(playerStanding.partnership_players, engine);
+            } else {
+                displayIdentity = resolvePlayerIdentity(playerName, engine);
+            }
+
+            const displayName = displayIdentity.displayName || playerName;
             document.getElementById('player-name').textContent = displayName;
+
+            const chartLabelEl = document.getElementById('chart-player-name');
+            if (chartLabelEl) {
+                chartLabelEl.textContent = formatPossessiveName(displayName);
+            }
             
-            // Show partnership information if applicable (normalized format)
+            // Show partnership information if applicable with friendly names
             let contextText = `${tournament.name} • ${tournament.year}`;
-            if (playerStanding.is_partnership_member || isHandSharingPartnership(params.player)) {
-                const partnershipName = normalizeHandSharingDisplay(playerStanding.partnership_name || params.player);
-                contextText += ` • Hand sharing partnership: ${partnershipName}`;
+            let partnershipFriendlyName = null;
+            if (playerStanding.is_partnership_member && Array.isArray(playerStanding.partnership_players) && playerStanding.partnership_players.length > 0) {
+                partnershipFriendlyName = displayName;
+            } else if (isHandSharingPartnership(params.player)) {
+                const sharedIdentity = buildCombinedIdentity(
+                    params.player.split(/[\/+&]/).map(name => name.trim()),
+                    engine
+                );
+                partnershipFriendlyName = sharedIdentity.displayName;
+            }
+            if (partnershipFriendlyName) {
+                contextText += ` • Hand sharing partnership: ${partnershipFriendlyName}`;
             }
             document.getElementById('tournament-context').textContent = contextText;
             
             // Update back link  
-            document.getElementById('back-to-tournament').href = `../tournaments/#${params.year}`;
+            document.getElementById('back-to-tournament').href = `../tournaments/results.html?year=${encodeURIComponent(params.year)}`;
             
             // Update rank and performance
             const rankText = playerStanding.position === 1 ? '🏆 Champion' : 
@@ -380,6 +460,11 @@
             // Get player's individual rounds - use original searched name, not partnership name
             const searchedPlayerName = params.player; // The name they searched for (e.g., "Paul")
             const playerRounds = getPlayerRounds(tournament, searchedPlayerName, engine);
+            let cumulativeTotal = 0;
+            playerRounds.forEach(round => {
+                cumulativeTotal += round.tricks;
+                round.cumulativeTotal = cumulativeTotal;
+            });
             const maxTricks = Math.max(...playerRounds.map(r => r.tricks));
             
             // Count how many times they achieved the maximum
@@ -396,8 +481,8 @@
             // Generate scorecard table
             generateScorecardTable(playerRounds);
             
-            // Create rank progression chart
-            createRankProgressionChart(tournament, displayName);
+            // Create rank progression chart (use canonical identifier for highlighting)
+            createRankProgressionChart(tournament, canonicalChartIdentifier, displayName, 0, engine);
         }
 
         function getPlayerRounds(tournament, playerName, engine) {
@@ -568,6 +653,7 @@
                             ).join(' & ')}
                         </td>
                         <td class="result ${resultClass}">${resultText}</td>
+                        <td class="cumulative-total">${round.cumulativeTotal}</td>
                     </tr>
                 `;
             }).join('');
@@ -622,19 +708,23 @@
             document.getElementById('error-message').textContent = message;
         }
 
-        function createRankProgressionChart(tournament, playerName, retryCount = 0) {
+        function createRankProgressionChart(tournament, playerName, displayNameForUi = null, retryCount = 0, engineInstance = null) {
             console.log(`🎯 createRankProgressionChart called for player: ${playerName} (attempt ${retryCount + 1})`);
             console.log('📋 Tournament data:', tournament);
             
+            if (displayNameForUi) {
+                const chartLabelEl = document.getElementById('chart-player-name');
+                if (chartLabelEl) {
+                    chartLabelEl.textContent = formatPossessiveName(displayNameForUi);
+                }
+            }
+            
             try {
-                // Update chart player name in description
-                document.getElementById('chart-player-name').textContent = playerName + "'s";
-                
                 // Wait for libraries to load with timeout
                 if (typeof Chart === 'undefined' || typeof TournamentCharts === 'undefined') {
                     if (retryCount < 10) { // Max 10 retries = 5 seconds
                         console.log(`⏳ Waiting for Chart.js and TournamentCharts to load... (attempt ${retryCount + 1}/10)`);
-                        setTimeout(() => createRankProgressionChart(tournament, playerName, retryCount + 1), 500);
+                        setTimeout(() => createRankProgressionChart(tournament, playerName, displayNameForUi, retryCount + 1, engineInstance), 500);
                         return;
                     } else {
                         console.error('❌ Chart.js failed to load after 5 seconds. Hiding chart section.');
@@ -652,7 +742,7 @@
                 const charts = new TournamentCharts();
                 
                 // Create the rank progression chart with player highlighting
-                charts.createRankProgressChart('rank-progression-chart', tournament, playerName);
+                charts.createRankProgressChart('rank-progression-chart', tournament, playerName, engineInstance);
                 
                 console.log(`✅ Created rank progression chart for ${playerName}`);
             } catch (error) {

@@ -284,11 +284,8 @@
                     );
                     
                     if (chartTournament) {
-                        const canvas = document.getElementById('rank-progression-chart');
-                        if (canvas) {
-                            const chartManager = new TournamentCharts(canvas, player.name);
-                            chartManager.createRankProgressChart(chartTournament);
-                        }
+                        const chartManager = new TournamentCharts();
+                        chartManager.createRankProgressChart('rank-progression-chart', chartTournament, player.name, tournamentEngine);
                     }
                 }
                 

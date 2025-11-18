@@ -923,9 +923,9 @@ class TournamentEngine {
                 return trimmed;
             });
         const scorecard = { SourceSheet: sheetName };
-        
-        headers.forEach((header, index) => {
-            let headerName = header;
+            
+            headers.forEach((header, index) => {
+                let headerName = header;
             if (headerName) {
                 if (headerName.startsWith('"') && headerName.endsWith('"')) {
                     headerName = headerName.slice(1, -1);
@@ -936,7 +936,7 @@ class TournamentEngine {
                 return;
             }
             scorecard[headerName] = values[index] !== undefined ? values[index] : '';
-        });
+            });
             
             // Skip empty rows (now that quotes are removed)
             if (!scorecard.Id) {
@@ -1162,7 +1162,7 @@ class TournamentEngine {
                         gameId: scorecard.Id
                     });
                 }
-
+                
                 individualScores.push(scorecard);
                 validRows++;
                 
@@ -1558,6 +1558,25 @@ class TournamentEngine {
     }
 
     /**
+     * Get structured player name parts (first, last, nickname)
+     */
+    getPlayerNameParts(playerId) {
+        if (!playerId) return null;
+        const canonicalId = this.getCanonicalPlayerId ? this.getCanonicalPlayerId(playerId) : playerId;
+        const playerData = this.playersLookup ? this.playersLookup.get(canonicalId) : null;
+        if (!playerData) {
+            return null;
+        }
+        return {
+            firstName: playerData.firstName || '',
+            lastName: playerData.lastName || '',
+            nickname: playerData.nickname || '',
+            displayName: playerData.displayName || '',
+            canonicalId
+        };
+    }
+
+    /**
      * Process individual scorecard data and create tournament structure
      */
     processIndividualScorecards(individualScores) {
@@ -1934,7 +1953,7 @@ class TournamentEngine {
             console.warn(`⚠️  HISTORICAL DATA ISSUE: ${issueMessage}. This is preserved for historical accuracy.`);
             
             // Track this issue
-        this.dataIssues.push({
+            this.dataIssues.push({
                 type: 'trick_count_mismatch',
                 severity: 'warning',
                 message: issueMessage,
@@ -1968,7 +1987,7 @@ class TournamentEngine {
             const playerInfo = scorecard[`${field}Names`];
             if (!playerInfo || !playerInfo.playerIds) continue;
             
-            for (const playerId of playerInfo.playerIds) {
+                for (const playerId of playerInfo.playerIds) {
                 const trimmedId = (playerId || '').trim();
                 if (!trimmedId) continue;
                 
@@ -2573,7 +2592,7 @@ class TournamentEngine {
             
             const combinationKey = data.combination_key || this.getCombinationKeyFromPlayerName(player);
             const tieBreakValue = combinationKey ? this.tieBreakers.get(combinationKey) : undefined;
-
+            
             standings.push({
                 player: player,
                 total_tricks: combinedTricks, // Combined total for rankings
@@ -2616,8 +2635,22 @@ class TournamentEngine {
     calculatePlayerStatistics() {
         // This will calculate career stats across all tournaments
         for (const [tournamentKey, tournament] of this.tournaments) {
-            for (const standing of tournament.final_standings) {
+            const standings = Array.isArray(tournament.final_standings) ? tournament.final_standings : [];
+            if (standings.length === 0) {
+                continue;
+            }
+
+            const totalEntrants = standings.length;
+            const fallbackPosition = totalEntrants || 1;
+            const worstPosition = standings.reduce((max, entry) => {
+                const entryPos = Number.isFinite(entry.position) ? entry.position : fallbackPosition;
+                return Math.max(max, entryPos);
+            }, fallbackPosition);
+
+            for (const standing of standings) {
                 const player = standing.player;
+                const entryPosition = Number.isFinite(standing.position) ? standing.position : fallbackPosition;
+                const isBoobyPlacement = totalEntrants > 0 && entryPosition >= worstPosition;
                 
                 // Check if this is a shared hand entry that needs individual player processing
                 const isSharedHandEntry = standing.is_partnership && standing.partnership_players;
@@ -2647,7 +2680,9 @@ class TournamentEngine {
                                 // Shared hand tracking
                                 shared_rounds: 0,
                                 shared_tricks: 0,
-                                tournament_history: []
+                                tournament_history: [],
+                                booby_prizes: 0,
+                                booby_percentage: 0
                             });
                         }
                         
@@ -2663,17 +2698,20 @@ class TournamentEngine {
                         individualPlayerData.shared_rounds += standing.shared_rounds || 0;
                         individualPlayerData.shared_tricks += (standing.shared_tricks || 0) / numPartners;
                         
-                        if (standing.position === 1) {
+                        if (entryPosition === 1) {
                             individualPlayerData.tournament_wins++;
                         }
-                        if (standing.position <= 3) {
+                        if (entryPosition <= 3) {
                             individualPlayerData.top_three_finishes++;
+                        }
+                        if (isBoobyPlacement) {
+                            individualPlayerData.booby_prizes = (individualPlayerData.booby_prizes || 0) + 1;
                         }
                         
                         individualPlayerData.tournament_history.push({
                             tournament: tournament.name,
                             year: tournament.year,
-                            position: standing.position,
+                            position: entryPosition,
                             tricks: splitTricks,
                             individual_tricks: 0,
                             shared_tricks: (standing.shared_tricks || 0) / numPartners,
@@ -2705,7 +2743,9 @@ class TournamentEngine {
                             // Shared hand tracking
                             shared_rounds: 0,
                             shared_tricks: 0,
-                            tournament_history: []
+                            tournament_history: [],
+                            booby_prizes: 0,
+                            booby_percentage: 0
                         });
                     }
                     
@@ -2719,11 +2759,14 @@ class TournamentEngine {
                     playerData.shared_rounds += standing.shared_rounds || 0;
                     playerData.shared_tricks += standing.shared_tricks || 0;
                     
-                    if (standing.position === 1) {
+                    if (entryPosition === 1) {
                         playerData.tournament_wins++;
                     }
-                    if (standing.position <= 3) {
+                    if (entryPosition <= 3) {
                         playerData.top_three_finishes++;
+                    }
+                    if (isBoobyPlacement) {
+                        playerData.booby_prizes = (playerData.booby_prizes || 0) + 1;
                     }
                     
                     // Individual stats (only if no shared rounds in this tournament)
@@ -2732,10 +2775,10 @@ class TournamentEngine {
                         playerData.individual.total_tricks += standing.individual_tricks || standing.total_tricks;
                         playerData.individual.total_rounds += standing.individual_rounds || standing.rounds_played;
                         
-                        if (standing.position === 1) {
+                        if (entryPosition === 1) {
                             playerData.individual.tournament_wins++;
                         }
-                        if (standing.position <= 3) {
+                        if (entryPosition <= 3) {
                             playerData.individual.top_three_finishes++;
                         }
                     }
@@ -2743,7 +2786,7 @@ class TournamentEngine {
                     playerData.tournament_history.push({
                         tournament: tournament.name,
                         year: tournament.year,
-                        position: standing.position,
+                        position: entryPosition,
                         tricks: standing.total_tricks,
                         individual_tricks: standing.individual_tricks || 0,
                         shared_tricks: standing.shared_tricks || 0,
@@ -2758,6 +2801,10 @@ class TournamentEngine {
             data.average_tricks = data.total_rounds > 0 ? (data.total_tricks / data.total_rounds).toFixed(2) : 0;
             data.individual.average_tricks = data.individual.total_rounds > 0 ? 
                 (data.individual.total_tricks / data.individual.total_rounds).toFixed(2) : 0;
+
+            data.booby_prizes = data.booby_prizes || 0;
+            const boobyPct = data.tournaments_played > 0 ? (data.booby_prizes / data.tournaments_played) * 100 : 0;
+            data.booby_percentage = parseFloat(boobyPct.toFixed(1));
             
             // Calculate rounds won (where player scored 7+ tricks)
             data.rounds_won = 0;
@@ -2877,6 +2924,8 @@ class TournamentEngine {
                 shared_tricks: player.shared_tricks,
                 win_percentage: player.tournaments_played > 0 ? 
                     ((player.tournament_wins / player.tournaments_played) * 100).toFixed(1) : 0,
+                booby_prizes: player.booby_prizes || 0,
+                booby_percentage: typeof player.booby_percentage === 'number' ? player.booby_percentage : 0,
                 stat_type: 'combined'
             };
         } else {
@@ -3969,6 +4018,18 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
                     const aRecent = (a.tournament_wins || 0) * 2 + (a.top_three_finishes || 0);
                     const bRecent = (b.tournament_wins || 0) * 2 + (b.top_three_finishes || 0);
                     return bRecent - aRecent;
+                });
+            case 'booby':
+                return this.getPlayerRankings().sort((a, b) => {
+                    const boobyDiff = (b.booby_prizes || 0) - (a.booby_prizes || 0);
+                    if (boobyDiff !== 0) {
+                        return boobyDiff;
+                    }
+                    const pctDiff = (b.booby_percentage || 0) - (a.booby_percentage || 0);
+                    if (pctDiff !== 0) {
+                        return pctDiff;
+                    }
+                    return (a.tournaments_played || 0) - (b.tournaments_played || 0);
                 });
             default:
                 return this.getPlayerRankings();

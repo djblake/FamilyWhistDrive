@@ -750,30 +750,18 @@ class TournamentCharts {
             data: {
                 labels: rankData.rounds,
                 datasets: (() => {
-                    // Show all players when no one is highlighted (tournament overview)
-                    // Only limit when there's a highlighted player (individual scorecard)
-                    let playersToShow = rankData.players;
-                    
-                    if (highlightPlayer && rankData.players.length > 10) {
-                        // When highlighting a specific player, show top 10 + highlighted player for readability
-                        const finalRanks = rankData.players.map(p => ({ 
-                            name: p.name, 
-                            finalRank: p.ranks[p.ranks.length - 1] || 999,
-                            data: p
-                        })).sort((a, b) => a.finalRank - b.finalRank);
-                        
-                        playersToShow = finalRanks.slice(0, 10).map(p => p.data);
-                        console.log(`📊 Limited to top 10 players for individual scorecard:`, playersToShow.map(p => p.name));
-                    } else if (!highlightPlayer) {
-                        console.log(`📊 Showing all ${rankData.players.length} players for tournament overview`);
-                    }
+                    const playersToShow = rankData.players;
+                    console.log(`📊 Showing ${playersToShow.length} players on rank progression chart`);
                     
                     const datasets = playersToShow.map((player, index) => {
                         const isHighlighted = highlightPlayer && player.name === highlightPlayer;
+                        const labelName = tournamentEngine && typeof tournamentEngine.getDisplayName === 'function'
+                            ? tournamentEngine.getDisplayName(player.name)
+                            : player.name;
                         const baseColor = this.getPlayerColor(index);
                         
                         return {
-                            label: player.name,
+                            label: labelName,
                             data: player.ranks,
                             scores: player.scores, // Add scores for tooltip access
                             borderColor: isHighlighted ? '#dc2626' : (highlightPlayer ? this.fadeColor(baseColor, 0.3) : baseColor),
@@ -795,8 +783,11 @@ class TournamentCharts {
                     if (highlightPlayer && !playersToShow.find(p => p.name === highlightPlayer)) {
                         const highlightedPlayer = rankData.players.find(p => p.name === highlightPlayer);
                         if (highlightedPlayer) {
+                            const highlightLabel = tournamentEngine && typeof tournamentEngine.getDisplayName === 'function'
+                                ? tournamentEngine.getDisplayName(highlightedPlayer.name)
+                                : highlightedPlayer.name;
                             datasets.push({
-                                label: highlightedPlayer.name,
+                                label: highlightLabel,
                                 data: highlightedPlayer.ranks,
                                 scores: highlightedPlayer.scores, // Add scores for tooltip access
                                 borderColor: '#dc2626',

@@ -48,6 +48,7 @@
                 <div class="ranking-filters">
                     <button class="filter-btn active" data-ranking="overall">Official Seed Ranking</button>
                     <button class="filter-btn" data-ranking="championships">Tournament Wins</button>
+                    <button class="filter-btn" data-ranking="booby">Booby Leaderboard</button>
                     <button class="filter-btn" data-ranking="career_stats">Career Wins</button>
                     <button class="filter-btn" data-ranking="recent_form">Recent Form</button>
                     <button class="filter-btn" data-ranking="performance">Performance</button>
@@ -333,6 +334,14 @@
         let currentSortedPlayers = [];
         let recentFormScores = new Map();
         let performanceScores = new Map();
+
+        const rankingTypes = ['overall', 'championships', 'booby', 'career_stats', 'recent_form', 'performance'];
+        const validRankingTypes = new Set(rankingTypes);
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialRankingParam = urlParams.get('tab') || urlParams.get('ranking');
+        if (initialRankingParam && validRankingTypes.has(initialRankingParam)) {
+            currentRankingType = initialRankingParam;
+        }
         
         document.addEventListener('DOMContentLoaded', function() {
             initializeLeaderboard();
@@ -360,7 +369,7 @@
                     : new Map();
                 
                 // Initialize rankings display
-                updateRankingsDisplay('overall');
+                updateRankingsDisplay(currentRankingType);
                 
                 // Generate championship history from real data
                 generateChampionshipHistory();
@@ -389,16 +398,31 @@
             
             filterButtons.forEach(button => {
                 button.addEventListener('click', function() {
-                    // Update active button
-                    filterButtons.forEach(btn => btn.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    // Update rankings
                     const rankingType = this.dataset.ranking;
-                    currentRankingType = rankingType;
+                    if (rankingType === currentRankingType) return;
                     updateRankingsDisplay(rankingType);
                 });
             });
+        }
+
+        function setActiveFilterButton(rankingType) {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            filterButtons.forEach(button => {
+                button.classList.toggle('active', button.dataset.ranking === rankingType);
+            });
+        }
+
+        function updateURLWithRanking(rankingType) {
+            const params = new URLSearchParams(window.location.search);
+            if (rankingType === 'overall') {
+                params.delete('tab');
+                params.delete('ranking');
+            } else {
+                params.set('tab', rankingType);
+            }
+            const newQuery = params.toString();
+            const newUrl = newQuery ? `${window.location.pathname}?${newQuery}` : window.location.pathname;
+            window.history.replaceState(null, '', newUrl);
         }
 
         function setupToggleViewListener() {
@@ -474,6 +498,7 @@
 
         function updateRankingsDisplay(rankingType) {
             let sortedPlayers;
+            currentRankingType = rankingType;
             
             if (rankingType === 'overall') {
                 // Use the new Official Seed Ranking system
@@ -498,9 +523,28 @@
             
             // Update rankings table with current view preference
             updateRankingsTable(sortedPlayers, showingAllPlayers ? sortedPlayers.length : 10);
+            
+            setActiveFilterButton(rankingType);
+            updateURLWithRanking(rankingType);
         }
 
         function sortPlayersByRanking(players, rankingType) {
+            if (rankingType === 'booby') {
+                return players
+                    .map(player => ({ ...player }))
+                    .sort((a, b) => {
+                        const boobyDiff = (b.booby_prizes || 0) - (a.booby_prizes || 0);
+                        if (boobyDiff !== 0) {
+                            return boobyDiff;
+                        }
+                        const pctDiff = (b.booby_percentage || 0) - (a.booby_percentage || 0);
+                        if (pctDiff !== 0) {
+                            return pctDiff;
+                        }
+                        return (a.tournaments_played || 0) - (b.tournaments_played || 0);
+                    });
+            }
+
             const playersWithScores = players.map(player => ({
                 ...player,
                 rankingScore: calculateRankingScore(player, rankingType)
@@ -543,6 +587,8 @@
                     if (typeof percentile !== 'number') return 0;
                     // Lower percentile is better, so convert to performance score where higher is better
                     return 100 - percentile;
+                case 'booby':
+                    return player.booby_prizes || 0;
                 
                 default:
                     return 0;
@@ -573,10 +619,14 @@
                 performance: {
                     title: 'Performance Rankings',
                     desc: 'Average tournament finish position as a top percentile adjusted for tournament size (lower percentile = better — e.g., top 10%)'
+                },
+                booby: {
+                    title: 'Booby Leaderboard',
+                    desc: 'Number of booby prizes (last-place finishes) earned, plus the share of tournaments where a player finished last'
                 }
             };
             
-            const info = rankingInfo[rankingType];
+            const info = rankingInfo[rankingType] || rankingInfo.overall;
             titleElement.textContent = info.title;
             descElement.textContent = info.desc;
         }
@@ -656,6 +706,34 @@
                             <div class="trend-col">${trend}</div>
                         </div>
                     `;
+                } else if (currentRankingType === 'booby') {
+                    const boobyWins = player.booby_prizes || 0;
+                    const totalTournaments = player.tournaments_played || 0;
+                    let boobyPctValue = typeof player.booby_percentage === 'number'
+                        ? player.booby_percentage
+                        : parseFloat(player.booby_percentage);
+                    if (Number.isNaN(boobyPctValue)) {
+                        boobyPctValue = totalTournaments > 0 ? (boobyWins / totalTournaments) * 100 : 0;
+                    }
+                    const boobyPctDisplay = boobyPctValue.toFixed(1);
+                    return `
+                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
+                            <div class="rank-col">
+                                <span class="rank-number">${index + 1}</span>
+                                <span class="rank-medal">${medalIcon}</span>
+                            </div>
+                            <div class="player-col">
+                                <a href="../players/profile.html?player=${encodeURIComponent(player.name)}" class="player-link">
+                                    <span class="player-name">${tournamentEngine.getDisplayName(player.name)}</span>
+                                    <span class="player-nickname">${getPlayerNickname(player.name)}</span>
+                                </a>
+                            </div>
+                            <div class="booby-count-col">${boobyWins}</div>
+                            <div class="booby-percent-col">${boobyPctDisplay}%</div>
+                            <div class="tournaments-col">${totalTournaments}</div>
+                            <div class="trend-col">${trend}</div>
+                        </div>
+                    `;
                 } else if (currentRankingType === 'overall') {
                     return `
                         <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
@@ -707,13 +785,12 @@
         function updateTableHeaders(rankingType) {
             const tableHeader = document.querySelector('.rankings-table-header');
             const rankingsTable = document.querySelector('.full-rankings');
+
+            rankingsTable.classList.remove('career-stats', 'performance-stats', 'seed-stats', 'championships-layout', 'booby-stats');
             
             if (rankingType === 'career_stats') {
                 // Add career-stats class for special layout
                 rankingsTable.classList.add('career-stats');
-                rankingsTable.classList.remove('championships-layout');
-                rankingsTable.classList.remove('performance-stats');
-            rankingsTable.classList.remove('seed-stats');
                 
                 // Special layout for Career Wins
                 tableHeader.innerHTML = `
@@ -725,9 +802,6 @@
                     <div class="trend-col">Trend</div>
                 `;
             } else if (rankingType === 'performance') {
-                rankingsTable.classList.remove('career-stats');
-                rankingsTable.classList.remove('seed-stats');
-                rankingsTable.classList.remove('championships-layout');
                 rankingsTable.classList.add('performance-stats');
                 
                 tableHeader.innerHTML = `
@@ -737,10 +811,18 @@
                     <div class="tournaments-col">Tournaments</div>
                     <div class="trend-col">Trend</div>
                 `;
+            } else if (rankingType === 'booby') {
+                rankingsTable.classList.add('booby-stats');
+                
+                tableHeader.innerHTML = `
+                    <div class="rank-col">Rank</div>
+                    <div class="player-col">Player</div>
+                    <div class="booby-count-col">Booby Wins</div>
+                    <div class="booby-percent-col">Booby %</div>
+                    <div class="tournaments-col">Tournaments</div>
+                    <div class="trend-col">Trend</div>
+                `;
             } else if (rankingType === 'championships') {
-                rankingsTable.classList.remove('career-stats');
-                rankingsTable.classList.remove('performance-stats');
-                rankingsTable.classList.remove('seed-stats');
                 rankingsTable.classList.add('championships-layout');
 
                 tableHeader.innerHTML = `
@@ -752,12 +834,6 @@
                     <div class="trend-col">Trend</div>
                 `;
             } else {
-                // Remove career-stats class for standard layout
-                rankingsTable.classList.remove('career-stats');
-                rankingsTable.classList.remove('performance-stats');
-                rankingsTable.classList.remove('seed-stats');
-                rankingsTable.classList.remove('championships-layout');
-                
                 // Standard layout for other ranking types
                 if (rankingType === 'overall') {
                     rankingsTable.classList.add('seed-stats');
@@ -795,6 +871,8 @@
                     return 'Form Score';
                 case 'performance':
                     return 'Top Percentile Finish Position';
+                case 'booby':
+                    return 'Booby Wins';
                 default:
                     return 'Score';
             }
@@ -816,6 +894,8 @@
                 case 'performance':
                     const percentile = performanceScores.get(player.name);
                     return typeof percentile === 'number' ? `${percentile.toFixed(1)}%` : '—';
+                case 'booby':
+                    return player.booby_prizes || 0;
                 default:
                     return '0';
             }
@@ -1142,6 +1222,24 @@
         }
         .championships-layout .ranking-row {
             grid-template-columns: 80px 1.2fr 120px 120px 120px 80px;
+        }
+        .booby-stats .rankings-table-header {
+            grid-template-columns: 80px 1.5fr 140px 140px 120px 80px;
+        }
+
+        .booby-stats .ranking-row {
+            grid-template-columns: 80px 1.5fr 140px 140px 120px 80px;
+        }
+
+        .booby-count-col,
+        .booby-percent-col {
+            text-align: center;
+            font-weight: 600;
+            color: var(--text-primary-dark);
+        }
+
+        .booby-percent-col {
+            font-variant-numeric: tabular-nums;
         }
 
         .ranking-insights {

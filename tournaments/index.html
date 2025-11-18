@@ -290,7 +290,7 @@
             try {
                 // Create chart with no highlighted player (all players equal)
                 const charts = new TournamentCharts();
-                charts.createRankProgressChart('tournament-rank-chart', tournament, null); // null = no highlighted player
+                charts.createRankProgressChart('tournament-rank-chart', tournament, null, tournamentEngine); // null = no highlighted player
                 console.log('✅ Created tournament overview rank progression chart');
             } catch (error) {
                 console.error('❌ Error creating tournament rank chart:', error);
