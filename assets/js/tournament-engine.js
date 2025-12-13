@@ -63,6 +63,81 @@ class TournamentEngine {
         });
     }
 
+    /**
+     * Parse full CSV text into rows, correctly handling:
+     * - quoted commas
+     * - quoted newlines
+     * - escaped quotes ("")
+     * This avoids bugs where splitting on "\n" corrupts fields like Inconsistency.
+     * @param {string} csvText
+     * @returns {Array<Array<string>>}
+     */
+    parseCSVRows(csvText) {
+        if (typeof csvText !== 'string') {
+            return [];
+        }
+
+        const rows = [];
+        let row = [];
+        let field = '';
+        let inQuotes = false;
+
+        for (let i = 0; i < csvText.length; i++) {
+            const char = csvText[i];
+
+            if (inQuotes) {
+                if (char === '"') {
+                    // Escaped quote
+                    if (csvText[i + 1] === '"') {
+                        field += '"';
+                        i++;
+                    } else {
+                        inQuotes = false;
+                    }
+                } else {
+                    field += char;
+                }
+                continue;
+            }
+
+            if (char === '"') {
+                inQuotes = true;
+                continue;
+            }
+
+            if (char === ',') {
+                row.push(field.trim());
+                field = '';
+                continue;
+            }
+
+            if (char === '\r') {
+                continue;
+            }
+
+            if (char === '\n') {
+                row.push(field.trim());
+                field = '';
+                // Skip completely empty trailing rows
+                if (!(row.length === 1 && row[0] === '')) {
+                    rows.push(row);
+                }
+                row = [];
+                continue;
+            }
+
+            field += char;
+        }
+
+        // Flush last field/row
+        row.push(field.trim());
+        if (!(row.length === 1 && row[0] === '')) {
+            rows.push(row);
+        }
+
+        return rows;
+    }
+
     normalizeHeaderName(header) {
         if (typeof header !== 'string') {
             return '';
@@ -903,67 +978,34 @@ class TournamentEngine {
      * Process tournament CSV data with new structure
      */
     async processTournamentCSV(csvData, sheetName) {
-        const lines = csvData.trim().split('\n');
-        
-        console.log(`🔍 DEBUG: Processing ${sheetName}:`);
-        console.log(`  Total lines: ${lines.length}`);
-        console.log(`  First 3 lines:`, lines.slice(0, 3));
-        
-        if (lines.length <= 1) {
-            console.log(`⚠️  ${sheetName} has no data rows (only ${lines.length} lines)`);
+        const rows = this.parseCSVRows(csvData);
+        if (rows.length <= 1) {
             return 0;
         }
-        
-        const headers = this.parseCSVLine(lines[0]).map(h => {
-            let trimmed = (h || '').trim();
-            // Remove surrounding quotes if present (parseCSVLine already handles most cases)
-            if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-                trimmed = trimmed.slice(1, -1);
-            }
-            return trimmed;
-        });
-        
-        console.log(`📋 Processing tournament CSV with headers: ${headers.join(', ')}`);
+
+        const headers = rows[0].map(h => this.normalizeHeaderName(h));
         
         let validScorecards = 0;
         let errors = [];
         let emptyRows = 0;
         
-        for (let i = 1; i < lines.length; i++) {
-            const rawLine = lines[i];
-            const values = rawLine.split(',').map(v => {
-                let trimmed = v.trim();
-                // Remove surrounding quotes if present
-                if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-                    trimmed = trimmed.slice(1, -1);
-                }
-                return trimmed;
-            });
-            const parsedValues = this.parseCSVLine(rawLine);
-        const scorecard = { SourceSheet: sheetName };
+        for (let i = 1; i < rows.length; i++) {
+            const parsedValues = rows[i];
+            const scorecard = { SourceSheet: sheetName };
             
             headers.forEach((header, index) => {
-                let headerName = header;
-            if (headerName) {
-                if (headerName.startsWith('"') && headerName.endsWith('"')) {
-                    headerName = headerName.slice(1, -1);
+                const headerName = this.normalizeHeaderName(header);
+                if (!headerName) {
+                    return;
                 }
-                headerName = headerName.trim();
-            }
-            if (!headerName) {
-                return;
-            }
-            scorecard[headerName] = parsedValues[index] !== undefined ? parsedValues[index] : '';
+                scorecard[headerName] = parsedValues[index] !== undefined ? parsedValues[index] : '';
             });
             
             // Skip empty rows (now that quotes are removed)
             if (!scorecard.Id) {
                 emptyRows++;
-                console.log(`🔍 DEBUG: Skipping empty row ${i + 1}:`, scorecard);
                 continue;
             }
-            
-            console.log(`🔍 DEBUG: Processing row ${i + 1}:`, scorecard);
             
             try {
                 if (!this.applyTournamentMetadata(scorecard, sheetName, i + 1)) {
@@ -999,26 +1041,16 @@ class TournamentEngine {
                 if (this.validateTournamentScorecard(scorecard, i + 1, sheetName)) {
                     this.rawScorecards.push(scorecard);
                     validScorecards++;
-                    console.log(`✅ Valid scorecard from row ${i + 1}`);
                 }
             } catch (error) {
-                console.log(`❌ Validation error on row ${i + 1}:`, error.message, scorecard);
                 errors.push(`Row ${i + 1}: ${error.message}`);
             }
         }
         
-        console.log(`📊 ${sheetName} summary:`);
-        console.log(`  - Total data rows: ${lines.length - 1}`);
-        console.log(`  - Empty rows skipped: ${emptyRows}`);
-        console.log(`  - Valid scorecards: ${validScorecards}`);
-        console.log(`  - Validation errors: ${errors.length}`);
-        
         if (errors.length > 0) {
             console.warn(`⚠️  Validation errors in ${sheetName}:`, errors);
-            // Don't throw error, just log warnings to see what's happening
         }
         
-        console.log(`✅ Processed ${validScorecards} valid scorecards from ${sheetName}`);
         return validScorecards;
     }
 
@@ -1064,20 +1096,12 @@ class TournamentEngine {
      * Expected headers: Id, Date, Tournament, Year, Round, Trump_Suit, Table, Player, Tricks_Won
      */
     async processScorecardsCSV(csvData, sheetName) {
-        const lines = csvData.trim().split('\n');
-        
-        console.log(`🔍 DEBUG: Processing individual scorecards ${sheetName}:`);
-        console.log(`  Total lines: ${lines.length}`);
-        console.log(`  First 3 lines:`, lines.slice(0, 3));
-        
-        if (lines.length <= 1) {
-            console.log(`⚠️  ${sheetName} has no data rows (only ${lines.length} lines)`);
+        const rows = this.parseCSVRows(csvData);
+        if (rows.length <= 1) {
             return 0;
         }
-        
-        const headers = this.parseCSVLine(lines[0]).map(h => this.normalizeHeaderName(h));
-        
-        console.log(`📊 Headers found: ${headers.join(', ')}`);
+
+        const headers = rows[0].map(h => this.normalizeHeaderName(h));
         
         const requiredHeaders = ['Id', 'Round', 'Trump_Suit', 'Table', 'Player', 'Tricks_Won'];
         const missingHeaders = requiredHeaders.filter(header => !headers.includes(header));
@@ -1093,20 +1117,17 @@ class TournamentEngine {
         let emptyRows = 0;
         const errors = [];
         
-        for (let i = 1; i < lines.length; i++) {
-            const line = lines[i];
-            const trimmedLine = (line || '').trim();
-            if (!trimmedLine) {
+        for (let i = 1; i < rows.length; i++) {
+            const parsedValues = rows[i];
+            const hasAnyValue = Array.isArray(parsedValues) && parsedValues.some(v => (v || '').toString().trim() !== '');
+            if (!hasAnyValue) {
                 emptyRows++;
                 continue;
             }
             
             try {
-                const rawValues = trimmedLine.split(',').map(v => v.replace(/^"|"$/g, '').trim());
-                const parsedValues = this.parseCSVLine(trimmedLine);
-                // Use parsed values for actual mapping (handles commas inside quotes)
                 if (parsedValues.length < headers.length) {
-                    errors.push(`Row ${i + 1}: Expected at least ${headers.length} values, got ${rawValues.length}`);
+                    errors.push(`Row ${i + 1}: Expected at least ${headers.length} values, got ${parsedValues.length}`);
                     continue;
                 }
                 
@@ -1668,6 +1689,36 @@ class TournamentEngine {
             const tableImbalanceOK = tableGroup.some(r =>
                 String(r?.Imbalance_OK ?? '').trim().toUpperCase() === 'YES'
             );
+
+            // Capture inconsistency notes at two levels:
+            // - per-player: show only to the player whose row contained the note (scorecard view)
+            // - table-level: useful for validation/reporting
+            const tableInconsistencyNotes = tableGroup
+                .map(r => (r?.Inconsistency || r?.inconsistency || r?.INCONSISTENCY || '').toString().trim())
+                .filter(Boolean);
+            const tableInconsistency = Array.from(new Set(tableInconsistencyNotes)).join(' | ');
+
+            const inconsistencyByPlayer = {};
+            for (const row of tableGroup) {
+                const note = (row?.Inconsistency || row?.inconsistency || row?.INCONSISTENCY || '').toString().trim();
+                if (!note) {
+                    continue;
+                }
+
+                const rawPlayer = (row?.Player || '').toString();
+                const parts = rawPlayer.split(/[\/+&]/).map(p => p.trim()).filter(Boolean);
+                const ids = (parts.length > 0 ? parts : [rawPlayer.trim()])
+                    .map(p => this.getCanonicalPlayerId(p))
+                    .filter(Boolean);
+
+                for (const id of ids) {
+                    if (!inconsistencyByPlayer[id]) {
+                        inconsistencyByPlayer[id] = note;
+                    } else if (!inconsistencyByPlayer[id].includes(note)) {
+                        inconsistencyByPlayer[id] = `${inconsistencyByPlayer[id]} | ${note}`;
+                    }
+                }
+            }
             
             const p1Tricks = partnership1[0].Tricks_Won;
             const p2Tricks = partnership2[0].Tricks_Won;
@@ -1708,7 +1759,8 @@ class TournamentEngine {
                     SourceSheet: baseData.SourceSheet || baseData.Source || 'Scorecards',
                     Tie_Break: baseData.Tie_Break !== undefined ? baseData.Tie_Break : null,
                     Imbalance_OK: tableImbalanceOK ? 'YES' : (baseData.Imbalance_OK || ''),
-                    Inconsistency: baseData.Inconsistency || ''
+                    Inconsistency: tableInconsistency,
+                    InconsistencyByPlayer: inconsistencyByPlayer
             };
             
             // Debug: Log first few created scorecards
@@ -2493,7 +2545,8 @@ class TournamentEngine {
                 const partnershipB_pos1 = o1Parsed.players.map(name => this.getCanonicalPlayerId(name)).sort();
                 const partnershipB_pos2 = o2Parsed.players.map(name => this.getCanonicalPlayerId(name)).sort();
 
-                const inconsistencyNote = card.Inconsistency || '';
+                const inconsistencyNote = (card.Inconsistency || card.inconsistency || '').toString().trim();
+                const inconsistencyByPlayer = card.InconsistencyByPlayer || card.inconsistencyByPlayer || null;
 
                 // Partnership A: 2 positions
                 partnerships.push({
@@ -2501,7 +2554,8 @@ class TournamentEngine {
                     position2: partnershipA_pos2,  // Array of canonical IDs
                     tricks: tricksWon,
                     trump_suit: trumpSuit,
-                    inconsistency: inconsistencyNote
+                    inconsistency: inconsistencyNote,
+                    inconsistencyByPlayer: inconsistencyByPlayer
                 });
 
                 // Partnership B: 2 positions
@@ -2510,7 +2564,8 @@ class TournamentEngine {
                     position2: partnershipB_pos2,  // Array of canonical IDs
                     tricks: opponentTricks,
                     trump_suit: trumpSuit,
-                    inconsistency: inconsistencyNote
+                    inconsistency: inconsistencyNote,
+                    inconsistencyByPlayer: inconsistencyByPlayer
                 });
             }
             

@@ -155,7 +155,7 @@
 
     <!-- Load Chart.js first -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-            <script src="../assets/js/tournament-engine.js?v=60"></script>
+            <script src="../assets/js/tournament-engine.js?v=64"></script>
             <script src="../assets/js/charts.js?v=20"></script>
     <script src="../assets/js/photo-gallery.js"></script>
 </body>
@@ -627,6 +627,32 @@
 
             // Check if searching for a shared hand (support '/', '+', '&')
             const isSharedHandSearch = /[\/+&]/.test(playerName);
+            const getInconsistencyForViewer = (partnership) => {
+                const mapping = partnership && (partnership.inconsistencyByPlayer || partnership.inconsistency_by_player);
+                if (!mapping) {
+                    // Fallback for WhistGame_* sheets where inconsistency applies to the game
+                    return (partnership && (partnership.inconsistency || partnership.Inconsistency) ? (partnership.inconsistency || partnership.Inconsistency) : '').toString().trim();
+                }
+
+                const ids = isSharedHandSearch
+                    ? playerName.split(/[\/+&]/).map(n => engine.getCanonicalPlayerId(n.trim())).filter(Boolean)
+                    : [engine.getCanonicalPlayerId(playerName)].filter(Boolean);
+
+                const notes = [];
+                for (const id of ids) {
+                    const target = id.toLowerCase();
+                    for (const key of Object.keys(mapping)) {
+                        if (key.toLowerCase() === target) {
+                            const note = (mapping[key] || '').toString().trim();
+                            if (note) {
+                                notes.push(note);
+                            }
+                        }
+                    }
+                }
+
+                return Array.from(new Set(notes)).join(' | ');
+            };
 
             for (const round of tournament.rounds) {
                 let foundInRound = false;
@@ -773,7 +799,7 @@
                                 totalTricks: totalTricks,
                                 isDataError: isDataError,
                                 won: partnership.tricks > 6,
-                                inconsistency: partnership.inconsistency || ''
+                                inconsistency: getInconsistencyForViewer(partnership)
                             });
                             foundInRound = true;
                             break;
@@ -792,6 +818,19 @@
 
         function generateScorecardTable(playerRounds) {
             const tbody = document.getElementById('scorecard-body');
+
+            const escapeHtmlAttribute = (value) => {
+                if (value === null || value === undefined) {
+                    return '';
+                }
+                return value
+                    .toString()
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            };
             
             const html = playerRounds.map(round => {
                 const resultClass = round.won ? 'result-win' : 'result-loss';
@@ -804,17 +843,20 @@
 
                 // Add data error highlighting
                 let rowClass = round.isDataError ? 'round-row data-error' : 'round-row';
-                let rowAttributes = '';
                 if (round.inconsistency) {
                     rowClass += ' data-inconsistency';
-                    const tooltip = round.inconsistency.replace(/"/g, '&quot;');
-                    rowAttributes = ` data-inconsistency="${tooltip}" title="${tooltip}"`;
                 }
                 const errorWarning = round.isDataError ? 
                     `<span class="data-error-icon" title="Data error: Total tricks = ${round.totalTricks} (should be 13)">⚠️</span>` : '';
 
+                // Inconsistency tooltip: Safari doesn't reliably show title tooltips on <tr>, so attach to a <span>.
+                const inconsistencyTooltip = round.inconsistency ? escapeHtmlAttribute(round.inconsistency) : '';
+                const inconsistencyIndicator = round.inconsistency
+                    ? `<span class="inconsistency-indicator" data-tooltip="${inconsistencyTooltip}" tabindex="0" aria-label="Inconsistency comment">💬</span>`
+                    : '';
+
                 return `
-                    <tr class="${rowClass} ${resultClass}"${rowAttributes}>
+                    <tr class="${rowClass} ${resultClass}">
                         <td class="round-number">${round.round}${errorWarning}</td>
                         <td class="trump-suit">
                             <span class="trump-symbol ${round.trump.toLowerCase()}">${trumpSymbol}</span>
@@ -830,7 +872,12 @@
                                     : 'Unknown')
                             }
                         </td>
-                        <td class="${ourTricksClass}">${round.tricks}</td>
+                        <td class="${ourTricksClass}">
+                            <span class="tricks-cell-content">
+                                ${inconsistencyIndicator}
+                                <span class="tricks-value">${round.tricks}</span>
+                            </span>
+                        </td>
                         <td class="${theirTricksClass}">${round.opponentTricks}</td>
                         <td class="opponents-names">
                             ${Array.isArray(round.opponentGroups) && round.opponentGroups.length > 0
@@ -848,6 +895,38 @@
             }).join('');
 
             tbody.innerHTML = html;
+
+            // Click-to-toggle tooltip (useful on touch devices / when hover tooltips are disabled).
+            if (tbody && !tbody.dataset.inconsistencyTooltipInit) {
+                tbody.dataset.inconsistencyTooltipInit = 'true';
+
+                const closeAllTooltips = () => {
+                    tbody.querySelectorAll('.inconsistency-indicator.tooltip-open')
+                        .forEach(el => el.classList.remove('tooltip-open'));
+                };
+
+                tbody.addEventListener('click', (e) => {
+                    const indicator = e.target && e.target.closest ? e.target.closest('.inconsistency-indicator') : null;
+                    if (!indicator) {
+                        closeAllTooltips();
+                        return;
+                    }
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const isOpen = indicator.classList.contains('tooltip-open');
+                    closeAllTooltips();
+                    if (!isOpen) {
+                        indicator.classList.add('tooltip-open');
+                    }
+                });
+
+                document.addEventListener('click', () => closeAllTooltips());
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        closeAllTooltips();
+                    }
+                });
+            }
             
             // Show summary if there are data errors
             const errorCount = playerRounds.filter(round => round.isDataError).length;
@@ -1380,6 +1459,80 @@
 
         .round-row.data-inconsistency:hover {
             background-color: rgba(249, 115, 22, 0.08);
+        }
+
+        .tricks-cell-content {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+            width: 100%;
+        }
+
+        .tricks-value {
+            display: inline-block;
+        }
+
+        .inconsistency-indicator {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            line-height: 1;
+            color: #f97316;
+            cursor: help;
+            vertical-align: middle;
+            position: relative;
+            outline: none;
+        }
+
+        /* Tooltip bubble */
+        .inconsistency-indicator::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 10px);
+            transform: translateX(-50%);
+            background: rgba(17, 24, 39, 0.96);
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            line-height: 1.25;
+            text-align: left;
+            white-space: pre-wrap;
+            max-width: 360px;
+            min-width: 180px;
+            width: max-content;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .inconsistency-indicator::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 4px);
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: rgba(17, 24, 39, 0.96);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            z-index: 51;
+        }
+
+        .inconsistency-indicator:hover::after,
+        .inconsistency-indicator:hover::before,
+        .inconsistency-indicator:focus::after,
+        .inconsistency-indicator:focus::before,
+        .inconsistency-indicator.tooltip-open::after,
+        .inconsistency-indicator.tooltip-open::before {
+            opacity: 1;
+            visibility: visible;
         }
 
         /* Player name link styles for scorecard */
