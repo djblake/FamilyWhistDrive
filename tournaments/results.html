@@ -782,32 +782,138 @@
             }
         }
         
+        const TRICK_WARNING_STORAGE_KEY = 'whist_hide_trick_mismatch_warning';
+
+        function shouldDisplayTrickWarnings() {
+            if (typeof window !== 'undefined' && window.TournamentUIConfig && window.TournamentUIConfig.showTrickImbalanceWarnings === false) {
+                return false;
+            }
+            if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+                return true;
+            }
+            try {
+                return localStorage.getItem(TRICK_WARNING_STORAGE_KEY) !== 'true';
+            } catch (error) {
+                console.warn('Unable to read trick warning preference from localStorage:', error);
+                return true;
+            }
+        }
+
+        function summarizeTrickMismatchIssues(issues) {
+            const tableMap = new Map();
+            const roundSet = new Set();
+
+            issues.forEach(issue => {
+                const tournamentLabel = issue.tournament || issue.tournamentId || (issue.year ? `Year ${issue.year}` : 'Tournament');
+                const roundLabel = typeof issue.round === 'number' ? issue.round : 'Unknown';
+                const tableLabel = typeof issue.table === 'number' ? issue.table : 'Unknown';
+                const roundKey = `${tournamentLabel}::${roundLabel}`;
+                const tableKey = `${roundKey}::${tableLabel}`;
+
+                roundSet.add(roundKey);
+                if (!tableMap.has(tableKey)) {
+                    tableMap.set(tableKey, {
+                        tournament: tournamentLabel,
+                        round: roundLabel,
+                        table: tableLabel,
+                        total: Number.isFinite(issue.actual) ? issue.actual : issue.actual || 'Unknown'
+                    });
+                }
+            });
+
+            return {
+                totalRounds: roundSet.size,
+                totalTables: tableMap.size,
+                samples: Array.from(tableMap.values())
+            };
+        }
+
+        function attachTrickWarningDismissHandler(banner) {
+            const dismissButton = banner.querySelector('[data-dismiss-trick-warning]');
+            if (!dismissButton) {
+                return;
+            }
+
+            dismissButton.addEventListener('click', () => {
+                try {
+                    localStorage.setItem(TRICK_WARNING_STORAGE_KEY, 'true');
+                } catch (error) {
+                    console.warn('Unable to persist trick warning preference:', error);
+                }
+
+                const warningBlock = banner.querySelector('.data-issues-banner__warning');
+                if (warningBlock) {
+                    warningBlock.remove();
+                }
+
+                const hasErrors = banner.querySelector('.data-issues-banner__errors');
+                if (!hasErrors) {
+                    banner.style.display = 'none';
+                    banner.innerHTML = '';
+                }
+            }, { once: true });
+        }
+
         function renderDataIssuesBanner(dataIssuesSummary) {
             const banner = document.getElementById('data-issues-banner');
             if (!banner || !dataIssuesSummary || !Array.isArray(dataIssuesSummary.issues)) {
                 return;
             }
             
-            const errorIssues = dataIssuesSummary.issues.filter(issue => issue.severity === 'error');
-            if (errorIssues.length === 0) {
+            const issues = dataIssuesSummary.issues;
+            const errorIssues = issues.filter(issue => issue.severity === 'error');
+            const trickWarnings = shouldDisplayTrickWarnings()
+                ? issues.filter(issue => issue.type === 'trick_count_mismatch')
+                : [];
+            
+            if (errorIssues.length === 0 && trickWarnings.length === 0) {
                 banner.style.display = 'none';
                 banner.innerHTML = '';
                 return;
             }
             
-            const issueList = errorIssues.map(issue => {
-                const location = issue.sheet ? `${issue.sheet}${issue.row ? ` (Row ${issue.row})` : ''}` : '';
-                const message = issue.message || issue.details || 'An unknown parsing error occurred.';
-                return `<li>${location ? `<strong>${location}:</strong> ` : ''}${message}</li>`;
-            }).join('');
+            let bannerSections = '';
             
-            banner.innerHTML = `
-                <div class="data-issues-banner__content">
-                    <strong>Data Import Errors Detected</strong>
-                    <ul>${issueList}</ul>
-                </div>
-            `;
+            if (errorIssues.length > 0) {
+                const issueList = errorIssues.map(issue => {
+                    const location = issue.sheet ? `${issue.sheet}${issue.row ? ` (Row ${issue.row})` : ''}` : '';
+                    const message = issue.message || issue.details || 'An unknown parsing error occurred.';
+                    return `<li>${location ? `<strong>${location}:</strong> ` : ''}${message}</li>`;
+                }).join('');
+                
+                bannerSections += `
+                    <div class="data-issues-banner__errors">
+                        <strong>Data Import Errors Detected</strong>
+                        <ul>${issueList}</ul>
+                    </div>
+                `;
+            }
+            
+            if (trickWarnings.length > 0) {
+                const summary = summarizeTrickMismatchIssues(trickWarnings);
+                const warningItems = summary.samples.slice(0, 3).map(entry => {
+                    return `<li>${entry.tournament} · Round ${entry.round}, Table ${entry.table} (reported total: ${entry.total})</li>`;
+                }).join('');
+                
+                bannerSections += `
+                    <div class="data-issues-banner__warning">
+                        <div class="data-issues-banner__warning-header">
+                            <strong>Trick totals look unbalanced</strong>
+                            <span class="data-issues-banner__pill">${summary.totalTables} table${summary.totalTables === 1 ? '' : 's'}</span>
+                            <span class="data-issues-banner__pill">${summary.totalRounds} round${summary.totalRounds === 1 ? '' : 's'}</span>
+                        </div>
+                        <p>Each table should total 13 tricks. Historical data currently shows ${summary.totalTables} table${summary.totalTables === 1 ? '' : 's'} across ${summary.totalRounds} round${summary.totalRounds === 1 ? '' : 's'} where the totals differ.</p>
+                        ${warningItems ? `<ul class="data-issues-banner__warning-list">${warningItems}</ul>` : ''}
+                        <button type="button" class="data-issues-banner__dismiss" data-dismiss-trick-warning>
+                            Hide trick mismatch warning
+                        </button>
+                    </div>
+                `;
+            }
+            
+            banner.innerHTML = `<div class="data-issues-banner__content">${bannerSections}</div>`;
             banner.style.display = 'block';
+            attachTrickWarningDismissHandler(banner);
         }
         
         function validateTournamentStructure(tournament) {
@@ -1255,7 +1361,57 @@
             padding: 0;
         }
 
+        .data-issues-banner__errors + .data-issues-banner__warning {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(124, 45, 18, 0.25);
+        }
 
+        .data-issues-banner__warning {
+            color: #7f1d1d;
+        }
+
+        .data-issues-banner__warning-header {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 0.35rem;
+        }
+
+        .data-issues-banner__pill {
+            background: rgba(127, 29, 29, 0.1);
+            border: 1px solid rgba(127, 29, 29, 0.3);
+            border-radius: 999px;
+            padding: 0.1rem 0.75rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .data-issues-banner__warning-list {
+            margin: 0.35rem 0 0.35rem 1.25rem;
+            padding-left: 0;
+        }
+
+        .data-issues-banner__warning-list li {
+            margin-bottom: 0.25rem;
+        }
+
+        .data-issues-banner__dismiss {
+            background: rgba(185, 28, 28, 0.1);
+            border: 1px solid rgba(185, 28, 28, 0.4);
+            border-radius: 999px;
+            color: inherit;
+            padding: 0.35rem 0.9rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        .data-issues-banner__dismiss:hover {
+            background: rgba(185, 28, 28, 0.2);
+            transform: translateY(-1px);
+        }
 
         @media (max-width: 768px) {
             .rankings-table {

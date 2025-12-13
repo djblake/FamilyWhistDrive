@@ -74,6 +74,17 @@ class TournamentEngine {
     }
 
     /**
+     * Safely convert incoming values to integers
+     */
+    parseNumericValue(value) {
+        if (value === null || typeof value === 'undefined') {
+            return null;
+        }
+        const parsed = parseInt(value, 10);
+        return Number.isNaN(parsed) ? null : parsed;
+    }
+
+    /**
      * Generate the official 20-player tournament schedule
      * Based on devenezia.com Whist algorithm
      */
@@ -174,7 +185,7 @@ class TournamentEngine {
                     sheetNames.push(sheetName);
                 }
             }
-            
+
             return sheetNames;
         } catch (error) {
             console.error('❌ Error reading Index sheet:', error);
@@ -203,6 +214,9 @@ class TournamentEngine {
             // Read the Index sheet to get list of sheets to process
             const indexSheetNames = await this.readIndexSheet(sheetId);
             console.log(`📋 Index sheet contains ${indexSheetNames.length} sheets:`, indexSheetNames);
+
+            // Using Index tab only (no auto-discovery)
+            const mergedSheetNames = indexSheetNames.filter(name => name && name !== 'Index');
             
             // Categorize sheets based on their names (no need to fetch metadata)
             let playersSheet = null;
@@ -210,7 +224,7 @@ class TournamentEngine {
             const tournamentSheets = [];
             const scorecardsSheets = [];
             
-            for (const sheetName of indexSheetNames) {
+            for (const sheetName of mergedSheetNames) {
                 // Create sheet object with name (GID will be resolved when needed)
                 const sheet = { name: sheetName };
                 
@@ -226,6 +240,7 @@ class TournamentEngine {
                     console.warn(`⚠️  Unknown sheet type for: ${sheetName}`);
                 }
             }
+
             
             // Load tournament metadata first (always attempt Tournaments sheet by name)
             if (!tournamentsSheet) {
@@ -264,6 +279,7 @@ class TournamentEngine {
                 const count = await this.loadScorecardsSheet(sheetId, sheet, sheet.name);
                 totalScorecards += count;
             }
+
             
             console.log(`✅ Successfully loaded ${totalScorecards} scorecards from ${tournamentSheets.length} tournaments and ${scorecardsSheets.length} individual scorecards sheets`);
             
@@ -898,9 +914,9 @@ class TournamentEngine {
             return 0;
         }
         
-        const headers = lines[0].split(',').map(h => {
-            let trimmed = h.trim();
-            // Remove surrounding quotes if present
+        const headers = this.parseCSVLine(lines[0]).map(h => {
+            let trimmed = (h || '').trim();
+            // Remove surrounding quotes if present (parseCSVLine already handles most cases)
             if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
                 trimmed = trimmed.slice(1, -1);
             }
@@ -914,7 +930,8 @@ class TournamentEngine {
         let emptyRows = 0;
         
         for (let i = 1; i < lines.length; i++) {
-            const values = lines[i].split(',').map(v => {
+            const rawLine = lines[i];
+            const values = rawLine.split(',').map(v => {
                 let trimmed = v.trim();
                 // Remove surrounding quotes if present
                 if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
@@ -922,6 +939,7 @@ class TournamentEngine {
                 }
                 return trimmed;
             });
+            const parsedValues = this.parseCSVLine(rawLine);
         const scorecard = { SourceSheet: sheetName };
             
             headers.forEach((header, index) => {
@@ -935,7 +953,7 @@ class TournamentEngine {
             if (!headerName) {
                 return;
             }
-            scorecard[headerName] = values[index] !== undefined ? values[index] : '';
+            scorecard[headerName] = parsedValues[index] !== undefined ? parsedValues[index] : '';
             });
             
             // Skip empty rows (now that quotes are removed)
@@ -1057,7 +1075,7 @@ class TournamentEngine {
             return 0;
         }
         
-        const headers = lines[0].split(',').map(h => this.normalizeHeaderName(h));
+        const headers = this.parseCSVLine(lines[0]).map(h => this.normalizeHeaderName(h));
         
         console.log(`📊 Headers found: ${headers.join(', ')}`);
         
@@ -1076,15 +1094,18 @@ class TournamentEngine {
         const errors = [];
         
         for (let i = 1; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (!line) {
+            const line = lines[i];
+            const trimmedLine = (line || '').trim();
+            if (!trimmedLine) {
                 emptyRows++;
                 continue;
             }
             
             try {
-                const rawValues = line.split(',').map(v => v.replace(/^"|"$/g, '').trim());
-                if (rawValues.length < headers.length) {
+                const rawValues = trimmedLine.split(',').map(v => v.replace(/^"|"$/g, '').trim());
+                const parsedValues = this.parseCSVLine(trimmedLine);
+                // Use parsed values for actual mapping (handles commas inside quotes)
+                if (parsedValues.length < headers.length) {
                     errors.push(`Row ${i + 1}: Expected at least ${headers.length} values, got ${rawValues.length}`);
                     continue;
                 }
@@ -1093,8 +1114,9 @@ class TournamentEngine {
                 headers.forEach((header, index) => {
                     const key = this.normalizeHeaderName(header);
                     if (!key) return;
-                    scorecard[key] = rawValues[index] !== undefined ? rawValues[index] : '';
+                    scorecard[key] = parsedValues[index] !== undefined ? parsedValues[index] : '';
                 });
+
 
                 if (scorecard.Tie_Break !== undefined && scorecard.Tie_Break !== '') {
                     const tieBreakValue = parseFloat(scorecard.Tie_Break);
@@ -1170,6 +1192,7 @@ class TournamentEngine {
                 errors.push(`Row ${i + 1}: ${error.message}`);
             }
         }
+
         
         console.log(`🆔 Scorecard Id values for ${sheetName}:`, Array.from(scorecardIdsDebug));
         console.log(`📊 Parsed ${validRows} individual scorecard records from ${sheetName}`);
@@ -1195,6 +1218,7 @@ class TournamentEngine {
         }
         
         console.log(`✅ Reverse-engineered ${engineeredScorecards.length} tournament scorecards from ${sheetName}`);
+
         return engineeredScorecards.length;
     }
 
@@ -1639,6 +1663,11 @@ class TournamentEngine {
             const partnership1 = tableGroup.slice(0, 2);
             const partnership2 = tableGroup.slice(2, 4);
             const baseData = tableGroup[0];
+
+            // Propagate approval flag from any of the 4 individual rows
+            const tableImbalanceOK = tableGroup.some(r =>
+                String(r?.Imbalance_OK ?? '').trim().toUpperCase() === 'YES'
+            );
             
             const p1Tricks = partnership1[0].Tricks_Won;
             const p2Tricks = partnership2[0].Tricks_Won;
@@ -1678,6 +1707,7 @@ class TournamentEngine {
                 TournamentKey: baseData.TournamentId,
                     SourceSheet: baseData.SourceSheet || baseData.Source || 'Scorecards',
                     Tie_Break: baseData.Tie_Break !== undefined ? baseData.Tie_Break : null,
+                    Imbalance_OK: tableImbalanceOK ? 'YES' : (baseData.Imbalance_OK || ''),
                     Inconsistency: baseData.Inconsistency || ''
             };
             
@@ -1948,10 +1978,13 @@ class TournamentEngine {
         }
         
         // HISTORICAL DATA VALIDATION: Warn about trick count issues but don't block
-        if (tricks + opponentTricks !== 13) {
+        // Skip validation if Imbalance_OK is set to "YES"
+        const imbalanceOK = scorecard.Imbalance_OK && scorecard.Imbalance_OK.toString().toUpperCase() === 'YES';
+
+        if (tricks + opponentTricks !== 13 && !imbalanceOK) {
             const issueMessage = `Tricks don't add to 13! Tricks_Won (${tricks}) + Opponent_Tricks (${opponentTricks}) = ${tricks + opponentTricks}${rowInfo}`;
             console.warn(`⚠️  HISTORICAL DATA ISSUE: ${issueMessage}. This is preserved for historical accuracy.`);
-            
+
             // Track this issue
             this.dataIssues.push({
                 type: 'trick_count_mismatch',
@@ -1961,9 +1994,14 @@ class TournamentEngine {
                 sheet: sheetName,
                 expected: 13,
                 actual: tricks + opponentTricks,
-                gameId: scorecard.Id
+                gameId: scorecard.Id,
+                round: this.parseNumericValue(scorecard.Round),
+                table: this.parseNumericValue(scorecard.Table),
+                tournament: scorecard.Tournament || scorecard.TournamentId || null,
+                tournamentId: scorecard.TournamentId || null,
+                year: this.parseNumericValue(scorecard.Year)
             });
-            
+
             // Mark this scorecard as having a data issue for tracking
             scorecard.hasDataIssue = true;
             scorecard.dataIssue = `Tricks total ${tricks + opponentTricks} instead of 13`;
@@ -2041,10 +2079,13 @@ class TournamentEngine {
         }
         
         // HISTORICAL DATA VALIDATION: Warn about trick count issues but don't block
-        if (tricks + opponentTricks !== 13) {
+        // Skip validation if Imbalance_OK is set to "YES"
+        const imbalanceOK = scorecard.Imbalance_OK && scorecard.Imbalance_OK.toString().toUpperCase() === 'YES';
+
+        if (tricks + opponentTricks !== 13 && !imbalanceOK) {
             const issueMessage = `Tricks don't add to 13! Tricks_Won (${tricks}) + Opponent_Tricks (${opponentTricks}) = ${tricks + opponentTricks}`;
             console.warn(`⚠️  HISTORICAL DATA ISSUE: ${issueMessage}. This is preserved for historical accuracy.`, scorecard);
-            
+
             // Track this issue (legacy data doesn't have row/sheet info)
             this.dataIssues.push({
                 type: 'trick_count_mismatch',
@@ -2052,9 +2093,14 @@ class TournamentEngine {
                 message: issueMessage,
                 expected: 13,
                 actual: tricks + opponentTricks,
-                scorecard: scorecard
+                scorecard: scorecard,
+                round: this.parseNumericValue(scorecard.Round),
+                table: this.parseNumericValue(scorecard.Table),
+                tournament: scorecard.Tournament || null,
+                tournamentId: scorecard.TournamentId || null,
+                year: this.parseNumericValue(scorecard.Year)
             });
-            
+
             // Mark this scorecard as having a data issue for tracking
             scorecard.hasDataIssue = true;
             scorecard.dataIssue = `Tricks total ${tricks + opponentTricks} instead of 13`;
@@ -2156,6 +2202,61 @@ class TournamentEngine {
                 acc[issue.type] = (acc[issue.type] || 0) + 1;
                 return acc;
             }, {})
+        };
+    }
+
+    /**
+     * Summarise trick imbalance issues (Tricks_Won + Opponent_Tricks !== 13)
+     * @param {Object} filter - Optional filters (year, tournamentId)
+     */
+    getTrickImbalanceSummary(filter = {}) {
+        const trickIssues = this.dataIssues.filter(issue => issue.type === 'trick_count_mismatch');
+        if (trickIssues.length === 0) {
+            return {
+                totalIssues: 0,
+                totalTables: 0,
+                totalRounds: 0,
+                details: []
+            };
+        }
+
+        const { year, tournamentId } = filter;
+        const filtered = trickIssues.filter(issue => {
+            if (tournamentId && issue.tournamentId && issue.tournamentId !== tournamentId) {
+                return false;
+            }
+            if (year && issue.year && issue.year !== year) {
+                return false;
+            }
+            return true;
+        });
+
+        const tableMap = new Map();
+        const roundSet = new Set();
+        filtered.forEach(issue => {
+            const roundLabel = typeof issue.round === 'number' ? issue.round : 'Unknown';
+            const tableLabel = typeof issue.table === 'number' ? issue.table : 'Unknown';
+            const tournamentLabel = issue.tournament || issue.tournamentId || (issue.year ? `Year ${issue.year}` : 'Tournament');
+            const roundKey = `${tournamentLabel}::${roundLabel}`;
+            const tableKey = `${roundKey}::${tableLabel}`;
+
+            roundSet.add(roundKey);
+            if (!tableMap.has(tableKey)) {
+                tableMap.set(tableKey, {
+                    tournament: tournamentLabel,
+                    round: roundLabel,
+                    table: tableLabel,
+                    total: issue.actual,
+                    message: issue.message
+                });
+            }
+        });
+
+        return {
+            totalIssues: filtered.length,
+            totalTables: tableMap.size,
+            totalRounds: roundSet.size,
+            details: Array.from(tableMap.values())
         };
     }
 

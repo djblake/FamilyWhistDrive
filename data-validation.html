@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Validation Report - Trick Imbalances</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <style>
+        .validation-report {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 2rem;
+        }
+
+        .summary-card {
+            background: white;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stat-box {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #dc3545;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .validation-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-top: 1rem;
+        }
+
+        .validation-table th {
+            background: #333;
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .validation-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #dee2e6;
+            color: #1a1a1a; /* override global light text so table text is visible on white background */
+        }
+
+        .validation-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .error-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .error-critical {
+            background: #dc3545;
+            color: white;
+        }
+
+        .error-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .filter-controls {
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-controls label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-controls select,
+        .filter-controls input {
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            font-size: 1.2rem;
+            color: #666;
+        }
+
+        .no-issues {
+            text-align: center;
+            padding: 3rem;
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            color: #155724;
+            font-size: 1.2rem;
+        }
+
+        .imbalance-ok {
+            background: #d4edda;
+            color: #155724;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .tournament-link {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .tournament-link:hover {
+            text-decoration: underline;
+        }
+
+        .export-button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .export-button:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="validation-report">
+        <h1>🔍 Data Validation Report: Trick Imbalances</h1>
+
+        <div id="loading" class="loading">
+            Loading tournament data and analyzing trick counts...
+        </div>
+
+        <div id="reportContent" style="display: none;">
+            <div class="summary-card">
+                <h2>Summary</h2>
+                <div class="summary-stats">
+                    <div class="stat-box">
+                        <div class="stat-number" id="totalGames">0</div>
+                        <div class="stat-label">Total Games Analyzed</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="imbalancedGames">0</div>
+                        <div class="stat-label">Games with Imbalances</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="approvedImbalances">0</div>
+                        <div class="stat-label">Approved Imbalances (Imbalance_OK=YES)</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="unapprovedImbalances">0</div>
+                        <div class="stat-label">Unapproved Imbalances</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="affectedTournaments">0</div>
+                        <div class="stat-label">Affected Tournaments</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-controls">
+                <label>
+                    <span>Google Sheet ID:</span>
+                    <input id="sheetIdInput" type="text" style="min-width: 420px;" placeholder="Google Sheet ID">
+                </label>
+                <button class="export-button" style="background:#007bff;" onclick="reloadWithSheetId()">Reload</button>
+                <label>
+                    <span>Filter by Tournament:</span>
+                    <select id="tournamentFilter">
+                        <option value="">All Tournaments</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Filter by Year:</span>
+                    <select id="yearFilter">
+                        <option value="">All Years</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Show:</span>
+                    <select id="statusFilter">
+                        <option value="all">All Imbalances</option>
+                        <option value="unapproved">Unapproved Only</option>
+                        <option value="approved">Approved Only</option>
+                    </select>
+                </label>
+                <button class="export-button" onclick="exportToCSV()">Export to CSV</button>
+            </div>
+
+            <div class="summary-card" style="margin-top: 1rem;">
+                <h3 style="margin-top: 0;">Coverage</h3>
+                <div id="coverageSummary" style="color:#333;"></div>
+            </div>
+
+            <div id="noIssues" class="no-issues" style="display: none;">
+                ✅ Excellent! No trick imbalances found in the data.
+            </div>
+
+            <div id="tableContainer" style="display: none;">
+                <table class="validation-table">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Tournament</th>
+                            <th>Year</th>
+                            <th>Round</th>
+                            <th>Table</th>
+                            <th>Partnership 1</th>
+                            <th>Tricks Won</th>
+                            <th>Partnership 2</th>
+                            <th>Opponent Tricks</th>
+                            <th>Total</th>
+                            <th>Difference</th>
+                            <th>Game ID</th>
+                            <th>Inconsistency</th>
+                        </tr>
+                    </thead>
+                    <tbody id="issuesTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <!-- Cache-bust to ensure we pick up CSV parsing fixes (quoted commas in Inconsistency, etc.) -->
+    <script src="assets/js/tournament-engine.js?v=csvfix1"></script>
+    <script>
+        let tournamentEngine = new TournamentEngine();
+        let allIssues = [];
+        let filteredIssues = [];
+
+        async function loadAndAnalyzeData() {
+            try {
+                console.log('Starting data load...');
+
+                // Use the sheet ID that has an Index sheet (override via ?sheetId=... or localStorage key `whist_sheet_id`)
+                const DEFAULT_SHEET_ID = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+                const urlSheetId = new URLSearchParams(window.location.search).get('sheetId');
+                const storedSheetId = window.localStorage ? window.localStorage.getItem('whist_sheet_id') : null;
+                const SHEET_ID = (urlSheetId || storedSheetId || DEFAULT_SHEET_ID || '').trim();
+
+                // Keep the input in sync (if present)
+                const sheetIdInput = document.getElementById('sheetIdInput');
+                if (sheetIdInput) {
+                    sheetIdInput.value = SHEET_ID;
+                }
+
+                await tournamentEngine.loadFromGoogleSheets(SHEET_ID);
+
+                console.log('✅ Data loaded successfully');
+                console.log(`Tournaments: ${tournamentEngine.tournaments.size}`);
+                console.log(`Players: ${tournamentEngine.playersLookup.size}`);
+
+                // Analyze the data
+                analyzeImbalances();
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                console.error('Error stack:', error.stack);
+                document.getElementById('loading').innerHTML = `
+                    <div style="color: #dc3545;">
+                        <h3>❌ Error loading data</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p style="font-size: 0.9rem; color: #666;">Check the browser console (F12) for more details.</p>
+                        <details style="margin-top: 1rem;">
+                            <summary style="cursor: pointer;">Stack Trace</summary>
+                            <pre style="background: #f5f5f5; padding: 1rem; overflow-x: auto; font-size: 0.85rem;">${error.stack}</pre>
+                        </details>
+                    </div>
+                `;
+            }
+        }
+
+        function analyzeImbalances() {
+            const issues = [];
+            let totalGames = 0;
+            let skippedMissingTricksFields = 0;
+            let approvedCount = 0;
+            let unapprovedCount = 0;
+            const affectedTournaments = new Set();
+
+            // Get all raw scorecards from the tournament engine
+            const scorecards = tournamentEngine.rawScorecards || [];
+            console.log(`Analyzing ${scorecards.length} raw scorecards...`);
+
+            // Coverage / provenance summary
+            const yearsLoaded = new Set();
+            const sourceSheets = new Set();
+            for (const sc of scorecards) {
+                if (sc && sc.Year !== undefined && sc.Year !== null && sc.Year !== '') {
+                    yearsLoaded.add(String(sc.Year));
+                }
+                if (sc && sc.SourceSheet) {
+                    sourceSheets.add(String(sc.SourceSheet));
+                }
+            }
+            const whistGameSheetsLoaded = Array.from(sourceSheets).filter(n => n.startsWith('WhistGame_')).length;
+            const scorecardsSheetsLoaded = Array.from(sourceSheets).filter(n => n.startsWith('Scorecards_')).length;
+
+            const coverageEl = document.getElementById('coverageSummary');
+            if (coverageEl) {
+                const yearsSorted = Array.from(yearsLoaded).sort();
+                coverageEl.innerHTML = `
+                    <div><strong>Loaded Years:</strong> ${yearsSorted.length} (${yearsSorted.slice(0, 10).join(', ')}${yearsSorted.length > 10 ? ', …' : ''})</div>
+                    <div><strong>Source Tabs Seen in Data:</strong> ${sourceSheets.size} (${whistGameSheetsLoaded} WhistGame_*, ${scorecardsSheetsLoaded} Scorecards_*)</div>
+                `;
+            }
+
+            // Debug: log sample scorecard structure
+            if (scorecards.length > 0) {
+                console.log('Sample scorecard fields:', Object.keys(scorecards[0]));
+                console.log('Sample scorecard:', scorecards[0]);
+            }
+
+            for (const scorecard of scorecards) {
+                // Skip scorecards that don't have partnership format (need both Tricks_Won and Opponent_Tricks)
+                // Both WhistGame_ sheets and reverse-engineered Scorecards_ sheets should have these
+                const hasTricksWon = scorecard.Tricks_Won !== undefined && scorecard.Tricks_Won !== null && scorecard.Tricks_Won !== '';
+                const hasOpponentTricks = scorecard.Opponent_Tricks !== undefined && scorecard.Opponent_Tricks !== null && scorecard.Opponent_Tricks !== '';
+
+                if (!hasTricksWon || !hasOpponentTricks) {
+                    skippedMissingTricksFields++;
+                    continue;
+                }
+
+                totalGames++;
+
+                const tricks = parseInt(scorecard.Tricks_Won) || 0;
+                const opponentTricks = parseInt(scorecard.Opponent_Tricks) || 0;
+                const total = tricks + opponentTricks;
+
+                if (total !== 13) {
+                    const imbalanceOK = scorecard.Imbalance_OK &&
+                        scorecard.Imbalance_OK.toString().toUpperCase() === 'YES';
+
+                    if (imbalanceOK) {
+                        approvedCount++;
+                    } else {
+                        unapprovedCount++;
+                    }
+
+                    // Extract tournament info
+                    const gameId = scorecard.Id || scorecard.id || scorecard.TournamentId || 'N/A';
+                    let tournamentKey = scorecard.Tournament || scorecard.TournamentId || 'Unknown';
+                    let year = scorecard.Year || scorecard.year || 'N/A';
+
+                    // If Id looks like "WhistGame_YYYY" or "Scorecards_YYYY", extract the year
+                    if (gameId && (gameId.startsWith('WhistGame_') || gameId.startsWith('Scorecards_'))) {
+                        const extractedYear = gameId.replace(/^(WhistGame_|Scorecards_)/, '');
+                        if (year === 'N/A') year = extractedYear;
+                    }
+
+                    // Try to get tournament name from metadata
+                    const metadata = tournamentEngine.tournamentMetadata?.get(year) ||
+                                   tournamentEngine.tournamentMetadata?.get(parseInt(year)) ||
+                                   tournamentEngine.tournamentMetadata?.get(String(year));
+                    if (metadata && metadata.name) {
+                        tournamentKey = metadata.name;
+                    } else if (year !== 'N/A') {
+                        tournamentKey = `Tournament ${year}`;
+                    }
+
+                    affectedTournaments.add(tournamentKey);
+
+                    // Get player display names, handling potential shared hands
+                    const getPlayerDisplay = (field) => {
+                        const namesField = scorecard[field + 'Names'];
+                        if (namesField && namesField.names) {
+                            return namesField.names.map(n => tournamentEngine.getDisplayName(n) || n).join(' & ');
+                        }
+                        return tournamentEngine.getDisplayName(scorecard[field]) || scorecard[field] || 'Unknown';
+                    };
+
+                    issues.push({
+                        gameId: gameId,
+                        tournament: tournamentKey,
+                        year: year,
+                        round: scorecard.Round || scorecard.round || 'N/A',
+                        table: scorecard.Table || scorecard.table || 'N/A',
+                        player1: getPlayerDisplay('Player1'),
+                        player2: getPlayerDisplay('Player2'),
+                        tricksWon: tricks,
+                        opponent1: getPlayerDisplay('Opponent1'),
+                        opponent2: getPlayerDisplay('Opponent2'),
+                        opponentTricks: opponentTricks,
+                        total: total,
+                        difference: total - 13,
+                        imbalanceOK: imbalanceOK,
+                        tournamentKey: tournamentKey,
+                        inconsistency: (scorecard.Inconsistency || scorecard.inconsistency || '').toString()
+                    });
+                }
+            }
+
+            console.log(`Found ${issues.length} imbalances out of ${totalGames} games`);
+
+            // Debug: log first issue if any
+            if (issues.length > 0) {
+                console.log('First issue object:', issues[0]);
+            }
+
+            allIssues = issues;
+
+            // Update summary stats
+            document.getElementById('totalGames').textContent = totalGames.toLocaleString();
+            document.getElementById('imbalancedGames').textContent = issues.length.toLocaleString();
+            document.getElementById('approvedImbalances').textContent = approvedCount.toLocaleString();
+            document.getElementById('unapprovedImbalances').textContent = unapprovedCount.toLocaleString();
+            document.getElementById('affectedTournaments').textContent = affectedTournaments.size.toLocaleString();
+
+            // Populate filter dropdowns
+            populateFilters(issues);
+
+            // Display results
+            displayIssues(issues);
+
+            // Hide loading, show report
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('reportContent').style.display = 'block';
+        }
+
+        function populateFilters(issues) {
+            const tournaments = new Set();
+            const years = new Set();
+
+            issues.forEach(issue => {
+                tournaments.add(issue.tournament);
+                years.add(issue.year);
+            });
+
+            const tournamentFilter = document.getElementById('tournamentFilter');
+            Array.from(tournaments).sort().forEach(tournament => {
+                const option = document.createElement('option');
+                option.value = tournament;
+                option.textContent = tournament;
+                tournamentFilter.appendChild(option);
+            });
+
+            const yearFilter = document.getElementById('yearFilter');
+            Array.from(years).sort().reverse().forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearFilter.appendChild(option);
+            });
+        }
+
+        function displayIssues(issues) {
+            filteredIssues = issues;
+
+            if (issues.length === 0) {
+                document.getElementById('noIssues').style.display = 'block';
+                document.getElementById('tableContainer').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('noIssues').style.display = 'none';
+            document.getElementById('tableContainer').style.display = 'block';
+
+            const tbody = document.getElementById('issuesTableBody');
+            tbody.innerHTML = '';
+
+            issues.forEach(issue => {
+                const row = document.createElement('tr');
+
+                const statusBadge = issue.imbalanceOK
+                    ? '<span class="imbalance-ok">✓ Approved</span>'
+                    : '<span class="error-badge error-warning">⚠ Needs Review</span>';
+
+                row.innerHTML = `
+                    <td>${statusBadge}</td>
+                    <td><a href="tournaments/results.html?year=${issue.year}" class="tournament-link">${issue.tournament}</a></td>
+                    <td>${issue.year}</td>
+                    <td>${issue.round}</td>
+                    <td>${issue.table}</td>
+                    <td>${issue.player1} & ${issue.player2}</td>
+                    <td>${issue.tricksWon}</td>
+                    <td>${issue.opponent1} & ${issue.opponent2}</td>
+                    <td>${issue.opponentTricks}</td>
+                    <td><strong>${issue.total}</strong></td>
+                    <td style="color: ${issue.difference > 0 ? '#dc3545' : '#007bff'}">
+                        ${issue.difference > 0 ? '+' : ''}${issue.difference}
+                    </td>
+                    <td style="font-family: monospace; font-size: 0.85rem;">${issue.gameId}</td>
+                    <td style="max-width: 420px; white-space: pre-wrap;">${issue.inconsistency || ''}</td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        function applyFilters() {
+            const tournamentFilter = document.getElementById('tournamentFilter').value;
+            const yearFilter = document.getElementById('yearFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+
+            let filtered = allIssues;
+
+            if (tournamentFilter) {
+                filtered = filtered.filter(issue => issue.tournament === tournamentFilter);
+            }
+
+            if (yearFilter) {
+                filtered = filtered.filter(issue => issue.year === yearFilter);
+            }
+
+            if (statusFilter === 'approved') {
+                filtered = filtered.filter(issue => issue.imbalanceOK);
+            } else if (statusFilter === 'unapproved') {
+                filtered = filtered.filter(issue => !issue.imbalanceOK);
+            }
+
+            displayIssues(filtered);
+        }
+
+        function exportToCSV() {
+            const headers = ['Status', 'Tournament', 'Year', 'Round', 'Table', 'Partnership 1', 'Tricks Won',
+                           'Partnership 2', 'Opponent Tricks', 'Total', 'Difference', 'Game ID', 'Inconsistency'];
+
+            const rows = filteredIssues.map(issue => [
+                issue.imbalanceOK ? 'Approved' : 'Needs Review',
+                issue.tournament,
+                issue.year,
+                issue.round,
+                issue.table,
+                `${issue.player1} & ${issue.player2}`,
+                issue.tricksWon,
+                `${issue.opponent1} & ${issue.opponent2}`,
+                issue.opponentTricks,
+                issue.total,
+                issue.difference,
+                issue.gameId,
+                issue.inconsistency || ''
+            ]);
+
+            const csvContent = [headers, ...rows]
+                .map(row => row.map(cell => `"${cell}"`).join(','))
+                .join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `trick-imbalances-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Add event listeners for filters
+        document.getElementById('tournamentFilter').addEventListener('change', applyFilters);
+        document.getElementById('yearFilter').addEventListener('change', applyFilters);
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
+
+        // Load and analyze on page load
+        loadAndAnalyzeData();
+
+        function reloadWithSheetId() {
+            const input = document.getElementById('sheetIdInput');
+            const sheetId = (input?.value || '').trim();
+            if (!sheetId) return;
+            try {
+                window.localStorage.setItem('whist_sheet_id', sheetId);
+            } catch (e) {
+                // ignore
+            }
+            // Reset UI state
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('reportContent').style.display = 'none';
+            document.getElementById('noIssues').style.display = 'none';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('issuesTableBody').innerHTML = '';
+            document.getElementById('tournamentFilter').innerHTML = '<option value="">All Tournaments</option>';
+            document.getElementById('yearFilter').innerHTML = '<option value="">All Years</option>';
+            allIssues = [];
+            filteredIssues = [];
+            // Recreate engine to ensure no stale state
+            tournamentEngine = new TournamentEngine();
+            loadAndAnalyzeData();
+        }
+    </script>
+</body>
+</html>

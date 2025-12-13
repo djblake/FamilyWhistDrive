@@ -108,6 +108,23 @@ WhistWebsite/
    http://localhost:8000
    ```
 
+### Trick Balance Validation Banner
+
+- Any scorecard rows where `Tricks_Won + Opponent_Tricks !== 13` are now surfaced directly in the UI (tournaments, leaderboards, and player scorecards) with counts of affected tables/rounds plus sample entries.
+- Click **“Hide trick mismatch warning”** to suppress the banner for your browser session. This preference is stored in `localStorage` under `whist_hide_trick_mismatch_warning`.
+- To show the warning again after dismissing it, open your browser devtools console on any page and run:
+  ```js
+  localStorage.removeItem('whist_hide_trick_mismatch_warning');
+  // or explicitly re-enable it:
+  localStorage.setItem('whist_hide_trick_mismatch_warning', 'false');
+  ```
+- To disable the banner globally (e.g., when embedding a page elsewhere), set `window.TournamentUIConfig = { showTrickImbalanceWarnings: false };` before loading `assets/js/tournament-engine.js`.
+
+### Data Validation Report (Trick Imbalances)
+
+- A dedicated validation report is available at `data-validation.html` (often routed locally as `/data-validation`).
+- It loads the tournament data and lists any games where `Tricks_Won + Opponent_Tricks !== 13`, including whether the issue is approved via `Imbalance_OK=YES` and any `Inconsistency` notes.
+
 ### Data Management
 The website uses a CSV-to-JSON conversion system:
 
