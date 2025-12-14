@@ -91,6 +91,136 @@ class TournamentEngine {
         }
     }
 
+    isLocalEnvironment() {
+        try {
+            if (typeof window === 'undefined' || !window.location) {
+                return false;
+            }
+            const host = window.location.hostname;
+            return host === 'localhost' || host === '127.0.0.1';
+        } catch (error) {
+            return false;
+        }
+    }
+
+    shouldRecomputeStatsAlways() {
+        // Local dev: cache raw to avoid repeated Sheets loads, but always recompute stats while iterating on algorithms.
+        return this.isLocalEnvironment();
+    }
+
+    isIndexedDbAvailable() {
+        try {
+            return typeof indexedDB !== 'undefined';
+        } catch (error) {
+            return false;
+        }
+    }
+
+    async openLocalCacheDb() {
+        if (!this.isIndexedDbAvailable()) {
+            return null;
+        }
+        return await new Promise((resolve) => {
+            try {
+                const request = indexedDB.open('whist_local_cache', 1);
+                request.onupgradeneeded = () => {
+                    const db = request.result;
+                    if (!db.objectStoreNames.contains('raw')) {
+                        db.createObjectStore('raw', { keyPath: 'key' });
+                    }
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => resolve(null);
+            } catch (error) {
+                resolve(null);
+            }
+        });
+    }
+
+    async loadLocalRawCache(sheetId) {
+        const db = await this.openLocalCacheDb();
+        if (!db) {
+            return null;
+        }
+        const key = `raw:${sheetId || 'default'}`;
+        return await new Promise((resolve) => {
+            try {
+                const tx = db.transaction(['raw'], 'readonly');
+                const store = tx.objectStore('raw');
+                const req = store.get(key);
+                req.onsuccess = () => {
+                    const record = req.result;
+                    resolve(record && record.rawCache ? record.rawCache : null);
+                };
+                req.onerror = () => resolve(null);
+                tx.oncomplete = () => {
+                    try { db.close(); } catch (_) {}
+                };
+            } catch (error) {
+                try { db.close(); } catch (_) {}
+                resolve(null);
+            }
+        });
+    }
+
+    async saveLocalRawCache(sheetId, rawCache) {
+        const db = await this.openLocalCacheDb();
+        if (!db) {
+            return false;
+        }
+        const key = `raw:${sheetId || 'default'}`;
+        return await new Promise((resolve) => {
+            try {
+                const tx = db.transaction(['raw'], 'readwrite');
+                const store = tx.objectStore('raw');
+                store.put({
+                    key,
+                    savedAt: new Date().toISOString(),
+                    rawHash: rawCache && rawCache.rawHash ? String(rawCache.rawHash) : null,
+                    schemaVersion: rawCache && rawCache.schemaVersion ? rawCache.schemaVersion : null,
+                    rawCache
+                });
+                tx.oncomplete = () => {
+                    try { db.close(); } catch (_) {}
+                    resolve(true);
+                };
+                tx.onerror = () => {
+                    try { db.close(); } catch (_) {}
+                    resolve(false);
+                };
+            } catch (error) {
+                try { db.close(); } catch (_) {}
+                resolve(false);
+            }
+        });
+    }
+
+    async clearLocalRawCache(sheetId) {
+        const db = await this.openLocalCacheDb();
+        if (!db) {
+            return false;
+        }
+        const key = `raw:${sheetId || 'default'}`;
+        return await new Promise((resolve) => {
+            try {
+                const tx = db.transaction(['raw'], 'readwrite');
+                const store = tx.objectStore('raw');
+                store.delete(key);
+                tx.oncomplete = () => {
+                    try { db.close(); } catch (_) {}
+                    resolve(true);
+                };
+                tx.onerror = () => {
+                    try { db.close(); } catch (_) {}
+                    resolve(false);
+                };
+            } catch (error) {
+                try { db.close(); } catch (_) {}
+                resolve(false);
+            }
+        });
+    }
+
     getSiteRootUrl() {
         // Determine site root from this script URL so this works on static hosts with a base path (e.g. GitHub Pages).
         try {
@@ -137,6 +267,24 @@ class TournamentEngine {
             return false;
         }
 
+        const developerMode = this.isDeveloperModeEnabled();
+        const recomputeStatsAlways = this.shouldRecomputeStatsAlways();
+
+        // 0) Local dev raw cache (IndexedDB) - avoids repeated Sheets loads while iterating on stats.
+        if (!developerMode && this.isLocalEnvironment()) {
+            const localRaw = await this.loadLocalRawCache(this.sheetId);
+            if (localRaw && localRaw.schemaVersion === TournamentEngine.RAW_CACHE_SCHEMA_VERSION) {
+                this.importRawCache(localRaw);
+                this.processRawScorecards(); // always recompute stats locally
+                this.loadedFromCache = true;
+                this.loadedCacheSummary = { source: 'local:idb:raw', rawHash: localRaw.rawHash || null };
+                return true;
+            }
+
+            // In local dev we prefer Sheets (then cache to IDB) over KV/assets, to keep the loop clear.
+            return false;
+        }
+
         // 1) Prefer Cloudflare KV API (site-wide mutable cache)
         if (this.cacheInfo.apiManifestUrl && this.cacheInfo.apiRawUrl && this.cacheInfo.apiStatsUrl) {
             const manifest = await this.tryFetchJson(this.cacheInfo.apiManifestUrl, { noStore: true });
@@ -147,15 +295,17 @@ class TournamentEngine {
                 const rawUrl = `${this.cacheInfo.apiRawUrl}?rawHash=${encodeURIComponent(rawHash)}`;
                 const statsUrl = `${this.cacheInfo.apiStatsUrl}?rawHash=${encodeURIComponent(rawHash)}&alg=${encodeURIComponent(alg)}`;
 
-                const statsCache = await this.tryFetchJson(statsUrl);
-                if (statsCache &&
-                    statsCache.schemaVersion === TournamentEngine.STATS_CACHE_SCHEMA_VERSION &&
-                    statsCache.statsAlgorithmVersion === TournamentEngine.STATS_ALGORITHM_VERSION &&
-                    statsCache.rawHash === rawHash) {
-                    this.importStatsCache(statsCache);
-                    this.loadedFromCache = true;
-                    this.loadedCacheSummary = { source: 'kv:stats', rawHash };
-                    return true;
+                if (!recomputeStatsAlways) {
+                    const statsCache = await this.tryFetchJson(statsUrl);
+                    if (statsCache &&
+                        statsCache.schemaVersion === TournamentEngine.STATS_CACHE_SCHEMA_VERSION &&
+                        statsCache.statsAlgorithmVersion === TournamentEngine.STATS_ALGORITHM_VERSION &&
+                        statsCache.rawHash === rawHash) {
+                        this.importStatsCache(statsCache);
+                        this.loadedFromCache = true;
+                        this.loadedCacheSummary = { source: 'kv:stats', rawHash };
+                        return true;
+                    }
                 }
 
                 const rawCache = await this.tryFetchJson(rawUrl);
@@ -178,18 +328,23 @@ class TournamentEngine {
 
             this.importRawCache(rawCache);
 
-            const statsCache = await this.tryFetchJson(this.cacheInfo.statsUrl);
-            if (statsCache &&
-                statsCache.schemaVersion === TournamentEngine.STATS_CACHE_SCHEMA_VERSION &&
-                statsCache.statsAlgorithmVersion === TournamentEngine.STATS_ALGORITHM_VERSION &&
-                statsCache.rawHash &&
-                rawCache.rawHash &&
-                statsCache.rawHash === rawCache.rawHash) {
-                this.importStatsCache(statsCache);
-                this.loadedCacheSummary = { source: 'asset:raw+stats', rawHash: rawCache.rawHash };
+            if (!recomputeStatsAlways) {
+                const statsCache = await this.tryFetchJson(this.cacheInfo.statsUrl);
+                if (statsCache &&
+                    statsCache.schemaVersion === TournamentEngine.STATS_CACHE_SCHEMA_VERSION &&
+                    statsCache.statsAlgorithmVersion === TournamentEngine.STATS_ALGORITHM_VERSION &&
+                    statsCache.rawHash &&
+                    rawCache.rawHash &&
+                    statsCache.rawHash === rawCache.rawHash) {
+                    this.importStatsCache(statsCache);
+                    this.loadedCacheSummary = { source: 'asset:raw+stats', rawHash: rawCache.rawHash };
+                } else {
+                    this.processRawScorecards();
+                    this.loadedCacheSummary = { source: 'asset:raw-only', rawHash: rawCache.rawHash };
+                }
             } else {
                 this.processRawScorecards();
-                this.loadedCacheSummary = { source: 'asset:raw-only', rawHash: rawCache.rawHash };
+                this.loadedCacheSummary = { source: 'asset:raw-only (recomputed stats)', rawHash: rawCache.rawHash };
             }
 
             this.loadedFromCache = true;
@@ -695,6 +850,16 @@ class TournamentEngine {
             
             // Process all the loaded data
             this.processRawScorecards();
+
+            // Local dev: cache the standardized raw data after first read from Sheets, so subsequent loads skip Sheets.
+            if (this.isLocalEnvironment()) {
+                try {
+                    const rawCache = this.exportRawCache();
+                    await this.saveLocalRawCache(sheetId, rawCache);
+                } catch (error) {
+                    // ignore local cache failures
+                }
+            }
             
             // Report any data issues found
             this.reportDataIssues();
