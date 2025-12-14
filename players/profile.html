@@ -106,6 +106,13 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="trophy-cabinet" id="trophy-cabinet">
+                            <div class="trophy-cabinet-label">Trophy Cabinet</div>
+                            <div class="trophy-cabinet-content" id="trophy-cabinet-content">
+                                <div class="loading-message">Loading trophy cabinet...</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -404,6 +411,7 @@
                 document.getElementById('top-finishes').textContent = topThreeFinishes;
                 
                 updatePerformanceStats(player.name, performanceStats);
+                generateTrophyCabinet(player.name, playerTournaments);
                 renderSeedRankHistoryChart(player.name);
                 
                 // Generate career statistics table
@@ -526,50 +534,152 @@
                 return;
             }
 
-            const history = engine.getSeedRankHistory(playerName, true) || [];
+            const history = (engine.getSeedRankHistory(playerName, true) || [])
+                .filter(h => h && typeof h.seed_rank === 'number' && Number.isFinite(h.year))
+                .slice()
+                .sort((a, b) => a.year - b.year);
             if (!history.length) {
                 container.innerHTML = '<p class="muted">No seed rank history yet.</p>';
                 return;
             }
 
             const years = history.map(h => h.year);
-            const ranks = history.map(h => h.seed_rank).filter(Boolean);
+            const ranks = history.map(h => h.seed_rank);
             const minYear = Math.min(...years);
             const maxYear = Math.max(...years);
             const maxRank = Math.max(...ranks);
 
-            const width = 900;
-            const height = 220;
-            const pad = 32;
+            const width = 980;
+            const height = 300;
+            const padLeft = 46;
+            const padRight = 18;
+            const padTop = 26;
+            const padBottom = 86;
 
             const xForYear = (y) => {
-                if (maxYear === minYear) return pad;
-                return pad + ((y - minYear) / (maxYear - minYear)) * (width - pad * 2);
+                if (maxYear === minYear) return padLeft;
+                return padLeft + ((y - minYear) / (maxYear - minYear)) * (width - padLeft - padRight);
             };
             const yForRank = (r) => {
                 // Lower rank is better: rank 1 at top.
-                if (maxRank <= 1) return pad;
-                return pad + ((r - 1) / (maxRank - 1)) * (height - pad * 2);
+                if (maxRank <= 1) return padTop;
+                return padTop + ((r - 1) / (maxRank - 1)) * (height - padTop - padBottom);
             };
 
-            const points = history
-                .filter(h => h && typeof h.seed_rank === 'number')
-                .map(h => `${xForYear(h.year).toFixed(1)},${yForRank(h.seed_rank).toFixed(1)}`)
-                .join(' ');
+            const points = history.map(h => `${xForYear(h.year).toFixed(1)},${yForRank(h.seed_rank).toFixed(1)}`).join(' ');
 
             const latest = history[history.length - 1];
             const latestLabel = latest ? `Latest: ${latest.year} (#${latest.seed_rank})` : '';
 
+            const uniqueYears = Array.from(new Set(years)).sort((a, b) => a - b);
+            const labelStep = Math.max(1, Math.ceil(uniqueYears.length / 18)); // keep labels readable
+            const xAxisY = height - padBottom;
+            const yAxisX = padLeft;
+            const tickLen = 8;
+            const yearLabels = uniqueYears
+                .filter((_, idx) => idx % labelStep === 0 || idx === uniqueYears.length - 1)
+                .map(y => {
+                    const x = xForYear(y).toFixed(1);
+                    const labelY = (xAxisY + 70).toFixed(1);
+                    return `
+                        <line x1="${x}" y1="${xAxisY}" x2="${x}" y2="${(xAxisY + tickLen).toFixed(1)}" stroke="rgba(26,26,26,0.25)" />
+                        <text transform="translate(${x},${labelY}) rotate(-90)" text-anchor="end" font-size="10" fill="rgba(26,26,26,0.75)">${y}</text>
+                    `;
+                })
+                .join('');
+
+            const pointDots = history.map(h => {
+                const x = xForYear(h.year).toFixed(1);
+                const y = yForRank(h.seed_rank).toFixed(1);
+                const title = `Year ${h.year} • Seed #${h.seed_rank}`;
+                return `
+                    <circle cx="${x}" cy="${y}" r="4.5" fill="rgba(245, 158, 11, 0.95)">
+                        <title>${title}</title>
+                    </circle>
+                `;
+            }).join('');
+
             container.innerHTML = `
                 <div class="muted" style="margin-bottom: 0.5rem;">${latestLabel}</div>
                 <svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" role="img" aria-label="Seed rank history">
-                    <rect x="0" y="0" width="${width}" height="${height}" fill="rgba(255,255,255,0.02)" />
-                    <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" stroke="rgba(255,255,255,0.18)" />
-                    <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" stroke="rgba(255,255,255,0.18)" />
+                    <rect x="0" y="0" width="${width}" height="${height}" fill="#ffffff" />
+                    <line x1="${yAxisX}" y1="${padTop}" x2="${yAxisX}" y2="${xAxisY}" stroke="rgba(26,26,26,0.25)" />
+                    <line x1="${yAxisX}" y1="${xAxisY}" x2="${width - padRight}" y2="${xAxisY}" stroke="rgba(26,26,26,0.25)" />
+                    ${yearLabels}
                     <polyline points="${points}" fill="none" stroke="rgba(245, 158, 11, 0.95)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                    ${pointDots}
                 </svg>
                 <div class="muted" style="margin-top: 0.5rem;">
                     ${minYear}${minYear !== maxYear ? `–${maxYear}` : ''} • lower rank is better
+                </div>
+            `;
+        }
+
+        function generateTrophyCabinet(playerId, tournaments) {
+            const el = document.getElementById('trophy-cabinet-content');
+            if (!el) return;
+
+            const engine = window.tournamentEngine;
+            const items = { 1: [], 2: [], 3: [] };
+
+            const getFinish = (tournament) => {
+                if (!tournament || !Array.isArray(tournament.final_standings)) return null;
+                let idx = tournament.final_standings.findIndex(s => s.player === playerId);
+                let isSharedHand = false;
+                if (idx === -1) {
+                    idx = tournament.final_standings.findIndex(s =>
+                        s &&
+                        s.is_partnership &&
+                        Array.isArray(s.partnership_players) &&
+                        s.partnership_players.some(p => p === playerId)
+                    );
+                    if (idx !== -1) {
+                        isSharedHand = true;
+                    }
+                }
+                if (idx === -1) return null;
+                return { place: idx + 1, isSharedHand };
+            };
+
+            (tournaments || []).forEach(t => {
+                const finish = getFinish(t);
+                if (!finish) return;
+                if (finish.place === 1 || finish.place === 2 || finish.place === 3) {
+                    items[finish.place].push({ year: t.year });
+                }
+            });
+
+            const total = items[1].length + items[2].length + items[3].length;
+            if (!total) {
+                el.innerHTML = `<div class="muted">Still waiting for their time to come.</div>`;
+                return;
+            }
+
+            // Flatten into a single row: 1st (old->new), then 2nd, then 3rd
+            const placeOrder = [
+                { place: 1, emoji: '🏆' },
+                { place: 2, emoji: '🥈' },
+                { place: 3, emoji: '🥉' }
+            ];
+
+            const flat = [];
+            placeOrder.forEach(meta => {
+                (items[meta.place] || [])
+                    .slice()
+                    .sort((a, b) => a.year - b.year)
+                    .forEach(x => flat.push({ place: meta.place, emoji: meta.emoji, year: x.year }));
+            });
+
+            const trophies = flat.map(x => `
+                <div class="trophy-piece trophy-piece--${x.place}">
+                    <div class="trophy-piece-emoji">${x.emoji}</div>
+                    <div class="trophy-piece-year">${x.year}</div>
+                </div>
+            `).join('');
+
+            el.innerHTML = `
+                <div class="trophy-row" role="list" aria-label="Trophy cabinet">
+                    ${trophies}
                 </div>
             `;
         }
@@ -853,6 +963,80 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: var(--spacing-md);
+        }
+
+        /* Trophy cabinet (in header/hero) */
+        .trophy-cabinet {
+            margin-top: var(--spacing-lg);
+            background: rgba(10, 26, 15, 0.55);
+            border: 1px solid rgba(34, 197, 94, 0.35);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-md) var(--spacing-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .trophy-cabinet-label {
+            font-size: 0.75rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-weight: 800;
+            color: rgba(248, 250, 252, 0.9);
+            margin-bottom: 0.6rem;
+        }
+
+        .trophy-cabinet-content .loading-message {
+            color: rgba(248, 250, 252, 0.75);
+        }
+
+        .trophy-cabinet::after {
+            content: '';
+            position: absolute;
+            left: var(--spacing-lg);
+            right: var(--spacing-lg);
+            bottom: 16px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent 0%, rgba(34, 197, 94, 0.25) 20%, rgba(34, 197, 94, 0.25) 80%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .trophy-row {
+            display: flex;
+            gap: var(--spacing-lg);
+            align-items: flex-end;
+            justify-content: flex-start;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding-bottom: 18px; /* leaves room for shelf line */
+            scrollbar-width: thin;
+        }
+
+        .trophy-piece {
+            flex: 0 0 auto;
+            width: 64px;
+            text-align: center;
+        }
+
+        .trophy-piece-emoji {
+            font-size: 2.6rem;
+            line-height: 1;
+            filter: drop-shadow(0 2px 8px rgba(0,0,0,0.25));
+            margin-bottom: 0.35rem;
+        }
+
+        .trophy-piece-year {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: rgba(248, 250, 252, 0.85);
+        }
+
+        @media (max-width: 768px) {
+            .trophy-piece {
+                width: 56px;
+            }
+            .trophy-piece-emoji {
+                font-size: 2.35rem;
+            }
         }
 
         .highlight-card {

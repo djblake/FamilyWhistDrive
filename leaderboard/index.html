@@ -59,6 +59,14 @@
                     <p class="rankings-subtitle" id="current-ranking-description">Comprehensive ranking based on tournament victories, career performance, and recent form</p>
                 </div>
 
+                <div class="full-rankings-tools">
+                    <label class="sample-filter-toggle sample-filter-toggle--dark" for="toggle-sample-filter">
+                        <input type="checkbox" id="toggle-sample-filter" checked>
+                        <span class="sample-filter-toggle__text">Exclude players with low sample size</span>
+                        <span class="sample-filter-toggle__hint">(2+ tournaments)</span>
+                    </label>
+                </div>
+
                 <div class="full-rankings">
                     <div class="rankings-table">
                         <div class="rankings-table-header">
@@ -151,8 +159,33 @@
                     Championship History
                 </h2>
                 
-                <div class="champions-timeline" id="champions-timeline">
-                    <!-- Will be populated by JavaScript -->
+                <div class="analytics-card" style="margin-bottom: var(--spacing-xl);">
+                    <div style="display:flex; gap: 0.5rem; flex-wrap: wrap; align-items:center; justify-content: space-between;">
+                        <div class="muted">One row per tournament. Sort by year or champion avg tricks.</div>
+                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                            <button class="btn btn-secondary" type="button" id="btn-sort-history-year">Sort: Year</button>
+                            <button class="btn btn-secondary" type="button" id="btn-sort-history-avg">Sort: Champ Avg</button>
+                        </div>
+                    </div>
+                    <div style="overflow:auto; margin-top: 0.75rem;">
+                        <table class="report-table" style="min-width: 760px;">
+                            <thead>
+                                <tr>
+                                    <th>Year</th>
+                                    <th>Tournament</th>
+                                    <th>1st</th>
+                                    <th>2nd</th>
+                                    <th>3rd</th>
+                                    <th>1st Avg/round</th>
+                                </tr>
+                            </thead>
+                            <tbody id="championship-history-body">
+                                <tr>
+                                    <td colspan="6" class="muted">Loading…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 
                 <div class="championship-stats">
@@ -201,111 +234,9 @@
                     <span class="title-icon">🥇</span>
                     Tournament Records & Achievements
                 </h2>
-                
-                <div class="records-grid">
-                    <div class="record-category">
-                        <h3>Championship Records</h3>
-                        <div class="record-list">
-                            <div class="record-item">
-                                <span class="record-title">Most Championships</span>
-                                <span class="record-holder" id="record-most-championships">—</span>
-                            </div>
-                            <div class="record-item">
-                                <span class="record-title">Most Consecutive</span>
-                                <span class="record-holder" id="record-most-consecutive-championships">—</span>
-                            </div>
-                            <div class="record-item">
-                                <span class="record-title">Youngest Winner</span>
-                                <span class="record-holder">Requires birth dates</span>
-                            </div>
-                            <div class="record-item">
-                                <span class="record-title">Oldest Winner</span>
-                                <span class="record-holder">Requires birth dates</span>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="record-category">
-                        <h3>Performance Records</h3>
-                        <div class="record-list">
-                            <div class="record-item">
-                                <span class="record-title">Highest Tournament Score</span>
-                                <span class="record-holder" id="record-highest-tournament-score">—</span>
-                            </div>
-                            <div class="record-item">
-                                <span class="record-title">Best Win Percentage</span>
-                                <span class="record-holder" id="record-best-win-percentage">—</span>
-                            </div>
-                            <div class="record-item">
-                                <span class="record-title">Most Career Round Wins (7+ tricks)</span>
-                                <span class="record-holder" id="record-most-career-round-wins">—</span>
-                            </div>
-                            <div class="record-item">
-                                <span class="record-title">Most 11-Trick Rounds</span>
-                                <span class="record-holder" id="record-most-11-trick-rounds">—</span>
-                            </div>
-                            <div class="record-item">
-                                <span class="record-title">Longest Majority-Win Streak (7+ tricks)</span>
-                                <span class="record-holder" id="record-most-consecutive-majority-wins">—</span>
-                            </div>
-                            <div class="record-item">
-                                <span class="record-title">Most 12-Trick Rounds</span>
-                                <span class="record-holder" id="record-most-12-trick-rounds">—</span>
-                            </div>
-                            <div class="record-item">
-                                <span class="record-title">Best Avg Tricks (single tournament)</span>
-                                <span class="record-holder" id="record-best-avg-tricks">—</span>
-                            </div>
-                            <div class="record-item">
-                                <span class="record-title">Best Avg Margin (single tournament)</span>
-                                <span class="record-holder" id="record-best-avg-margin">—</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="record-category">
-                        <h3>Participation Records</h3>
-                        <div class="record-list">
-                            <div class="record-item">
-                                <span class="record-title">Perfect Attendance</span>
-                                <span class="record-holder" id="record-perfect-attendance">—</span>
-                            </div>
-                            <div class="record-item">
-                                <span class="record-title">Most Tournaments</span>
-                                <span class="record-holder" id="record-most-tournaments">—</span>
-                            </div>
-                            <div class="record-item">
-                                <span class="record-title">Most Top-3 Finishes</span>
-                                <span class="record-holder" id="record-most-top3">—</span>
-                            </div>
-                            <div class="record-item">
-                                <span class="record-title">Never Last Place</span>
-                                <span class="record-holder" id="record-never-last">—</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="record-category">
-                        <h3>Partnership Records</h3>
-                        <div class="record-list">
-                            <div class="record-item">
-                                <span class="record-title">Best Partnership</span>
-                                <span class="record-holder" id="record-best-partnership">—</span>
-                            </div>
-                            <div class="record-item">
-                                <span class="record-title">Most Partnerships</span>
-                                <span class="record-holder" id="record-most-partnerships">—</span>
-                            </div>
-                            <div class="record-item">
-                                <span class="record-title">Family Chemistry</span>
-                                <span class="record-holder">TBD</span>
-                            </div>
-                            <div class="record-item">
-                                <span class="record-title">Cross-Generation</span>
-                                <span class="record-holder">TBD</span>
-                            </div>
-                        </div>
-                    </div>
+                <div id="hof-records-panels" class="hof-records-panels">
+                    <div class="muted">Loading…</div>
                 </div>
             </div>
         </section>
@@ -319,7 +250,7 @@
 
                 <div class="records-grid">
                     <div class="record-category">
-                        <h3>12+ trick rounds (chronological)</h3>
+                        <h3>12-trick rounds (chronological)</h3>
                         <div class="record-list" id="hof-12plus-list">
                             <div class="record-item">
                                 <span class="record-title">Loading…</span>
@@ -381,6 +312,8 @@
         let currentSortedPlayers = [];
         let recentFormScores = new Map();
         let performanceScores = new Map();
+        let excludeLowSampleSize = true;
+        const MIN_TOURNAMENT_SAMPLE_SIZE = 2;
 
         const rankingTypes = ['overall', 'championships', 'booby', 'career_stats', 'recent_form', 'performance'];
         const validRankingTypes = new Set(rankingTypes);
@@ -429,6 +362,9 @@
                 
                 // Add toggle view event listener
                 setupToggleViewListener();
+
+                // Sample size filter toggle
+                setupSampleSizeToggle();
 
                 console.log('🏆 Hall of Fame loaded successfully with real data');
 
@@ -547,128 +483,448 @@
                     : 0;
                 setText('hof-avg-entrants', tournaments.length > 0 ? avgEntrants.toFixed(1) : '—');
 
-                // --- Records
-                if (allTime) {
-                    setText('record-most-championships', `${tournamentEngine.getDisplayName(allTime.name)} (${allTime.tournament_wins || 0})`);
-                }
-                if (streak && streak.winner && streak.streak > 0) {
-                    setText('record-most-consecutive-championships', `${tournamentEngine.getDisplayName(streak.winner)} (${streak.streak}, ${streak.fromYear}–${streak.toYear})`);
-                }
+                // --- Championship history table (1st/2nd/3rd + champ avg tricks)
+                const historyBody = document.getElementById('championship-history-body');
+                const sortYearBtn = document.getElementById('btn-sort-history-year');
+                const sortAvgBtn = document.getElementById('btn-sort-history-avg');
 
-                // Highest tournament score (max total_tricks in final standings)
-                let bestTournamentScore = null;
-                for (const t of tournaments) {
-                    const standings = Array.isArray(t.final_standings) ? t.final_standings : [];
-                    for (const entry of standings) {
-                        const tricks = Number.isFinite(entry.total_tricks) ? entry.total_tricks : parseFloat(entry.total_tricks);
-                        if (!Number.isFinite(tricks)) continue;
-                        if (!bestTournamentScore || tricks > bestTournamentScore.tricks) {
-                            bestTournamentScore = {
+                if (historyBody) {
+                    const rows = tournaments
+                        .filter(t => t && Number.isFinite(t.year) && Array.isArray(t.final_standings))
+                        .map(t => {
+                            const standings = t.final_standings || [];
+                            const first = standings.find(s => s.position === 1) || standings[0] || null;
+                            const second = standings.find(s => s.position === 2) || standings[1] || null;
+                            const third = standings.find(s => s.position === 3) || standings[2] || null;
+
+                            const firstName = first ? tournamentEngine.getDisplayName(first.player) : '—';
+                            const secondName = second ? tournamentEngine.getDisplayName(second.player) : '—';
+                            const thirdName = third ? tournamentEngine.getDisplayName(third.player) : '—';
+
+                            const firstAvg = first && (first.average_tricks !== null && typeof first.average_tricks !== 'undefined')
+                                ? parseFloat(first.average_tricks)
+                                : null;
+
+                            return {
                                 year: t.year,
                                 title: t.title || t.name || t.id,
-                                player: entry.player,
-                                tricks
+                                firstName,
+                                secondName,
+                                thirdName,
+                                firstAvg: Number.isFinite(firstAvg) ? firstAvg : null
                             };
+                        });
+
+                    let sortMode = 'year_desc';
+                    const renderHistory = () => {
+                        const sorted = rows.slice().sort((a, b) => {
+                            if (sortMode === 'avg_desc') {
+                                const av = a.firstAvg === null ? -Infinity : a.firstAvg;
+                                const bv = b.firstAvg === null ? -Infinity : b.firstAvg;
+                                if (bv !== av) return bv - av;
+                                return b.year - a.year;
+                            }
+                            // year_desc
+                            return b.year - a.year;
+                        });
+
+                        const nameCell = (name) => (name && name !== '—')
+                            ? `<span class="hof-name">${name}</span>`
+                            : '—';
+                        historyBody.innerHTML = sorted.map(r => {
+                            const avg = r.firstAvg === null ? '—' : r.firstAvg.toFixed(2);
+                            return `
+                                <tr>
+                                    <td>${r.year}</td>
+                                    <td>${r.title}</td>
+                                    <td>${nameCell(r.firstName)}</td>
+                                    <td>${nameCell(r.secondName)}</td>
+                                    <td>${nameCell(r.thirdName)}</td>
+                                    <td><span class="hof-value">${avg}</span></td>
+                                </tr>
+                            `;
+                        }).join('') || `<tr><td colspan="6" class="muted">No tournaments found.</td></tr>`;
+                    };
+
+                    renderHistory();
+
+                    if (sortYearBtn) {
+                        sortYearBtn.addEventListener('click', () => {
+                            sortMode = 'year_desc';
+                            renderHistory();
+                        });
+                    }
+                    if (sortAvgBtn) {
+                        sortAvgBtn.addEventListener('click', () => {
+                            sortMode = 'avg_desc';
+                            renderHistory();
+                        });
+                    }
+                }
+
+                // --- Records (render Top 3 for each record into a single table)
+                const recordsPanels = document.getElementById('hof-records-panels');
+                const fmtPlayer = (playerId) => playerId ? tournamentEngine.getDisplayName(playerId) : '—';
+                const fmt = (text) => (text === null || typeof text === 'undefined' || text === '') ? '—' : String(text);
+                const makeEntry = (name, valueText, labelText, extraText) => ({
+                    name: name || '—',
+                    valueText: (valueText === null || typeof valueText === 'undefined') ? '' : String(valueText),
+                    labelText: (labelText === null || typeof labelText === 'undefined') ? '' : String(labelText),
+                    extraText: (extraText === null || typeof extraText === 'undefined') ? '' : String(extraText)
+                });
+
+                const ordinal = (n) => {
+                    if (n === 1) return '1st';
+                    if (n === 2) return '2nd';
+                    if (n === 3) return '3rd';
+                    return `${n}th`;
+                };
+
+                const buildRankGroups = (entries) => {
+                    const groups = new Map();
+                    for (const entry of (entries || [])) {
+                        if (!entry || typeof entry !== 'object') continue;
+                        const key = entry.key;
+                        const sortValue = entry.sortValue;
+                        const item = entry.item;
+                        if (key === null || typeof key === 'undefined') continue;
+                        if (!item) continue;
+                        if (!groups.has(key)) {
+                            groups.set(key, { key, sortValue: Number.isFinite(sortValue) ? sortValue : 0, items: [] });
+                        }
+                        groups.get(key).items.push(item);
+                    }
+                    return Array.from(groups.values()).sort((a, b) => (b.sortValue - a.sortValue));
+                };
+
+                const isTieGroup = (g) => !!(g && Array.isArray(g.items) && g.items.length > 1);
+                const rankLabel = (rank, tied) => tied ? `Tied for ${ordinal(rank)}` : ordinal(rank);
+
+                const formatExtraPhrase = (extraText) => {
+                    const t = (extraText || '').trim();
+                    if (!t) return '';
+                    if (t.startsWith('Year ')) return `in ${t}`;
+                    if (t.startsWith('Years ')) return `during ${t}`;
+                    if (t.startsWith('from ') || t.startsWith('over ')) return t;
+                    return t;
+                };
+
+                const joinList = (items) => {
+                    const arr = (items || []).filter(Boolean);
+                    if (arr.length === 0) return '';
+                    if (arr.length === 1) return arr[0];
+                    if (arr.length === 2) return `${arr[0]} & ${arr[1]}`;
+                    return `${arr.slice(0, -1).join(', ')} & ${arr[arr.length - 1]}`;
+                };
+
+                const formatNamesHtml = (items, max = 3, includeExtra = false) => {
+                    const arr = (items || []).filter(Boolean);
+                    if (!arr.length) return '<span class="muted">No data</span>';
+                    const isTie = arr.length > 1;
+                    const head = isTie ? arr : arr.slice(0, max);
+                    const more = isTie ? 0 : (arr.length - head.length);
+                    const parts = head.map(i => {
+                        const base = `<span class="hof-name">${i.name}</span>`;
+                        if (!includeExtra || !i.extraText) return base;
+                        return `${base} <span class="hof-detail">(${i.extraText})</span>`;
+                    });
+                    const joined = joinList(parts);
+                    const moreHtml = more > 0 ? ` <span class="hof-detail">+${more} more</span>` : '';
+                    return `${joined}${moreHtml}`;
+                };
+
+                const formatMetricText = (item) => {
+                    if (!item) return '';
+                    const v = (item.valueText || '').trim();
+                    const l = (item.labelText || '').trim();
+                    if (!v && !l) return '';
+                    if (!l) return v;
+                    if (!v) return l;
+                    return `${v} ${l}`;
+                };
+
+                const renderRecordCard = (recordLabel, entries, options = {}) => {
+                    const groups = buildRankGroups(entries);
+                    const first = groups[0] || null;
+                    const second = groups[1] || null;
+                    const third = groups[2] || null;
+
+                    const secondTied = isTieGroup(second);
+                    const showThird = !secondTied && !!third;
+
+                    const firstItem = first && first.items && first.items.length ? first.items[0] : null;
+                    const tieForFirst = isTieGroup(first);
+                    const winnerNamesHtml = first ? formatNamesHtml(first.items, 3, false) : '<span class="muted">No record yet</span>';
+                    const verb = tieForFirst ? 'lead with' : 'leads with';
+
+                    const metricText = firstItem ? formatMetricText(firstItem) : '';
+                    const extraPhrase = firstItem ? formatExtraPhrase(firstItem.extraText) : '';
+
+                    const firstExtraSet = new Set((first?.items || []).map(i => (i.extraText || '').trim()).filter(Boolean));
+                    const tieExtrasDiffer = tieForFirst && firstExtraSet.size > 1;
+                    const tieExtraLine = tieExtrasDiffer
+                        ? `<div class="hof-record-lead-extras">${formatNamesHtml(first.items, 4, true)}</div>`
+                        : '';
+
+                    const mainLine = metricText
+                        ? `<div class="hof-record-lead-sentence">${winnerNamesHtml} <span class="hof-lead-verb">${verb}</span> <span class="hof-lead-metric">${metricText}</span>${extraPhrase ? ` <span class="hof-lead-extra">${extraPhrase}</span>` : ''}.</div>`
+                        : `<div class="hof-record-lead-sentence"><span class="muted">${options.noDataText || 'No data available yet.'}</span></div>`;
+
+                    const renderFootnoteGroup = (rank, group) => {
+                        if (!group || !Array.isArray(group.items) || group.items.length === 0) return '';
+                        const tied = isTieGroup(group);
+                        const label = rankLabel(rank, tied);
+                        const item0 = group.items[0];
+                        const metric = formatMetricText(item0);
+                        const extraSet = new Set(group.items.map(i => (i.extraText || '').trim()).filter(Boolean));
+                        const includeExtra = tied && extraSet.size > 1;
+                        const names = formatNamesHtml(group.items, 3, includeExtra);
+                        const extra = (!includeExtra && item0 && item0.extraText) ? formatExtraPhrase(item0.extraText) : '';
+                        const withMetric = metric ? ` with <span class="hof-lead-metric">${metric}</span>` : '';
+                        const withExtra = extra ? ` <span class="hof-lead-extra">${extra}</span>` : '';
+                        return `<div class="hof-record-footnote"><span class="hof-record-footnote-rank">${label}:</span> <span class="hof-record-footnote-text">${names}${withMetric}${withExtra}.</span></div>`;
+                    };
+
+                    const footnotes = [
+                        renderFootnoteGroup(2, second),
+                        showThird ? renderFootnoteGroup(3, third) : ''
+                    ].filter(Boolean).join('');
+
+                    return `
+                        <div class="hof-record-card insight-card">
+                            <div class="hof-record-header">
+                                <div class="hof-record-icon">🏆</div>
+                                <div class="hof-record-title">${recordLabel}</div>
+                            </div>
+                            <div class="hof-record-main">
+                                ${tieForFirst ? `<div class="hof-record-winner-rank">${rankLabel(1, true)}</div>` : ''}
+                                ${mainLine}
+                                ${tieExtraLine}
+                            </div>
+                            ${footnotes ? `
+                                <div class="hof-record-divider"></div>
+                                <div class="hof-record-footnotes">${footnotes}</div>
+                            ` : ''}
+                        </div>
+                    `;
+                };
+
+                const renderSection = (emoji, sectionTitle, recordCardsHtml) => `
+                    <div class="hof-records-section">
+                        <h3 class="hof-records-section-title"><span class="hof-records-section-emoji">${emoji}</span> ${sectionTitle}</h3>
+                        <div class="hof-records-grid">
+                            ${recordCardsHtml}
+                        </div>
+                    </div>
+                `;
+
+                if (recordsPanels) {
+                    const championshipCards = [];
+                    const performanceCards = [];
+                    const participationCards = [];
+                    const partnershipCards = [];
+
+                    // Championship Records
+                    {
+                        const entries = (allPlayers || [])
+                            .slice()
+                            .filter(p => p && (p.tournament_wins || 0) > 0)
+                            .map(p => {
+                                const wins = p.tournament_wins || 0;
+                                return { key: String(wins), sortValue: wins, item: makeEntry(fmtPlayer(p.name), wins, 'wins', '') };
+                            });
+                        championshipCards.push(renderRecordCard('Most Championships', entries));
+                    }
+
+                    // Most consecutive tournament championships (top 3)
+                    {
+                        championshipCards.push(renderRecordCard('Youngest Winner', [], { noDataText: 'Requires birth dates.' }));
+                        championshipCards.push(renderRecordCard('Oldest Winner', [], { noDataText: 'Requires birth dates.' }));
+                    }
+
+                    // Performance Records
+                    {
+                        const tournamentScores = [];
+                        for (const t of tournaments) {
+                            const standings = Array.isArray(t.final_standings) ? t.final_standings : [];
+                            for (const entry of standings) {
+                                const tricks = Number.isFinite(entry.total_tricks) ? entry.total_tricks : parseFloat(entry.total_tricks);
+                                if (!Number.isFinite(tricks)) continue;
+                                tournamentScores.push({ player: entry.player, tricks, year: t.year });
+                            }
+                        }
+                        tournamentScores.sort((a, b) => (b.tricks - a.tricks) || ((b.year || 0) - (a.year || 0)));
+
+                        const entries = (tournamentScores || [])
+                            .filter(x => x && Number.isFinite(x.tricks))
+                            .map(x => ({ key: String(x.tricks), sortValue: x.tricks, item: makeEntry(fmtPlayer(x.player), x.tricks, 'tricks', `Year ${x.year}`) }));
+                        performanceCards.push(renderRecordCard('Highest Tournament Score', entries));
+                    }
+
+                    const minRoundsForPct = 20;
+                    const winPctLeaders = (allPlayers || [])
+                        .filter(p => (p.total_rounds || 0) >= minRoundsForPct)
+                        .map(p => ({ playerId: p.name, pct: (p.total_rounds || 0) > 0 ? ((p.rounds_won || 0) / p.total_rounds) * 100 : 0, rounds: p.total_rounds || 0 }))
+                        .sort((a, b) => (b.pct - a.pct) || (b.rounds - a.rounds));
+                    {
+                        const entries = (winPctLeaders || [])
+                            .filter(x => x && typeof x.pct === 'number')
+                            .map(x => {
+                                const pctText = x.pct.toFixed(1);
+                                return { key: pctText, sortValue: x.pct, item: makeEntry(fmtPlayer(x.playerId), `${pctText}%`, 'win rate', '') };
+                            });
+                        performanceCards.push(renderRecordCard(`Best Win Percentage (7+ tricks, min ${minRoundsForPct} rounds)`, entries));
+                    }
+
+                    {
+                        const entries = (allPlayers || [])
+                            .slice()
+                            .sort((a, b) => (b.rounds_won || 0) - (a.rounds_won || 0))
+                            .filter(p => p && (p.rounds_won || 0) > 0)
+                            .map(p => {
+                                const wins = Math.floor(parseFloat(p.rounds_won ?? 0) || 0);
+                                return { key: String(wins), sortValue: wins, item: makeEntry(fmtPlayer(p.name), wins, 'round wins', '') };
+                            });
+                        performanceCards.push(renderRecordCard('Most Career Round Wins (7+ tricks)', entries));
+                    }
+
+                    if (typeof tournamentEngine.getPlayerHighTrickRoundCounts === 'function') {
+                        {
+                            const entries = (tournamentEngine.getPlayerHighTrickRoundCounts(11) || [])
+                                .filter(x => x && (x.count || 0) > 0)
+                                .map(x => {
+                                    const value = (x.count === 1) ? '1 round' : `${x.count} rounds`;
+                                    return { key: String(x.count), sortValue: x.count, item: makeEntry(x.playerName, value, '', 'where they scored 11 tricks or more') };
+                                });
+                            performanceCards.push(renderRecordCard('Most 11+ Trick Rounds', entries));
+                        }
+
+                        {
+                            const entries = (tournamentEngine.getPlayerHighTrickRoundCounts(12) || [])
+                                .filter(x => x && (x.count || 0) > 0)
+                                .map(x => {
+                                    const value = (x.count === 1) ? '1 round' : `${x.count} rounds`;
+                                    return { key: String(x.count), sortValue: x.count, item: makeEntry(x.playerName, value, '', 'where they scored 12 tricks or more') };
+                                });
+                            performanceCards.push(renderRecordCard('Most 12+ Trick Rounds', entries));
+                        }
+                    } else {
+                        performanceCards.push(renderRecordCard('Most 11+ Trick Rounds', []));
+                        performanceCards.push(renderRecordCard('Most 12+ Trick Rounds', []));
+                    }
+
+                    if (typeof tournamentEngine.getPlayerMajorityWinStreaks === 'function') {
+                        const entries = (tournamentEngine.getPlayerMajorityWinStreaks(7) || [])
+                            .filter(s => s && (s.streak || 0) > 0)
+                            .map(s => {
+                                const from = s.from ? `Year ${s.from.year} R${s.from.round}` : '—';
+                                const to = s.to ? `Year ${s.to.year} R${s.to.round}` : '—';
+                                const streak = Math.floor(parseFloat(s.streak ?? 0) || 0);
+                                return { key: String(streak), sortValue: streak, item: makeEntry(s.playerName, streak, 'rounds', `from ${from} to ${to}`) };
+                            });
+                        performanceCards.push(renderRecordCard('Longest Majority-Win Streak (7+ tricks)', entries));
+                    } else {
+                        performanceCards.push(renderRecordCard('Longest Majority-Win Streak (7+ tricks)', []));
+                    }
+
+                    // Best tournament averages (top 3)
+                    const perTournamentAverages = [];
+                    for (const t of tournaments) {
+                        if (!t || !Number.isFinite(t.year) || !Array.isArray(t.rounds)) continue;
+                        const year = t.year;
+                        const perPlayer = new Map();
+                        const add = (playerId, tricks, margin) => {
+                            if (!perPlayer.has(playerId)) perPlayer.set(playerId, { tricksSum: 0, marginSum: 0, rounds: 0 });
+                            const agg = perPlayer.get(playerId);
+                            agg.tricksSum += tricks;
+                            agg.marginSum += margin;
+                            agg.rounds += 1;
+                        };
+                        for (const round of (t.rounds || [])) {
+                            for (const table of (round.tables || [])) {
+                                const ps = Array.isArray(table.partnerships) ? table.partnerships : [];
+                                for (let i = 0; i < ps.length; i++) {
+                                    const p = ps[i];
+                                    const tricks = Number.isFinite(p?.tricks) ? p.tricks : parseInt(p?.tricks, 10);
+                                    if (!Number.isFinite(tricks)) continue;
+                                    const opponent = ps.length === 2 ? ps[1 - i] : null;
+                                    const opp = opponent && Number.isFinite(opponent.tricks) ? opponent.tricks : (13 - tricks);
+                                    const margin = Number.isFinite(opp) ? (tricks - opp) : 0;
+                                    const playerIds = []
+                                        .concat(Array.isArray(p.position1) ? p.position1 : [])
+                                        .concat(Array.isArray(p.position2) ? p.position2 : []);
+                                    playerIds.forEach(id => add(id, tricks, margin));
+                                }
+                            }
+                        }
+                        for (const [playerId, agg] of perPlayer.entries()) {
+                            if (!agg.rounds) continue;
+                            perTournamentAverages.push({ playerId, year, avgTricks: agg.tricksSum / agg.rounds, avgMargin: agg.marginSum / agg.rounds });
                         }
                     }
-                }
-                if (bestTournamentScore) {
-                    setText('record-highest-tournament-score', `${tournamentEngine.getDisplayName(bestTournamentScore.player)} (${bestTournamentScore.tricks} tricks, ${bestTournamentScore.year})`);
-                }
-
-                // Best win percentage (round-majority win rate)
-                let bestWinPct = null;
-                for (const p of (allPlayers || [])) {
-                    const totalRounds = p.total_rounds || 0;
-                    if (!totalRounds || totalRounds < 20) continue; // avoid tiny samples
-                    const wins = p.rounds_won || 0;
-                    const pct = (wins / totalRounds) * 100;
-                    if (!bestWinPct || pct > bestWinPct.pct) {
-                        bestWinPct = { playerId: p.name, pct, wins, totalRounds };
+                    perTournamentAverages.sort((a, b) => (b.avgTricks - a.avgTricks) || (b.year - a.year));
+                    {
+                        const entries = (perTournamentAverages || [])
+                            .filter(x => x && typeof x.avgTricks === 'number' && Number.isFinite(x.avgTricks))
+                            .map(x => {
+                                const key = x.avgTricks.toFixed(2);
+                                return { key, sortValue: x.avgTricks, item: makeEntry(fmtPlayer(x.playerId), key, 'avg tricks', `Year ${x.year}`) };
+                            });
+                        performanceCards.push(renderRecordCard('Best Avg Tricks (single tournament)', entries));
                     }
-                }
-                if (bestWinPct) {
-                    setText('record-best-win-percentage', `${tournamentEngine.getDisplayName(bestWinPct.playerId)} (${bestWinPct.pct.toFixed(1)}%)`);
-                }
 
-                // Most career round wins (>=7 tricks)
-                const mostCareerRoundWins = (allPlayers || []).slice().sort((a, b) => (b.rounds_won || 0) - (a.rounds_won || 0))[0];
-                if (mostCareerRoundWins) {
-                    setText('record-most-career-round-wins', `${tournamentEngine.getDisplayName(mostCareerRoundWins.name)} (${mostCareerRoundWins.rounds_won || 0})`);
-                }
-
-                // Most 11+ / 12+ trick rounds
-                if (typeof tournamentEngine.getPlayerHighTrickRoundCounts === 'function') {
-                    const top11 = tournamentEngine.getPlayerHighTrickRoundCounts(11)[0];
-                    const top12 = tournamentEngine.getPlayerHighTrickRoundCounts(12)[0];
-                    if (top11) setText('record-most-11-trick-rounds', `${top11.playerName} (${top11.count})`);
-                    if (top12) setText('record-most-12-trick-rounds', `${top12.playerName} (${top12.count})`);
-                }
-
-                // Longest majority-win streak (>=7 tricks)
-                if (typeof tournamentEngine.getPlayerMajorityWinStreaks === 'function') {
-                    const streaks = tournamentEngine.getPlayerMajorityWinStreaks(7);
-                    const top = streaks && streaks.length ? streaks[0] : null;
-                    if (top) {
-                        const from = top.from ? `${top.from.year} R${top.from.round}` : '—';
-                        const to = top.to ? `${top.to.year} R${top.to.round}` : '—';
-                        setText('record-most-consecutive-majority-wins', `${top.playerName} (${top.streak}, ${from}–${to})`);
+                    // Participation Records
+                    {
+                        const entries = (allPlayers || [])
+                            .slice()
+                            .filter(p => p && (p.tournaments_played || 0) > 0)
+                            .map(p => {
+                                const played = p.tournaments_played || 0;
+                                return { key: String(played), sortValue: played, item: makeEntry(fmtPlayer(p.name), played, 'tournaments', '') };
+                            });
+                        participationCards.push(renderRecordCard('Most Tournaments Played', entries));
                     }
-                }
-
-                // Best tournament averages (avg tricks, avg margin)
-                if (typeof tournamentEngine.getBestTournamentAverages === 'function') {
-                    const { bestAvgTricks, bestAvgMargin } = tournamentEngine.getBestTournamentAverages();
-                    if (bestAvgTricks) {
-                        setText('record-best-avg-tricks', `${bestAvgTricks.playerName} (${bestAvgTricks.avgTricks.toFixed(2)}, ${bestAvgTricks.year})`);
+                    {
+                        const entries = (allPlayers || [])
+                            .slice()
+                            .filter(p => p && (p.top_three_finishes || 0) > 0)
+                            .map(p => {
+                                const top3 = p.top_three_finishes || 0;
+                                return { key: String(top3), sortValue: top3, item: makeEntry(fmtPlayer(p.name), top3, 'top-3 finishes', '') };
+                            });
+                        participationCards.push(renderRecordCard('Most Top-3 Finishes', entries));
                     }
-                    if (bestAvgMargin) {
-                        setText('record-best-avg-margin', `${bestAvgMargin.playerName} (${bestAvgMargin.avgMargin.toFixed(2)}, ${bestAvgMargin.year})`);
+                    {
+                        const entries = (allPlayers || [])
+                            .filter(p => (p.tournaments_played || 0) >= 10 && (p.booby_prizes || 0) === 0)
+                            .map(p => {
+                                const played = p.tournaments_played || 0;
+                                return { key: String(played), sortValue: played, item: makeEntry(fmtPlayer(p.name), played, 'tournaments', 'and 0 last-place finishes') };
+                            });
+                        participationCards.push(renderRecordCard('Never Last Place (min 10 tournaments)', entries));
                     }
-                }
 
-                // Perfect attendance (played every tournament)
-                const perfect = (allPlayers || []).filter(p => (p.tournaments_played || 0) > 0 && (p.tournaments_played || 0) === totalTournaments);
-                if (perfect.length > 0) {
-                    const names = perfect.slice(0, 3).map(p => tournamentEngine.getDisplayName(p.name));
-                    const extra = perfect.length > 3 ? ` +${perfect.length - 3} more` : '';
-                    setText('record-perfect-attendance', `${names.join(', ')}${extra} (${totalTournaments})`);
-                } else {
-                    setText('record-perfect-attendance', '—');
-                }
+                    // Partnership Records
+                    if (typeof tournamentEngine.getPartnershipAnalysis === 'function') {
+                        const partnerships = tournamentEngine.getPartnershipAnalysis() || [];
+                        const partnershipAvgs = partnerships
+                            .filter(p => p && Array.isArray(p.players) && p.players.length === 2 && (p.rounds_played || 0) >= 3)
+                            .map(p => {
+                                const avg = (p.total_tricks / p.rounds_played);
+                                const names = p.players.map(id => tournamentEngine.getDisplayName(id)).join(' & ');
+                                return { names, avg, rounds: p.rounds_played };
+                            })
+                        {
+                            const entries = (partnershipAvgs || [])
+                                .filter(x => x && typeof x.avg === 'number' && Number.isFinite(x.avg))
+                                .sort((a, b) => (b.avg - a.avg) || (b.rounds - a.rounds))
+                                .map(x => {
+                                    const rounds = Math.floor(parseFloat(x.rounds ?? 0) || 0);
+                                    return { key: x.avg.toFixed(2), sortValue: x.avg, item: makeEntry(x.names, x.avg.toFixed(2), 'avg tricks', `over ${rounds} rounds`) };
+                                });
+                            partnershipCards.push(renderRecordCard('Best Partnership (avg tricks)', entries));
+                        }
 
-                // Most tournaments played
-                const mostTournaments = (allPlayers || []).slice().sort((a, b) => (b.tournaments_played || 0) - (a.tournaments_played || 0))[0];
-                if (mostTournaments) {
-                    setText('record-most-tournaments', `${tournamentEngine.getDisplayName(mostTournaments.name)} (${mostTournaments.tournaments_played || 0})`);
-                }
-
-                // Most top-3 finishes
-                if (top3Leader) {
-                    setText('record-most-top3', `${tournamentEngine.getDisplayName(top3Leader.name)} (${top3Leader.top_three_finishes || 0})`);
-                }
-
-                // Never last place (booby_prizes == 0) with a small minimum tournament threshold
-                const neverLast = (allPlayers || [])
-                    .filter(p => (p.tournaments_played || 0) >= 10 && (p.booby_prizes || 0) === 0)
-                    .sort((a, b) => (b.tournaments_played || 0) - (a.tournaments_played || 0));
-                if (neverLast.length > 0) {
-                    const p = neverLast[0];
-                    setText('record-never-last', `${tournamentEngine.getDisplayName(p.name)} (${p.tournaments_played} tournaments)`);
-                } else {
-                    setText('record-never-last', '—');
-                }
-
-                // Best partnership (by avg tricks per round)
-                if (typeof tournamentEngine.getPartnershipAnalysis === 'function') {
-                    const partnerships = tournamentEngine.getPartnershipAnalysis();
-                    if (partnerships && partnerships.length > 0) {
-                        const best = partnerships[0];
-                        const avg = best.rounds_played > 0 ? (best.total_tricks / best.rounds_played) : 0;
-                        const names = Array.isArray(best.players) ? best.players.map(id => tournamentEngine.getDisplayName(id)).join(' & ') : '—';
-                        setText('record-best-partnership', `${names} (${avg.toFixed(2)} avg tricks)`);
-
-                        // Most partnerships (unique partners count)
                         const partnerSets = new Map();
                         for (const pair of partnerships) {
                             if (!pair || !Array.isArray(pair.players) || pair.players.length !== 2) continue;
@@ -679,39 +935,48 @@
                             partnerSets.get(a).add(b);
                             partnerSets.get(b).add(a);
                         }
-                        let bestPartners = null;
-                        for (const [playerId, set] of partnerSets.entries()) {
-                            const count = set.size;
-                            if (!bestPartners || count > bestPartners.count) {
-                                bestPartners = { playerId, count };
-                            }
+                        const mostPartnersAll = Array.from(partnerSets.entries())
+                            .map(([playerId, set]) => ({ playerId, count: set.size }))
+                        {
+                            const entries = (mostPartnersAll || [])
+                                .filter(x => x && (x.count || 0) > 0)
+                                .sort((a, b) => (b.count - a.count) || fmtPlayer(a.playerId).localeCompare(fmtPlayer(b.playerId)))
+                                .map(x => ({ key: String(x.count), sortValue: x.count, item: makeEntry(fmtPlayer(x.playerId), x.count, 'partners', '') }));
+                            partnershipCards.push(renderRecordCard('Most Different Partners', entries));
                         }
-                        if (bestPartners) {
-                            setText('record-most-partnerships', `${tournamentEngine.getDisplayName(bestPartners.playerId)} (${bestPartners.count} partners)`);
-                        }
+                    } else {
+                        partnershipCards.push(renderRecordCard('Best Partnership (avg tricks)', []));
+                        partnershipCards.push(renderRecordCard('Most Different Partners', []));
                     }
+
+                    const sectionsHtml = [];
+                    if (championshipCards.length) sectionsHtml.push(renderSection('👑', 'Championship Records', championshipCards.join('')));
+                    if (performanceCards.length) sectionsHtml.push(renderSection('🎯', 'Performance Records', performanceCards.join('')));
+                    if (participationCards.length) sectionsHtml.push(renderSection('👥', 'Participation Records', participationCards.join('')));
+                    if (partnershipCards.length) sectionsHtml.push(renderSection('🤝', 'Partnership Records', partnershipCards.join('')));
+
+                    recordsPanels.innerHTML = sectionsHtml.join('');
                 }
 
-                // --- Big rounds lists (12+ and 13)
+                // --- Big rounds lists (12 exactly, and 13)
                 const list12 = document.getElementById('hof-12plus-list');
                 if (list12 && typeof tournamentEngine.getHighTrickRoundEvents === 'function') {
-                    const events12 = tournamentEngine.getHighTrickRoundEvents(12);
-                    if (!events12 || events12.length === 0) {
+                    const events12 = (tournamentEngine.getHighTrickRoundEvents(12) || []).filter(e => e && e.tricks === 12);
+                    if (!events12.length) {
                         list12.innerHTML = `
                             <div class="record-item">
                                 <span class="record-title">None yet</span>
-                                <span class="record-holder">No 12+ trick rounds found.</span>
+                                <span class="record-holder">No 12-trick rounds found.</span>
                             </div>
                         `;
                     } else {
                         const maxRows = 60;
                         const rows = events12.slice(0, maxRows).map(e => {
-                            const score = Number.isFinite(e.opponentTricks) ? `${e.tricks} / ${e.opponentTricks}` : `${e.tricks}`;
                             const suit = e.trumpSuit ? ` • ${e.trumpSuit}` : '';
                             return `
                                 <div class="record-item">
                                     <span class="record-title">${e.year} • Round ${e.round} • Table ${e.table}${suit}</span>
-                                    <span class="record-holder">${e.partnership} (${score})</span>
+                                    <span class="record-holder">${e.partnership}</span>
                                 </div>
                             `;
                         }).join('');
@@ -727,12 +992,11 @@
                     const events13 = tournamentEngine.getHighTrickRoundEvents(13);
                     if (events13 && events13.length > 0) {
                         list13.innerHTML = events13.map(e => {
-                            const score = Number.isFinite(e.opponentTricks) ? `${e.tricks} / ${e.opponentTricks}` : `${e.tricks}`;
                             const suit = e.trumpSuit ? ` • ${e.trumpSuit}` : '';
                             return `
                                 <div class="record-item">
                                     <span class="record-title">${e.year} • Round ${e.round} • Table ${e.table}${suit}</span>
-                                    <span class="record-holder">${e.partnership} (${score})</span>
+                                    <span class="record-holder">${e.partnership}</span>
                                 </div>
                             `;
                         }).join('');
@@ -782,7 +1046,7 @@
                     const wasShowingAll = showingAllPlayers;
                     showingAllPlayers = !showingAllPlayers;
                     updateToggleButton();
-                    updateRankingsTable(currentSortedPlayers, showingAllPlayers ? currentSortedPlayers.length : 10);
+                    refreshRankingsTable();
                     
                     // If we just switched from showing all to showing top 10, scroll to top of table
                     if (wasShowingAll && !showingAllPlayers) {
@@ -796,6 +1060,35 @@
                     }
                 });
             }
+        }
+
+        function getTournamentsPlayedCount(player) {
+            if (!player) return 0;
+            const raw = player.tournaments_played ?? player.tournaments ?? player.total_tournaments ?? player.tournamentsPlayed;
+            const n = Number.isFinite(raw) ? raw : parseFloat(raw);
+            if (!Number.isFinite(n)) return 0;
+            return Math.floor(n);
+        }
+
+        function applySampleSizeFilter(players) {
+            const arr = Array.isArray(players) ? players : [];
+            if (!excludeLowSampleSize) return arr;
+            return arr.filter(p => getTournamentsPlayedCount(p) >= MIN_TOURNAMENT_SAMPLE_SIZE);
+        }
+
+        function refreshRankingsTable() {
+            const filtered = applySampleSizeFilter(currentSortedPlayers);
+            updateRankingsTable(filtered, showingAllPlayers ? filtered.length : 10);
+        }
+
+        function setupSampleSizeToggle() {
+            const toggle = document.getElementById('toggle-sample-filter');
+            if (!toggle) return;
+            excludeLowSampleSize = toggle.checked;
+            toggle.addEventListener('change', () => {
+                excludeLowSampleSize = toggle.checked;
+                refreshRankingsTable();
+            });
         }
 
         const TRICK_WARNING_STORAGE_KEY = 'whist_hide_trick_mismatch_warning';
@@ -978,7 +1271,7 @@
             updateToggleButton();
             
             // Update rankings table with current view preference
-            updateRankingsTable(sortedPlayers, showingAllPlayers ? sortedPlayers.length : 10);
+            refreshRankingsTable();
             
             setActiveFilterButton(rankingType);
             updateURLWithRanking(rankingType);
@@ -1104,8 +1397,8 @@
                 
                 if (currentRankingType === 'career_stats') {
                     // Special layout for Career Wins
-                    const roundsWonDisplay = (player.rounds_won ?? 0).toFixed(1);
-                    const roundsPlayedDisplay = (player.total_rounds ?? 0).toFixed(1);
+                    const roundsWonDisplay = Math.floor(parseFloat(player.rounds_won ?? 0) || 0).toString();
+                    const roundsPlayedDisplay = Math.floor(parseFloat(player.total_rounds ?? 0) || 0).toString();
                     return `
                         <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
                             <div class="rank-col">
@@ -1115,7 +1408,6 @@
                             <div class="player-col">
                                 <a href="../players/profile.html?player=${encodeURIComponent(player.name)}" class="player-link">
                                     <span class="player-name">${tournamentEngine.getDisplayName(player.name)}</span>
-                                    <span class="player-nickname">${getPlayerNickname(player.name)}</span>
                                 </a>
                             </div>
                             <div class="rounds-won-col">${roundsWonDisplay}</div>
@@ -1134,7 +1426,6 @@
                             <div class="player-col">
                                 <a href="../players/profile.html?player=${encodeURIComponent(player.name)}" class="player-link">
                                     <span class="player-name">${tournamentEngine.getDisplayName(player.name)}</span>
-                                    <span class="player-nickname">${getPlayerNickname(player.name)}</span>
                                 </a>
                             </div>
                             <div class="score-col">${formatScoreDisplay(player, currentRankingType)}</div>
@@ -1153,7 +1444,6 @@
                             <div class="player-col">
                                 <a href="../players/profile.html?player=${encodeURIComponent(player.name)}" class="player-link">
                                     <span class="player-name">${tournamentEngine.getDisplayName(player.name)}</span>
-                                    <span class="player-nickname">${getPlayerNickname(player.name)}</span>
                                 </a>
                             </div>
                             <div class="wins-col">${player.tournament_wins || 0}</div>
@@ -1181,7 +1471,6 @@
                             <div class="player-col">
                                 <a href="../players/profile.html?player=${encodeURIComponent(player.name)}" class="player-link">
                                     <span class="player-name">${tournamentEngine.getDisplayName(player.name)}</span>
-                                    <span class="player-nickname">${getPlayerNickname(player.name)}</span>
                                 </a>
                             </div>
                             <div class="booby-count-col">${boobyWins}</div>
@@ -1200,7 +1489,6 @@
                             <div class="player-col">
                                 <a href="../players/profile.html?player=${encodeURIComponent(player.name)}" class="player-link">
                                     <span class="player-name">${tournamentEngine.getDisplayName(player.name)}</span>
-                                    <span class="player-nickname">${getPlayerNickname(player.name)}</span>
                                 </a>
                             </div>
                             <div class="score-col">${formatScoreDisplay(player, currentRankingType)}</div>
@@ -1222,7 +1510,6 @@
                             <div class="player-col">
                                 <a href="../players/profile.html?player=${encodeURIComponent(player.name)}" class="player-link">
                                     <span class="player-name">${tournamentEngine.getDisplayName(player.name)}</span>
-                                    <span class="player-nickname">${getPlayerNickname(player.name)}</span>
                                 </a>
                             </div>
                             <div class="score-col">${formatScoreDisplay(player, currentRankingType)}</div>
@@ -1362,11 +1649,8 @@
         }
 
         function getPlayerNickname(name) {
-            if (!tournamentEngine || typeof tournamentEngine.getPlayerNameParts !== 'function') {
-                return '';
-            }
-            const parts = tournamentEngine.getPlayerNameParts(name);
-            return parts && parts.nickname ? `"${parts.nickname}"` : '';
+            // Nicknames removed from Hall of Fame ranking rows (kept for player profile only).
+            return '';
         }
 
         function generateTrendIndicator(player, currentPosition, rankingType) {
@@ -1393,31 +1677,8 @@
         }
 
         function generateChampionshipHistory() {
-            const timeline = document.getElementById('champions-timeline');
-            if (!timeline || !tournamentEngine || typeof tournamentEngine.getTournamentChampionsChronological !== 'function') {
-                if (timeline) {
-                    timeline.innerHTML = '';
-                }
-                return;
-            }
-
-            const champions = tournamentEngine.getTournamentChampionsChronological();
-            const timelineHTML = champions.map(entry => {
-                const championName = entry.winner ? tournamentEngine.getDisplayName(entry.winner) : '—';
-                const highlight = entry.title ? entry.title : 'Champion';
-                return `
-                    <div class="champion-entry">
-                        <div class="champion-year">${entry.year}</div>
-                        <div class="champion-info">
-                            <h4 class="champion-name">${championName}</h4>
-                            <p class="champion-highlight">${highlight}</p>
-                        </div>
-                        <div class="champion-medal">🏆</div>
-                    </div>
-                `;
-            }).join('');
-
-            timeline.innerHTML = timelineHTML;
+            // Championship history is now rendered as a table via renderHallOfFamePanels().
+            return;
         }
 
         function loadFallbackData() {
@@ -1553,6 +1814,58 @@
             width: 100%;
         }
 
+        .full-rankings-tools {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .sample-filter-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary-dark);
+            user-select: none;
+        }
+
+        .sample-filter-toggle input {
+            accent-color: var(--primary);
+        }
+
+        .sample-filter-toggle__text {
+            font-weight: 600;
+            color: var(--text-primary-dark);
+        }
+
+        .sample-filter-toggle__hint {
+            color: var(--text-secondary-dark);
+            opacity: 0.85;
+            font-weight: 500;
+        }
+
+        /* Dark-background variant (above the table on green bg) */
+        .sample-filter-toggle--dark {
+            color: var(--text-secondary);
+        }
+
+        .sample-filter-toggle--dark .sample-filter-toggle__text {
+            color: var(--text-primary);
+        }
+
+        .sample-filter-toggle--dark .sample-filter-toggle__hint {
+            color: var(--text-secondary);
+            opacity: 0.9;
+        }
+
+        .rankings-table-body {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md);
+            background: rgba(15, 36, 25, 0.06);
+        }
+
         .rankings-table-header {
             display: grid;
             grid-template-columns: 80px 1.2fr 120px 120px 100px 120px 80px;
@@ -1577,20 +1890,47 @@
         .ranking-row {
             display: grid;
             grid-template-columns: 80px 1.2fr 120px 120px 100px 120px 80px;
-            padding: var(--spacing-md);
-            border-bottom: 1px solid var(--border);
+            padding: var(--spacing-md) var(--spacing-lg);
             align-items: center;
             transition: all 0.2s ease;
             color: var(--text-primary-dark);
+            background: white;
+            border: 1px solid rgba(34, 197, 94, 0.22);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-sm);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ranking-row::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 6px;
+            background: rgba(212, 175, 55, 0.6);
         }
 
         .ranking-row:hover {
-            background: var(--bg-secondary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: rgba(212, 175, 55, 0.55);
         }
 
         .ranking-row.podium-row {
-            background: linear-gradient(90deg, rgba(245, 158, 11, 0.1) 0%, transparent 100%);
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.14) 0%, rgba(255, 255, 255, 1) 70%);
+            border-color: rgba(212, 175, 55, 0.55);
         }
+
+        /* Alternating accents so rows feel more distinct */
+        .rankings-table-body .ranking-row:nth-child(odd)::before { background: rgba(212, 175, 55, 0.65); }
+        .rankings-table-body .ranking-row:nth-child(even)::before { background: rgba(34, 197, 94, 0.55); }
+
+        /* Podium accents (top 3 rows in current view) */
+        .rankings-table-body .ranking-row:nth-child(1)::before { background: var(--gold); }
+        .rankings-table-body .ranking-row:nth-child(2)::before { background: var(--silver); }
+        .rankings-table-body .ranking-row:nth-child(3)::before { background: var(--bronze); }
 
         .rank-col {
             display: flex;
@@ -1612,7 +1952,8 @@
         }
 
         .player-name {
-            font-weight: 600;
+            font-weight: 850;
+            color: var(--primary-dark);
             transition: color 0.2s ease;
         }
 
@@ -1628,6 +1969,52 @@
             font-family: var(--font-primary);
             color: var(--primary);
             font-size: 1.125rem;
+        }
+
+        /* Value emphasis: color only (no bubbles) */
+        .ranking-row .score-col,
+        .ranking-row .wins-col,
+        .ranking-row .percentage-col,
+        .ranking-row .podium-col,
+        .ranking-row .avg-finish-col,
+        .ranking-row .recent-col,
+        .ranking-row .tournaments-col,
+        .ranking-row .rounds-won-col,
+        .ranking-row .rounds-played-col,
+        .ranking-row .booby-count-col,
+        .ranking-row .booby-percent-col {
+            font-variant-numeric: tabular-nums;
+            justify-self: center;
+            text-align: center;
+        }
+
+        .ranking-row .score-col {
+            color: var(--primary);
+            font-weight: 900;
+            background: transparent;
+            border: none;
+            padding: 0;
+            border-radius: 0;
+            width: auto;
+        }
+
+        .ranking-row .wins-col,
+        .ranking-row .tournaments-col,
+        .ranking-row .percentage-col,
+        .ranking-row .podium-col,
+        .ranking-row .avg-finish-col,
+        .ranking-row .recent-col,
+        .ranking-row .rounds-won-col,
+        .ranking-row .rounds-played-col,
+        .ranking-row .booby-count-col,
+        .ranking-row .booby-percent-col {
+            color: var(--primary-dark);
+            font-weight: 750;
+            background: transparent;
+            border: none;
+            padding: 0;
+            border-radius: 0;
+            width: auto;
         }
 
         .trend-col {
@@ -1846,6 +2233,219 @@
         .record-holder {
             font-weight: 600;
             color: var(--primary);
+        }
+
+        /* Shared "card" styling for Hall of Fame tables on this page */
+        .analytics-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-lg);
+            border: 2px solid rgba(34, 197, 94, 0.25);
+        }
+
+        .muted {
+            color: var(--text-secondary-dark);
+            opacity: 0.85;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 0.65rem;
+        }
+
+        .report-table thead th {
+            text-align: left;
+            padding: 0.85rem 0.85rem;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--bg-secondary) 100%);
+            color: white;
+            border: none;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .report-table tbody td {
+            text-align: left;
+            padding: 0.85rem 0.85rem;
+            background: white;
+            color: var(--text-primary-dark);
+            border-top: 1px solid rgba(34, 197, 94, 0.22);
+            border-bottom: 1px solid rgba(34, 197, 94, 0.22);
+            vertical-align: middle;
+        }
+
+        /* Card edges for table rows */
+        .report-table tbody tr td:first-child {
+            border-left: 1px solid rgba(34, 197, 94, 0.22);
+            border-top-left-radius: var(--border-radius-lg);
+            border-bottom-left-radius: var(--border-radius-lg);
+            font-weight: 750;
+            background: rgba(15, 36, 25, 0.03);
+        }
+
+        .report-table tbody tr td:last-child {
+            border-right: 1px solid rgba(34, 197, 94, 0.22);
+            border-top-right-radius: var(--border-radius-lg);
+            border-bottom-right-radius: var(--border-radius-lg);
+        }
+
+        .report-table tbody tr:hover td {
+            background: rgba(212, 175, 55, 0.10);
+        }
+
+        /* Section label rows inside the records table */
+        .report-table tbody tr.hof-section-row td {
+            background: transparent;
+            border: none;
+            padding: 1.15rem 0.25rem 0.25rem;
+        }
+
+        .hof-sep {
+            color: rgba(10, 26, 15, 0.35);
+            font-weight: 700;
+        }
+
+        /* Records panels layout (3 per row) */
+        .hof-records-panels {
+            display: grid;
+            gap: var(--spacing-2xl);
+        }
+
+        .hof-records-section-title {
+            color: var(--primary);
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 2px solid var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .hof-records-section-emoji {
+            font-size: 1.35rem;
+        }
+
+        .hof-records-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-xl);
+        }
+
+        .hof-record-card {
+            border: 2px solid rgba(34, 197, 94, 0.20);
+        }
+
+        .hof-record-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .hof-record-icon {
+            font-size: 2.25rem;
+            line-height: 1;
+        }
+
+        .hof-record-title {
+            font-family: var(--font-primary);
+            font-weight: 900;
+            color: var(--text-primary-dark);
+            font-size: 1.4rem;
+            line-height: 1.15;
+        }
+
+        .hof-record-main {
+            color: var(--text-primary-dark);
+        }
+
+        .hof-record-winner-rank {
+            font-size: 0.8rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 800;
+            color: rgba(10, 26, 15, 0.65);
+            margin-bottom: 0.35rem;
+        }
+
+        .hof-record-lead-sentence {
+            line-height: 1.2;
+            color: var(--text-primary-dark);
+            word-break: break-word;
+            font-size: 1.05rem;
+        }
+
+        .hof-lead-verb {
+            color: rgba(10, 26, 15, 0.62);
+            font-weight: 750;
+        }
+
+        .hof-lead-metric {
+            color: var(--primary);
+            font-weight: 950;
+        }
+
+        .hof-lead-extra {
+            color: var(--text-secondary-dark);
+            font-weight: 700;
+        }
+
+        .hof-record-lead-extras {
+            margin-top: 0.35rem;
+            font-size: 0.9rem;
+            color: rgba(26, 26, 26, 0.7);
+            line-height: 1.25;
+        }
+
+        .hof-record-divider {
+            margin-top: var(--spacing-lg);
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid rgba(10, 26, 15, 0.12);
+        }
+
+        .hof-record-footnotes {
+            display: grid;
+            gap: 0.4rem;
+            margin-top: 0.65rem;
+        }
+
+        .hof-record-footnote {
+            font-size: 0.9rem;
+            color: rgba(26, 26, 26, 0.75);
+            line-height: 1.25;
+        }
+
+        .hof-record-footnote-rank {
+            font-size: 0.75rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 800;
+            color: rgba(10, 26, 15, 0.45);
+            white-space: nowrap;
+        }
+
+        .hof-record-footnote-text {
+            color: rgba(26, 26, 26, 0.72);
+        }
+
+        /* Inline name/value styling used by the Records + History tables */
+        .hof-name {
+            color: var(--primary-dark);
+            font-weight: 850;
+        }
+
+        .hof-value {
+            color: var(--primary);
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        .hof-detail {
+            color: var(--text-secondary-dark);
+            font-weight: 650;
+            white-space: nowrap;
         }
 
         .data-issues-banner {
