@@ -16,8 +16,11 @@ class FamilyTree {
     /**
      * Load family tree data from JSON
      */
-    async loadFamilyData(familyDataUrl = '/data/family-tree.json') {
+    async loadFamilyData(familyDataUrl = null) {
         try {
+            if (!familyDataUrl) {
+                throw new Error('Family tree data URL not configured');
+            }
             const response = await fetch(familyDataUrl);
             const familyData = await response.json();
             

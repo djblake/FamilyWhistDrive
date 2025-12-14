@@ -95,24 +95,7 @@ class PhotoGallery {
             }
         ];
 
-        // Add year-specific variations
-        if (year === 2023) {
-            basePhotos.push({
-                filename: 'margaret_victory_speech.jpg',
-                caption: 'Margaret Wilson\'s Championship Victory Speech - "Three in a Row!"',
-                date: `${year}-12-25`,
-                type: 'celebration'
-            });
-        }
-
-        if (year === 2022) {
-            basePhotos.push({
-                filename: 'emma_youngest_winner.jpg',
-                caption: 'Emma Jones Makes History - Youngest Champion Ever at Age 21',
-                date: `${year}-12-25`,
-                type: 'milestone'
-            });
-        }
+        // (Removed year-specific dummy captions / names.)
 
         return basePhotos.map(photo => ({
             ...photo,

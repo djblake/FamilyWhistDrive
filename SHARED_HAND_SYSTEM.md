@@ -79,7 +79,7 @@ const combinedStats = engine.getPlayerStats("David Smith", true);
 const individualStats = engine.getPlayerStats("David Smith", false);
 
 // Check if player has shared hand history
-const hasShared = engine.playerHasSharedHands("David Smith");
+const hasShared = engine.playerHasSharedHands("Some Player");
 ```
 
 ### Player Rankings
@@ -93,15 +93,7 @@ const individualRankings = engine.getPlayerRankings(false);
 
 ## Testing
 
-The system includes built-in test methods:
-
-```javascript
-// Test the shared hand parsing and calculation
-engine.testSharedHands();
-
-// Generate sample CSV with shared hands
-const sampleData = engine.generateSampleSharedHandCSV();
-```
+The shared-hand logic is exercised through real tournament data loads. No sample/dummy data helpers are shipped with the site.
 
 ## UI Integration
 

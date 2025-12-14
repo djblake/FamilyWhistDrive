@@ -97,10 +97,10 @@
                         <div class="insight-icon">👑</div>
                         <h3>Current Dynasty</h3>
                         <div class="insight-content">
-                            <p><strong>David</strong> claimed victory in the historic "[2000] Covid Begins!" tournament, demonstrating exceptional skill in this family competition.</p>
+                            <p id="insight-current-dynasty-text">Loading latest champion…</p>
                             <div class="insight-stat">
-                                <span class="stat-number">1</span>
-                                <span class="stat-label">Tournament Victory</span>
+                                <span class="stat-number" id="insight-current-dynasty-number">—</span>
+                                <span class="stat-label" id="insight-current-dynasty-label">Most recent winner</span>
                             </div>
                         </div>
                     </div>
@@ -109,22 +109,22 @@
                         <div class="insight-icon">🏆</div>
                         <h3>All-Time Champion</h3>
                         <div class="insight-content">
-                            <p><strong>James Ruston Sr.</strong> remains the tournament GOAT with 12 total championships spanning four decades of excellence.</p>
+                            <p id="insight-all-time-champ-text">Loading all-time champion…</p>
                             <div class="insight-stat">
-                                <span class="stat-number">12</span>
-                                <span class="stat-label">Total Championships</span>
+                                <span class="stat-number" id="insight-all-time-champ-number">—</span>
+                                <span class="stat-label" id="insight-all-time-champ-label">Total championships</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="insight-card">
                         <div class="insight-icon">⚡</div>
-                        <h3>Rising Star</h3>
+                        <h3>Best Recent Form</h3>
                         <div class="insight-content">
-                            <p><strong>Emma Jones</strong> broke the youngest winner record at age 21 and shows championship potential for the next generation.</p>
+                            <p id="insight-recent-form-text">Loading best recent form…</p>
                             <div class="insight-stat">
-                                <span class="stat-number">21</span>
-                                <span class="stat-label">Age at First Win</span>
+                                <span class="stat-number" id="insight-recent-form-number">—</span>
+                                <span class="stat-label" id="insight-recent-form-label">Recent form score</span>
                             </div>
                         </div>
                     </div>
@@ -133,10 +133,10 @@
                         <div class="insight-icon">🎯</div>
                         <h3>Consistency King</h3>
                         <div class="insight-content">
-                            <p><strong>David Smith</strong> holds the record for most top-3 finishes (28) and has never finished last in 25+ tournaments.</p>
+                            <p id="insight-consistency-text">Loading top-3 leader…</p>
                             <div class="insight-stat">
-                                <span class="stat-number">28</span>
-                                <span class="stat-label">Top-3 Finishes</span>
+                                <span class="stat-number" id="insight-consistency-number">—</span>
+                                <span class="stat-label" id="insight-consistency-label">Top-3 finishes</span>
                             </div>
                         </div>
                     </div>
@@ -160,7 +160,7 @@
                         <div class="stat-icon">🏆</div>
                         <div class="stat-content">
                             <h4>Total Championships</h4>
-                            <div class="stat-number">40</div>
+                            <div class="stat-number" id="hof-total-championships">—</div>
                             <div class="stat-detail">Four Decades of Excellence</div>
                         </div>
                     </div>
@@ -169,7 +169,7 @@
                         <div class="stat-icon">👥</div>
                         <div class="stat-content">
                             <h4>Total Champions</h4>
-                            <div class="stat-number">15</div>
+                            <div class="stat-number" id="hof-total-champions">—</div>
                             <div class="stat-detail">Different Winners</div>
                         </div>
                     </div>
@@ -178,17 +178,17 @@
                         <div class="stat-icon">🔄</div>
                         <div class="stat-content">
                             <h4>Most Consecutive</h4>
-                            <div class="stat-number">3</div>
-                            <div class="stat-detail">Margaret Wilson (2021-2023)</div>
+                            <div class="stat-number" id="hof-most-consecutive">—</div>
+                            <div class="stat-detail" id="hof-most-consecutive-detail">Loading…</div>
                         </div>
                     </div>
                     
                     <div class="stat-card">
                         <div class="stat-icon">📈</div>
                         <div class="stat-content">
-                            <h4>Participation Rate</h4>
-                            <div class="stat-number">94%</div>
-                            <div class="stat-detail">Average Family Attendance</div>
+                            <h4>Avg Entrants</h4>
+                            <div class="stat-number" id="hof-avg-entrants">—</div>
+                            <div class="stat-detail">Average tournament size</div>
                         </div>
                     </div>
                 </div>
@@ -208,19 +208,19 @@
                         <div class="record-list">
                             <div class="record-item">
                                 <span class="record-title">Most Championships</span>
-                                <span class="record-holder">James Ruston Sr. (12)</span>
+                                <span class="record-holder" id="record-most-championships">—</span>
                             </div>
                             <div class="record-item">
                                 <span class="record-title">Most Consecutive</span>
-                                <span class="record-holder">James Ruston Sr. / Margaret Wilson (3)</span>
+                                <span class="record-holder" id="record-most-consecutive-championships">—</span>
                             </div>
                             <div class="record-item">
                                 <span class="record-title">Youngest Winner</span>
-                                <span class="record-holder">Emma Jones (Age 21)</span>
+                                <span class="record-holder">Requires birth dates</span>
                             </div>
                             <div class="record-item">
                                 <span class="record-title">Oldest Winner</span>
-                                <span class="record-holder">Tom Wilson (Age 76)</span>
+                                <span class="record-holder">Requires birth dates</span>
                             </div>
                         </div>
                     </div>
@@ -230,19 +230,35 @@
                         <div class="record-list">
                             <div class="record-item">
                                 <span class="record-title">Highest Tournament Score</span>
-                                <span class="record-holder">James Ruston Sr. (142 tricks, 1998)</span>
+                                <span class="record-holder" id="record-highest-tournament-score">—</span>
                             </div>
                             <div class="record-item">
                                 <span class="record-title">Best Win Percentage</span>
-                                <span class="record-holder">Margaret Wilson (68.0%)</span>
+                                <span class="record-holder" id="record-best-win-percentage">—</span>
                             </div>
                             <div class="record-item">
-                                <span class="record-title">Most Career Wins</span>
-                                <span class="record-holder">James Ruston Sr. (156)</span>
+                                <span class="record-title">Most Career Round Wins (7+ tricks)</span>
+                                <span class="record-holder" id="record-most-career-round-wins">—</span>
                             </div>
                             <div class="record-item">
                                 <span class="record-title">Most 11-Trick Rounds</span>
-                                <span class="record-holder">Margaret Wilson (47)</span>
+                                <span class="record-holder" id="record-most-11-trick-rounds">—</span>
+                            </div>
+                            <div class="record-item">
+                                <span class="record-title">Longest Majority-Win Streak (7+ tricks)</span>
+                                <span class="record-holder" id="record-most-consecutive-majority-wins">—</span>
+                            </div>
+                            <div class="record-item">
+                                <span class="record-title">Most 12-Trick Rounds</span>
+                                <span class="record-holder" id="record-most-12-trick-rounds">—</span>
+                            </div>
+                            <div class="record-item">
+                                <span class="record-title">Best Avg Tricks (single tournament)</span>
+                                <span class="record-holder" id="record-best-avg-tricks">—</span>
+                            </div>
+                            <div class="record-item">
+                                <span class="record-title">Best Avg Margin (single tournament)</span>
+                                <span class="record-holder" id="record-best-avg-margin">—</span>
                             </div>
                         </div>
                     </div>
@@ -252,19 +268,19 @@
                         <div class="record-list">
                             <div class="record-item">
                                 <span class="record-title">Perfect Attendance</span>
-                                <span class="record-holder">Tom Wilson (40 years)</span>
+                                <span class="record-holder" id="record-perfect-attendance">—</span>
                             </div>
                             <div class="record-item">
                                 <span class="record-title">Most Tournaments</span>
-                                <span class="record-holder">James Ruston Sr. (40)</span>
+                                <span class="record-holder" id="record-most-tournaments">—</span>
                             </div>
                             <div class="record-item">
                                 <span class="record-title">Most Top-3 Finishes</span>
-                                <span class="record-holder">David Smith (28)</span>
+                                <span class="record-holder" id="record-most-top3">—</span>
                             </div>
                             <div class="record-item">
                                 <span class="record-title">Never Last Place</span>
-                                <span class="record-holder">David Smith (25 tournaments)</span>
+                                <span class="record-holder" id="record-never-last">—</span>
                             </div>
                         </div>
                     </div>
@@ -274,19 +290,50 @@
                         <div class="record-list">
                             <div class="record-item">
                                 <span class="record-title">Best Partnership</span>
-                                <span class="record-holder">Margaret Wilson & James Ruston (73% success)</span>
+                                <span class="record-holder" id="record-best-partnership">—</span>
                             </div>
                             <div class="record-item">
                                 <span class="record-title">Most Partnerships</span>
-                                <span class="record-holder">James Ruston Sr. (156 different partners)</span>
+                                <span class="record-holder" id="record-most-partnerships">—</span>
                             </div>
                             <div class="record-item">
                                 <span class="record-title">Family Chemistry</span>
-                                <span class="record-holder">Ruston Brothers (68% success rate)</span>
+                                <span class="record-holder">TBD</span>
                             </div>
                             <div class="record-item">
                                 <span class="record-title">Cross-Generation</span>
-                                <span class="record-holder">Tom Wilson & Emma Jones (65% success)</span>
+                                <span class="record-holder">TBD</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="records-section">
+            <div class="container">
+                <h2 class="section-title">
+                    <span class="title-icon">🔥</span>
+                    Big Rounds Hall of Fame
+                </h2>
+
+                <div class="records-grid">
+                    <div class="record-category">
+                        <h3>12+ trick rounds (chronological)</h3>
+                        <div class="record-list" id="hof-12plus-list">
+                            <div class="record-item">
+                                <span class="record-title">Loading…</span>
+                                <span class="record-holder">—</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="record-category">
+                        <h3>13-trick rounds</h3>
+                        <div class="record-list" id="hof-13-list">
+                            <div class="record-item">
+                                <span class="record-title">None yet</span>
+                                <span class="record-holder">When it happens, it will appear here.</span>
                             </div>
                         </div>
                     </div>
@@ -300,9 +347,9 @@
             <div class="footer-content">
                 <div class="footer-section">
                     <h4>Hall of Fame</h4>
-                    <p><a href="../players/margaret-wilson/">Margaret Wilson</a></p>
-                    <p><a href="../players/james-ruston/">James Ruston Sr.</a></p>
-                    <p><a href="../players/">All Champions</a></p>
+                    <p><a href="../players/">All Players</a></p>
+                    <p><a href="../tournaments/">All Tournaments</a></p>
+                    <p><a href="./">Rankings</a></p>
                 </div>
                 <div class="footer-section">
                     <h4>Statistics</h4>
@@ -373,6 +420,9 @@
                 
                 // Generate championship history from real data
                 generateChampionshipHistory();
+
+                // Fill Hall of Fame panels (insights, records, big rounds) from real data
+                renderHallOfFamePanels();
                 
                 // Add filter event listeners
                 setupFilterListeners();
@@ -390,6 +440,306 @@
                 } else {
                     renderDataIssuesBanner(null);
                 }
+            }
+        }
+
+        function setText(id, text) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = (text === null || typeof text === 'undefined') ? '—' : String(text);
+        }
+
+        function renderHallOfFamePanels() {
+            try {
+                if (!tournamentEngine) {
+                    return;
+                }
+
+                const tournaments = typeof tournamentEngine.getAllTournamentsUnique === 'function'
+                    ? tournamentEngine.getAllTournamentsUnique('asc')
+                    : [];
+
+                const champions = typeof tournamentEngine.getTournamentChampionsChronological === 'function'
+                    ? tournamentEngine.getTournamentChampionsChronological()
+                    : [];
+
+                const totalTournaments = champions.length;
+                const uniqueChampionSet = new Set(champions.map(c => c.winner).filter(Boolean));
+
+                // --- Insights
+                const latest = champions.length > 0 ? champions[champions.length - 1] : null;
+                if (latest && latest.winner) {
+                    const champName = tournamentEngine.getDisplayName(latest.winner);
+                    const title = latest.title ? `“${latest.title}”` : 'the tournament';
+                    const p = document.getElementById('insight-current-dynasty-text');
+                    if (p) {
+                        p.innerHTML = `<strong>${champName}</strong> won ${latest.year} ${title}.`;
+                    }
+                    setText('insight-current-dynasty-number', latest.year);
+                    setText('insight-current-dynasty-label', 'Most recent champion');
+                } else {
+                    setText('insight-current-dynasty-text', 'No champion data available yet.');
+                }
+
+                const playersByWins = tournamentEngine.getAllPlayers('tournament_wins');
+                const allTime = playersByWins && playersByWins.length > 0 ? playersByWins[0] : null;
+                if (allTime) {
+                    const p = document.getElementById('insight-all-time-champ-text');
+                    if (p) {
+                        p.innerHTML = `<strong>${tournamentEngine.getDisplayName(allTime.name)}</strong> leads with the most championships.`;
+                    }
+                    setText('insight-all-time-champ-number', allTime.tournament_wins || 0);
+                    setText('insight-all-time-champ-label', 'Total championships');
+                }
+
+                // Best recent form
+                let bestRecent = null;
+                if (recentFormScores && recentFormScores.size) {
+                    for (const player of (allPlayers || [])) {
+                        const score = recentFormScores.get(player.name);
+                        if (typeof score !== 'number') continue;
+                        if (!bestRecent || score > bestRecent.score) {
+                            bestRecent = { playerId: player.name, score };
+                        }
+                    }
+                }
+                if (bestRecent) {
+                    const p = document.getElementById('insight-recent-form-text');
+                    if (p) {
+                        p.innerHTML = `<strong>${tournamentEngine.getDisplayName(bestRecent.playerId)}</strong> has the best recent form over the last 5 tournaments.`;
+                    }
+                    setText('insight-recent-form-number', Math.round(bestRecent.score));
+                    setText('insight-recent-form-label', 'Recent form score');
+                } else {
+                    setText('insight-recent-form-text', 'Recent form data unavailable.');
+                }
+
+                // Consistency (top-3 finishes)
+                const top3Leader = (allPlayers || []).slice().sort((a, b) => (b.top_three_finishes || 0) - (a.top_three_finishes || 0))[0];
+                if (top3Leader) {
+                    const p = document.getElementById('insight-consistency-text');
+                    if (p) {
+                        p.innerHTML = `<strong>${tournamentEngine.getDisplayName(top3Leader.name)}</strong> has the most top-3 finishes.`;
+                    }
+                    setText('insight-consistency-number', top3Leader.top_three_finishes || 0);
+                    setText('insight-consistency-label', 'Top-3 finishes');
+                }
+
+                // --- Championship history stats
+                setText('hof-total-championships', totalTournaments);
+                setText('hof-total-champions', uniqueChampionSet.size);
+
+                const streak = typeof tournamentEngine.getLongestChampionStreak === 'function'
+                    ? tournamentEngine.getLongestChampionStreak()
+                    : { winner: null, streak: 0, fromYear: null, toYear: null };
+                setText('hof-most-consecutive', streak && streak.streak ? streak.streak : 0);
+                const streakDetail = document.getElementById('hof-most-consecutive-detail');
+                if (streakDetail) {
+                    if (streak && streak.winner && streak.streak > 0) {
+                        streakDetail.textContent = `${tournamentEngine.getDisplayName(streak.winner)} (${streak.fromYear}–${streak.toYear})`;
+                    } else {
+                        streakDetail.textContent = '—';
+                    }
+                }
+
+                const avgEntrants = tournaments.length > 0
+                    ? (tournaments.reduce((sum, t) => sum + (t.total_players || 0), 0) / tournaments.length)
+                    : 0;
+                setText('hof-avg-entrants', tournaments.length > 0 ? avgEntrants.toFixed(1) : '—');
+
+                // --- Records
+                if (allTime) {
+                    setText('record-most-championships', `${tournamentEngine.getDisplayName(allTime.name)} (${allTime.tournament_wins || 0})`);
+                }
+                if (streak && streak.winner && streak.streak > 0) {
+                    setText('record-most-consecutive-championships', `${tournamentEngine.getDisplayName(streak.winner)} (${streak.streak}, ${streak.fromYear}–${streak.toYear})`);
+                }
+
+                // Highest tournament score (max total_tricks in final standings)
+                let bestTournamentScore = null;
+                for (const t of tournaments) {
+                    const standings = Array.isArray(t.final_standings) ? t.final_standings : [];
+                    for (const entry of standings) {
+                        const tricks = Number.isFinite(entry.total_tricks) ? entry.total_tricks : parseFloat(entry.total_tricks);
+                        if (!Number.isFinite(tricks)) continue;
+                        if (!bestTournamentScore || tricks > bestTournamentScore.tricks) {
+                            bestTournamentScore = {
+                                year: t.year,
+                                title: t.title || t.name || t.id,
+                                player: entry.player,
+                                tricks
+                            };
+                        }
+                    }
+                }
+                if (bestTournamentScore) {
+                    setText('record-highest-tournament-score', `${tournamentEngine.getDisplayName(bestTournamentScore.player)} (${bestTournamentScore.tricks} tricks, ${bestTournamentScore.year})`);
+                }
+
+                // Best win percentage (round-majority win rate)
+                let bestWinPct = null;
+                for (const p of (allPlayers || [])) {
+                    const totalRounds = p.total_rounds || 0;
+                    if (!totalRounds || totalRounds < 20) continue; // avoid tiny samples
+                    const wins = p.rounds_won || 0;
+                    const pct = (wins / totalRounds) * 100;
+                    if (!bestWinPct || pct > bestWinPct.pct) {
+                        bestWinPct = { playerId: p.name, pct, wins, totalRounds };
+                    }
+                }
+                if (bestWinPct) {
+                    setText('record-best-win-percentage', `${tournamentEngine.getDisplayName(bestWinPct.playerId)} (${bestWinPct.pct.toFixed(1)}%)`);
+                }
+
+                // Most career round wins (>=7 tricks)
+                const mostCareerRoundWins = (allPlayers || []).slice().sort((a, b) => (b.rounds_won || 0) - (a.rounds_won || 0))[0];
+                if (mostCareerRoundWins) {
+                    setText('record-most-career-round-wins', `${tournamentEngine.getDisplayName(mostCareerRoundWins.name)} (${mostCareerRoundWins.rounds_won || 0})`);
+                }
+
+                // Most 11+ / 12+ trick rounds
+                if (typeof tournamentEngine.getPlayerHighTrickRoundCounts === 'function') {
+                    const top11 = tournamentEngine.getPlayerHighTrickRoundCounts(11)[0];
+                    const top12 = tournamentEngine.getPlayerHighTrickRoundCounts(12)[0];
+                    if (top11) setText('record-most-11-trick-rounds', `${top11.playerName} (${top11.count})`);
+                    if (top12) setText('record-most-12-trick-rounds', `${top12.playerName} (${top12.count})`);
+                }
+
+                // Longest majority-win streak (>=7 tricks)
+                if (typeof tournamentEngine.getPlayerMajorityWinStreaks === 'function') {
+                    const streaks = tournamentEngine.getPlayerMajorityWinStreaks(7);
+                    const top = streaks && streaks.length ? streaks[0] : null;
+                    if (top) {
+                        const from = top.from ? `${top.from.year} R${top.from.round}` : '—';
+                        const to = top.to ? `${top.to.year} R${top.to.round}` : '—';
+                        setText('record-most-consecutive-majority-wins', `${top.playerName} (${top.streak}, ${from}–${to})`);
+                    }
+                }
+
+                // Best tournament averages (avg tricks, avg margin)
+                if (typeof tournamentEngine.getBestTournamentAverages === 'function') {
+                    const { bestAvgTricks, bestAvgMargin } = tournamentEngine.getBestTournamentAverages();
+                    if (bestAvgTricks) {
+                        setText('record-best-avg-tricks', `${bestAvgTricks.playerName} (${bestAvgTricks.avgTricks.toFixed(2)}, ${bestAvgTricks.year})`);
+                    }
+                    if (bestAvgMargin) {
+                        setText('record-best-avg-margin', `${bestAvgMargin.playerName} (${bestAvgMargin.avgMargin.toFixed(2)}, ${bestAvgMargin.year})`);
+                    }
+                }
+
+                // Perfect attendance (played every tournament)
+                const perfect = (allPlayers || []).filter(p => (p.tournaments_played || 0) > 0 && (p.tournaments_played || 0) === totalTournaments);
+                if (perfect.length > 0) {
+                    const names = perfect.slice(0, 3).map(p => tournamentEngine.getDisplayName(p.name));
+                    const extra = perfect.length > 3 ? ` +${perfect.length - 3} more` : '';
+                    setText('record-perfect-attendance', `${names.join(', ')}${extra} (${totalTournaments})`);
+                } else {
+                    setText('record-perfect-attendance', '—');
+                }
+
+                // Most tournaments played
+                const mostTournaments = (allPlayers || []).slice().sort((a, b) => (b.tournaments_played || 0) - (a.tournaments_played || 0))[0];
+                if (mostTournaments) {
+                    setText('record-most-tournaments', `${tournamentEngine.getDisplayName(mostTournaments.name)} (${mostTournaments.tournaments_played || 0})`);
+                }
+
+                // Most top-3 finishes
+                if (top3Leader) {
+                    setText('record-most-top3', `${tournamentEngine.getDisplayName(top3Leader.name)} (${top3Leader.top_three_finishes || 0})`);
+                }
+
+                // Never last place (booby_prizes == 0) with a small minimum tournament threshold
+                const neverLast = (allPlayers || [])
+                    .filter(p => (p.tournaments_played || 0) >= 10 && (p.booby_prizes || 0) === 0)
+                    .sort((a, b) => (b.tournaments_played || 0) - (a.tournaments_played || 0));
+                if (neverLast.length > 0) {
+                    const p = neverLast[0];
+                    setText('record-never-last', `${tournamentEngine.getDisplayName(p.name)} (${p.tournaments_played} tournaments)`);
+                } else {
+                    setText('record-never-last', '—');
+                }
+
+                // Best partnership (by avg tricks per round)
+                if (typeof tournamentEngine.getPartnershipAnalysis === 'function') {
+                    const partnerships = tournamentEngine.getPartnershipAnalysis();
+                    if (partnerships && partnerships.length > 0) {
+                        const best = partnerships[0];
+                        const avg = best.rounds_played > 0 ? (best.total_tricks / best.rounds_played) : 0;
+                        const names = Array.isArray(best.players) ? best.players.map(id => tournamentEngine.getDisplayName(id)).join(' & ') : '—';
+                        setText('record-best-partnership', `${names} (${avg.toFixed(2)} avg tricks)`);
+
+                        // Most partnerships (unique partners count)
+                        const partnerSets = new Map();
+                        for (const pair of partnerships) {
+                            if (!pair || !Array.isArray(pair.players) || pair.players.length !== 2) continue;
+                            const a = pair.players[0];
+                            const b = pair.players[1];
+                            if (!partnerSets.has(a)) partnerSets.set(a, new Set());
+                            if (!partnerSets.has(b)) partnerSets.set(b, new Set());
+                            partnerSets.get(a).add(b);
+                            partnerSets.get(b).add(a);
+                        }
+                        let bestPartners = null;
+                        for (const [playerId, set] of partnerSets.entries()) {
+                            const count = set.size;
+                            if (!bestPartners || count > bestPartners.count) {
+                                bestPartners = { playerId, count };
+                            }
+                        }
+                        if (bestPartners) {
+                            setText('record-most-partnerships', `${tournamentEngine.getDisplayName(bestPartners.playerId)} (${bestPartners.count} partners)`);
+                        }
+                    }
+                }
+
+                // --- Big rounds lists (12+ and 13)
+                const list12 = document.getElementById('hof-12plus-list');
+                if (list12 && typeof tournamentEngine.getHighTrickRoundEvents === 'function') {
+                    const events12 = tournamentEngine.getHighTrickRoundEvents(12);
+                    if (!events12 || events12.length === 0) {
+                        list12.innerHTML = `
+                            <div class="record-item">
+                                <span class="record-title">None yet</span>
+                                <span class="record-holder">No 12+ trick rounds found.</span>
+                            </div>
+                        `;
+                    } else {
+                        const maxRows = 60;
+                        const rows = events12.slice(0, maxRows).map(e => {
+                            const score = Number.isFinite(e.opponentTricks) ? `${e.tricks} / ${e.opponentTricks}` : `${e.tricks}`;
+                            const suit = e.trumpSuit ? ` • ${e.trumpSuit}` : '';
+                            return `
+                                <div class="record-item">
+                                    <span class="record-title">${e.year} • Round ${e.round} • Table ${e.table}${suit}</span>
+                                    <span class="record-holder">${e.partnership} (${score})</span>
+                                </div>
+                            `;
+                        }).join('');
+                        const more = events12.length > maxRows
+                            ? `<div class="record-item"><span class="record-title">…and more</span><span class="record-holder">${events12.length - maxRows} more events</span></div>`
+                            : '';
+                        list12.innerHTML = rows + more;
+                    }
+                }
+
+                const list13 = document.getElementById('hof-13-list');
+                if (list13 && typeof tournamentEngine.getHighTrickRoundEvents === 'function') {
+                    const events13 = tournamentEngine.getHighTrickRoundEvents(13);
+                    if (events13 && events13.length > 0) {
+                        list13.innerHTML = events13.map(e => {
+                            const score = Number.isFinite(e.opponentTricks) ? `${e.tricks} / ${e.opponentTricks}` : `${e.tricks}`;
+                            const suit = e.trumpSuit ? ` • ${e.trumpSuit}` : '';
+                            return `
+                                <div class="record-item">
+                                    <span class="record-title">${e.year} • Round ${e.round} • Table ${e.table}${suit}</span>
+                                    <span class="record-holder">${e.partnership} (${score})</span>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
+            } catch (error) {
+                console.warn('Unable to render Hall of Fame panels:', error);
             }
         }
 
@@ -1012,17 +1362,11 @@
         }
 
         function getPlayerNickname(name) {
-            const nicknames = {
-                'Margaret Wilson': '"The Ace"',
-                'James Ruston': '"The Master"',
-                'Emma Jones': '"The Prodigy"',
-                'David Smith': '"Steady Eddie"',
-                'Tom Wilson': '"The Veteran"',
-                'Sarah Brown': '"Lucky Sarah"',
-                'Michael Thompson': '"The Professor"',
-                'Mary Ruston': '"The Rock"'
-            };
-            return nicknames[name] || '';
+            if (!tournamentEngine || typeof tournamentEngine.getPlayerNameParts !== 'function') {
+                return '';
+            }
+            const parts = tournamentEngine.getPlayerNameParts(name);
+            return parts && parts.nickname ? `"${parts.nickname}"` : '';
         }
 
         function generateTrendIndicator(player, currentPosition, rankingType) {
@@ -1050,44 +1394,40 @@
 
         function generateChampionshipHistory() {
             const timeline = document.getElementById('champions-timeline');
-            
-            const champions = [
-                { year: 2023, champion: 'Margaret Wilson', highlight: 'Third Consecutive Title' },
-                { year: 2022, champion: 'Margaret Wilson', highlight: 'Back-to-Back Champion' },
-                { year: 2021, champion: 'Margaret Wilson', highlight: 'Return to Glory' },
-                { year: 2020, champion: 'David Smith', highlight: 'COVID Tournament' },
-                { year: 2019, champion: 'James Ruston', highlight: 'Veteran Victory' },
-                { year: 2018, champion: 'Margaret Wilson', highlight: 'Dominant Performance' },
-                { year: 2017, champion: 'Emma Jones', highlight: 'Youngest Winner Record' },
-                { year: 2016, champion: 'Tom Wilson', highlight: 'Senior Surprise' }
-            ];
+            if (!timeline || !tournamentEngine || typeof tournamentEngine.getTournamentChampionsChronological !== 'function') {
+                if (timeline) {
+                    timeline.innerHTML = '';
+                }
+                return;
+            }
 
-            const timelineHTML = champions.map(entry => `
-                <div class="champion-entry">
-                    <div class="champion-year">${entry.year}</div>
-                    <div class="champion-info">
-                        <h4 class="champion-name">${entry.champion}</h4>
-                        <p class="champion-highlight">${entry.highlight}</p>
+            const champions = tournamentEngine.getTournamentChampionsChronological();
+            const timelineHTML = champions.map(entry => {
+                const championName = entry.winner ? tournamentEngine.getDisplayName(entry.winner) : '—';
+                const highlight = entry.title ? entry.title : 'Champion';
+                return `
+                    <div class="champion-entry">
+                        <div class="champion-year">${entry.year}</div>
+                        <div class="champion-info">
+                            <h4 class="champion-name">${championName}</h4>
+                            <p class="champion-highlight">${highlight}</p>
+                        </div>
+                        <div class="champion-medal">🏆</div>
                     </div>
-                    <div class="champion-medal">🏆</div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             timeline.innerHTML = timelineHTML;
         }
 
         function loadFallbackData() {
-            // Fallback data if tournament engine fails
-            console.log('Loading fallback leaderboard data...');
-            
-            allPlayers = [
-                { name: 'Margaret Wilson', tournament_wins: 8, career_wins: 127, win_percentage: '68.0', tournaments_played: 35, top_three_finishes: 23 },
-                { name: 'James Ruston', tournament_wins: 12, career_wins: 156, win_percentage: '65.2', tournaments_played: 40, top_three_finishes: 28 },
-                { name: 'Emma Jones', tournament_wins: 1, career_wins: 34, win_percentage: '72.1', tournaments_played: 6, top_three_finishes: 4 },
-                { name: 'David Smith', tournament_wins: 3, career_wins: 98, win_percentage: '61.8', tournaments_played: 25, top_three_finishes: 18 }
-            ];
-            
-            updateRankingsDisplay('overall');
+            // No dummy data: show an error state.
+            console.log('Leaderboard data unavailable; skipping fallback dummy data.');
+            allPlayers = [];
+            const tableBody = document.getElementById('rankings-table-body');
+            if (tableBody) {
+                tableBody.innerHTML = `<div style="padding: 1rem;">Unable to load tournament data.</div>`;
+            }
         }
     </script>
 

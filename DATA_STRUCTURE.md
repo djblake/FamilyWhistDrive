@@ -253,27 +253,16 @@ const trends = analyzeTrends(csvData);
 ### Data Directory Layout
 ```
 data/
-├── raw/
-│   ├── tournament_1984.csv
-│   ├── tournament_1985.csv
-│   └── ...
-├── processed/
-│   ├── tournaments.json
-│   ├── players.json
-│   ├── partnerships.json
-│   └── statistics.json
-└── cache/
-    ├── leaderboards.json
-    └── analytics.json
+└── (legacy docs only — the live site loads from Google Sheets / cache)
 ```
 
 ### JSON Output Format
 Processed data is stored in JSON format for efficient website loading:
 
-- **tournaments.json**: All tournament metadata and results
-- **players.json**: Complete player profiles and statistics
-- **partnerships.json**: Partnership analysis and chemistry data
-- **statistics.json**: Advanced analytics and historical trends
+- **raw cache**: `assets/cache/raw-data.json` (or Cloudflare KV via `/api/cache/raw`)
+- **stats cache**: `assets/cache/stats.json` (or Cloudflare KV via `/api/cache/stats`)
+
+Player metadata is sourced from the Google Sheet **Players** tab (not from a local `players.json` file).
 
 ---
 

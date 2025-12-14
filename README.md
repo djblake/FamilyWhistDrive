@@ -69,8 +69,8 @@ WhistWebsite/
 │   └── images/                  # Site assets
 ├── data/                        # JSON tournament data
 │   ├── tournaments.json         # Tournament metadata
-│   ├── players.json             # Player profiles
 │   └── scorecards/              # Individual tournament data
+├── assets/cache/                # Optional generated caches (raw-data.json, stats.json)
 ├── tournaments/                 # Tournament pages
 │   └── [year]/
 │       ├── index.html           # Tournament results

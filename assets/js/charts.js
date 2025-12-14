@@ -504,7 +504,7 @@ class TournamentCharts {
      */
     processTournamentProgress(tournamentData) {
         if (!tournamentData || !tournamentData.rounds) {
-            return this.generateSampleProgressData();
+            return { rounds: [], players: [] };
         }
 
         const rounds = Array.from({length: tournamentData.rounds.length}, (_, i) => i + 1);
@@ -561,21 +561,7 @@ class TournamentCharts {
         return { rounds, players };
     }
 
-    /**
-     * Generate sample progress data for demonstration
-     */
-    generateSampleProgressData() {
-        const rounds = [1, 2, 3, 4, 5, 6, 7, 8];
-        const players = [
-            { name: 'Margaret Wilson', cumulativeScores: [14, 27, 41, 55, 68, 82, 95, 112] },
-            { name: 'James Ruston', cumulativeScores: [12, 25, 39, 53, 66, 79, 93, 108] },
-            { name: 'Emma Jones', cumulativeScores: [13, 24, 37, 51, 64, 78, 91, 105] },
-            { name: 'David Smith', cumulativeScores: [11, 23, 36, 49, 62, 75, 89, 102] },
-            { name: 'Sarah Brown', cumulativeScores: [10, 22, 35, 48, 61, 74, 87, 98] }
-        ];
-
-        return { rounds, players };
-    }
+    // (Removed sample/dummy chart data.)
 
     /**
      * Get color for player based on index
@@ -936,8 +922,8 @@ class TournamentCharts {
         console.log('🔍 Processing rank progression data:', tournamentData);
         
         if (!tournamentData || !tournamentData.rounds) {
-            console.warn('⚠️ No tournament data or rounds found, using sample data');
-            return this.generateSampleRankData();
+            console.warn('⚠️ No tournament data or rounds found');
+            return { rounds: [], players: [] };
         }
 
         console.log(`📊 Tournament has ${tournamentData.rounds.length} rounds, ${tournamentData.final_standings.length} players`);
@@ -1087,21 +1073,7 @@ class TournamentCharts {
         return { rounds, players };
     }
 
-    /**
-     * Generate sample rank progression data
-     */
-    generateSampleRankData() {
-        const rounds = [1, 2, 3, 4, 5, 6, 7, 8];
-        const players = [
-            { name: 'Margaret Wilson', ranks: [2, 1, 1, 1, 1, 1, 1, 1], scores: [8, 15, 23, 31, 39, 47, 55, 63] },
-            { name: 'James Ruston', ranks: [5, 4, 3, 2, 2, 2, 2, 2], scores: [6, 13, 22, 30, 38, 46, 54, 61] },
-            { name: 'Emma Jones', ranks: [3, 2, 2, 3, 3, 3, 3, 3], scores: [7, 14, 21, 28, 36, 44, 52, 59] },
-            { name: 'David Smith', ranks: [1, 3, 4, 4, 4, 4, 4, 4], scores: [9, 12, 20, 27, 35, 43, 51, 58] },
-            { name: 'Sarah Brown', ranks: [4, 5, 5, 5, 5, 5, 5, 5], scores: [5, 11, 19, 26, 34, 42, 50, 57] }
-        ];
-
-        return { rounds, players };
-    }
+    // (Removed sample/dummy rank progression data.)
 
     /**
      * Get point style for differentiation when lines overlap

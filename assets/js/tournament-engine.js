@@ -3879,6 +3879,491 @@ class TournamentEngine {
     }
 
     /**
+     * Get all tournaments without duplicate map entries (the tournaments map stores multiple keys per tournament).
+     */
+    getAllTournamentsUnique(sortOrder = 'desc') {
+        const unique = new Map();
+        for (const tournament of this.tournaments.values()) {
+            if (!tournament || !tournament.id) {
+                continue;
+            }
+            if (!unique.has(tournament.id)) {
+                unique.set(tournament.id, tournament);
+            }
+        }
+        const list = Array.from(unique.values());
+        list.sort((a, b) => {
+            const ay = Number.isFinite(a.year) ? a.year : -1;
+            const by = Number.isFinite(b.year) ? b.year : -1;
+            return sortOrder === 'asc' ? (ay - by) : (by - ay);
+        });
+        return list;
+    }
+
+    formatPositionDisplay(positionIds) {
+        const ids = Array.isArray(positionIds) ? positionIds : [];
+        const displayNames = ids.map(id => this.getDisplayName(id));
+        return displayNames.join('/');
+    }
+
+    formatPartnershipDisplay(partnership) {
+        if (!partnership) {
+            return '';
+        }
+        const pos1 = this.formatPositionDisplay(partnership.position1);
+        const pos2 = this.formatPositionDisplay(partnership.position2);
+        if (pos1 && pos2) {
+            return `${pos1} & ${pos2}`;
+        }
+        return pos1 || pos2 || '';
+    }
+
+    getTournamentChampionsChronological() {
+        return this.getAllTournamentsUnique('asc')
+            .filter(t => t && Number.isFinite(t.year))
+            .map(t => ({
+                id: t.id,
+                year: t.year,
+                title: t.title || t.name || t.id,
+                winner: t.winner || null,
+                totalPlayers: t.total_players || null
+            }))
+            .sort((a, b) => a.year - b.year);
+    }
+
+    getLongestChampionStreak() {
+        const champs = this.getTournamentChampionsChronological();
+        let best = { winner: null, streak: 0, fromYear: null, toYear: null };
+        let currentWinner = null;
+        let currentStreak = 0;
+        let currentFrom = null;
+        let lastYear = null;
+
+        for (const entry of champs) {
+            const year = entry.year;
+            const winner = entry.winner;
+            if (!winner || !Number.isFinite(year)) {
+                continue;
+            }
+
+            const isConsecutiveYear = lastYear === null ? true : (year === lastYear + 1);
+            if (winner === currentWinner && isConsecutiveYear) {
+                currentStreak += 1;
+            } else {
+                currentWinner = winner;
+                currentStreak = 1;
+                currentFrom = year;
+            }
+            lastYear = year;
+
+            if (currentStreak > best.streak) {
+                best = { winner: currentWinner, streak: currentStreak, fromYear: currentFrom, toYear: year };
+            }
+        }
+
+        return best;
+    }
+
+    getHighTrickRoundEvents(minTricks = 12) {
+        const events = [];
+        const tournaments = this.getAllTournamentsUnique('asc');
+
+        for (const tournament of tournaments) {
+            if (!tournament || !Number.isFinite(tournament.year) || !Array.isArray(tournament.rounds)) {
+                continue;
+            }
+            for (const round of tournament.rounds) {
+                const roundNum = round && Number.isFinite(round.round) ? round.round : null;
+                if (!roundNum || !Array.isArray(round.tables)) {
+                    continue;
+                }
+                for (const table of round.tables) {
+                    const tableNum = table && Number.isFinite(table.table) ? table.table : null;
+                    const partnerships = table && Array.isArray(table.partnerships) ? table.partnerships : [];
+                    if (!tableNum || partnerships.length < 1) {
+                        continue;
+                    }
+
+                    // If we have exactly 2 partnerships, use the other partnership as opponent tricks (handles imbalance too).
+                    for (let i = 0; i < partnerships.length; i++) {
+                        const p = partnerships[i];
+                        const tricks = p && Number.isFinite(p.tricks) ? p.tricks : parseInt(p?.tricks, 10);
+                        if (!Number.isFinite(tricks)) {
+                            continue;
+                        }
+                        const opponent = partnerships.length === 2 ? partnerships[1 - i] : null;
+                        const opponentTricks = opponent && Number.isFinite(opponent.tricks)
+                            ? opponent.tricks
+                            : (Number.isFinite(tricks) ? (13 - tricks) : null);
+
+                        if (tricks >= minTricks) {
+                            events.push({
+                                tournamentId: tournament.id,
+                                tournamentTitle: tournament.title || tournament.name || tournament.id,
+                                year: tournament.year,
+                                round: roundNum,
+                                table: tableNum,
+                                partnership: this.formatPartnershipDisplay(p),
+                                tricks,
+                                opponentTricks: Number.isFinite(opponentTricks) ? opponentTricks : null,
+                                trumpSuit: p?.trump_suit || round?.trump_suit || null
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        events.sort((a, b) => {
+            if (a.year !== b.year) return a.year - b.year;
+            if (a.round !== b.round) return a.round - b.round;
+            if (a.table !== b.table) return a.table - b.table;
+            return (b.tricks || 0) - (a.tricks || 0);
+        });
+        return events;
+    }
+
+    getPlayerHighTrickRoundCounts(minTricks = 12) {
+        const counts = new Map();
+        const tournaments = this.getAllTournamentsUnique('asc');
+
+        for (const tournament of tournaments) {
+            if (!tournament || !Number.isFinite(tournament.year) || !Array.isArray(tournament.rounds)) {
+                continue;
+            }
+            for (const round of tournament.rounds) {
+                if (!round || !Array.isArray(round.tables)) {
+                    continue;
+                }
+                for (const table of round.tables) {
+                    const partnerships = table && Array.isArray(table.partnerships) ? table.partnerships : [];
+                    for (const p of partnerships) {
+                        const tricks = p && Number.isFinite(p.tricks) ? p.tricks : parseInt(p?.tricks, 10);
+                        if (!Number.isFinite(tricks) || tricks < minTricks) {
+                            continue;
+                        }
+                        const playerIds = []
+                            .concat(Array.isArray(p.position1) ? p.position1 : [])
+                            .concat(Array.isArray(p.position2) ? p.position2 : []);
+                        for (const id of playerIds) {
+                            counts.set(id, (counts.get(id) || 0) + 1);
+                        }
+                    }
+                }
+            }
+        }
+
+        return Array.from(counts.entries())
+            .map(([playerId, count]) => ({ playerId, playerName: this.getDisplayName(playerId), count }))
+            .sort((a, b) => (b.count - a.count) || a.playerName.localeCompare(b.playerName));
+    }
+
+    getPlayerMajorityWinStreaks(minTricks = 7) {
+        const perPlayer = new Map();
+        const tournaments = this.getAllTournamentsUnique('asc');
+
+        const ensure = (playerId) => {
+            if (!perPlayer.has(playerId)) {
+                perPlayer.set(playerId, {
+                    playerId,
+                    best: { streak: 0, from: null, to: null },
+                    current: { streak: 0, from: null, to: null }
+                });
+            }
+            return perPlayer.get(playerId);
+        };
+
+        for (const tournament of tournaments) {
+            if (!tournament || !Number.isFinite(tournament.year) || !Array.isArray(tournament.rounds)) {
+                continue;
+            }
+            const year = tournament.year;
+            const rounds = [...tournament.rounds].sort((a, b) => (a.round || 0) - (b.round || 0));
+            for (const round of rounds) {
+                const roundNum = round && Number.isFinite(round.round) ? round.round : null;
+                if (!roundNum || !Array.isArray(round.tables)) {
+                    continue;
+                }
+                const tables = [...round.tables].sort((a, b) => (a.table || 0) - (b.table || 0));
+                for (const table of tables) {
+                    const partnerships = table && Array.isArray(table.partnerships) ? table.partnerships : [];
+                    for (const p of partnerships) {
+                        const tricks = p && Number.isFinite(p.tricks) ? p.tricks : parseInt(p?.tricks, 10);
+                        if (!Number.isFinite(tricks)) {
+                            continue;
+                        }
+                        const isWin = tricks >= minTricks;
+                        const marker = { year, round: roundNum };
+                        const playerIds = []
+                            .concat(Array.isArray(p.position1) ? p.position1 : [])
+                            .concat(Array.isArray(p.position2) ? p.position2 : []);
+
+                        for (const id of playerIds) {
+                            const state = ensure(id);
+                            if (isWin) {
+                                if (state.current.streak === 0) {
+                                    state.current.from = marker;
+                                }
+                                state.current.streak += 1;
+                                state.current.to = marker;
+
+                                if (state.current.streak > state.best.streak) {
+                                    state.best = { ...state.current };
+                                }
+                            } else {
+                                state.current = { streak: 0, from: null, to: null };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return Array.from(perPlayer.values())
+            .map(entry => ({
+                playerId: entry.playerId,
+                playerName: this.getDisplayName(entry.playerId),
+                streak: entry.best.streak,
+                from: entry.best.from,
+                to: entry.best.to
+            }))
+            .filter(x => x.streak > 0)
+            .sort((a, b) => (b.streak - a.streak) || a.playerName.localeCompare(b.playerName));
+    }
+
+    getBestTournamentAverages() {
+        // Computes best single-tournament average tricks and average margin for an individual player (including shared hands).
+        const tournaments = this.getAllTournamentsUnique('asc');
+        let bestAvgTricks = null;
+        let bestAvgMargin = null;
+
+        for (const tournament of tournaments) {
+            if (!tournament || !Number.isFinite(tournament.year) || !Array.isArray(tournament.rounds)) {
+                continue;
+            }
+            const year = tournament.year;
+            const perPlayer = new Map();
+
+            const add = (playerId, tricks, margin) => {
+                if (!perPlayer.has(playerId)) {
+                    perPlayer.set(playerId, { tricksSum: 0, marginSum: 0, rounds: 0 });
+                }
+                const agg = perPlayer.get(playerId);
+                agg.tricksSum += tricks;
+                agg.marginSum += margin;
+                agg.rounds += 1;
+            };
+
+            const rounds = [...tournament.rounds].sort((a, b) => (a.round || 0) - (b.round || 0));
+            for (const round of rounds) {
+                if (!round || !Array.isArray(round.tables)) {
+                    continue;
+                }
+                for (const table of round.tables) {
+                    const partnerships = table && Array.isArray(table.partnerships) ? table.partnerships : [];
+                    if (partnerships.length === 0) {
+                        continue;
+                    }
+                    for (let i = 0; i < partnerships.length; i++) {
+                        const p = partnerships[i];
+                        const tricks = p && Number.isFinite(p.tricks) ? p.tricks : parseInt(p?.tricks, 10);
+                        if (!Number.isFinite(tricks)) {
+                            continue;
+                        }
+                        const opponent = partnerships.length === 2 ? partnerships[1 - i] : null;
+                        const opponentTricks = opponent && Number.isFinite(opponent.tricks)
+                            ? opponent.tricks
+                            : (13 - tricks);
+                        const margin = Number.isFinite(opponentTricks) ? (tricks - opponentTricks) : 0;
+
+                        const playerIds = []
+                            .concat(Array.isArray(p.position1) ? p.position1 : [])
+                            .concat(Array.isArray(p.position2) ? p.position2 : []);
+                        for (const id of playerIds) {
+                            add(id, tricks, margin);
+                        }
+                    }
+                }
+            }
+
+            for (const [playerId, agg] of perPlayer.entries()) {
+                if (!agg.rounds) {
+                    continue;
+                }
+                const avgTricks = agg.tricksSum / agg.rounds;
+                const avgMargin = agg.marginSum / agg.rounds;
+
+                if (!bestAvgTricks || avgTricks > bestAvgTricks.avgTricks) {
+                    bestAvgTricks = {
+                        playerId,
+                        playerName: this.getDisplayName(playerId),
+                        year,
+                        tournamentTitle: tournament.title || tournament.name || tournament.id,
+                        avgTricks
+                    };
+                }
+
+                if (!bestAvgMargin || avgMargin > bestAvgMargin.avgMargin) {
+                    bestAvgMargin = {
+                        playerId,
+                        playerName: this.getDisplayName(playerId),
+                        year,
+                        tournamentTitle: tournament.title || tournament.name || tournament.id,
+                        avgMargin
+                    };
+                }
+            }
+        }
+
+        return { bestAvgTricks, bestAvgMargin };
+    }
+
+    computeOfficialSeedRankingsForTournaments(tournaments, includeSharedHands = true) {
+        const rankings = [];
+        const positionPoints = {
+            1: 500, 2: 300, 3: 200, 4: 120, 5: 80,
+            6: 50, 7: 50, 8: 50, 9: 25, 10: 25, 11: 25, 12: 25
+        };
+        const getRecencyWeight = (tournamentPosition) => {
+            if (tournamentPosition === 0) return 1.00;
+            if (tournamentPosition === 1) return 0.80;
+            if (tournamentPosition === 2) return 0.60;
+            if (tournamentPosition === 3) return 0.40;
+            if (tournamentPosition === 4) return 0.20;
+            if (tournamentPosition === 5) return 0.10;
+            return 0.05;
+        };
+        const isSharedHandEntry = (playerName) => {
+            return playerName.includes('/') || playerName.includes('&') || playerName.includes('+');
+        };
+
+        const allTournaments = Array.isArray(tournaments) ? tournaments : [];
+        const ordered = [...allTournaments].sort((a, b) => (b.year || 0) - (a.year || 0));
+
+        for (const [playerName] of this.players) {
+            if (!playerName || isSharedHandEntry(playerName)) {
+                continue;
+            }
+
+            const stats = this.getPlayerStats(playerName, includeSharedHands);
+            if (!stats) {
+                continue;
+            }
+
+            let totalPoints = 0;
+            let tournamentsInPeriod = 0;
+            let championshipCount = 0;
+            let podiumCount = 0;
+            let totalFinishSum = 0;
+            let finishCount = 0;
+            let hasHistoricalWin = false;
+            let participated = false;
+
+            ordered.forEach((tournament, tournamentIndex) => {
+                const recencyWeight = getRecencyWeight(tournamentIndex);
+                const playerTournamentData = this.getIndividualPlayerData(tournament, playerName);
+                if (!playerTournamentData) {
+                    return;
+                }
+
+                participated = true;
+                const position = playerTournamentData.position;
+
+                let basePoints = positionPoints[position] || 10;
+                if (position > 12) basePoints = 10;
+                if (!position) basePoints = 5;
+
+                let tournamentPoints = basePoints * recencyWeight;
+
+                if (tournamentIndex <= 5) tournamentsInPeriod++;
+                if (position === 1) {
+                    championshipCount++;
+                    hasHistoricalWin = true;
+                    tournamentPoints *= 1.25;
+                }
+                if (position && position <= 3) {
+                    podiumCount++;
+                    tournamentPoints *= 1.15;
+                }
+                if (position) {
+                    totalFinishSum += position;
+                    finishCount++;
+                }
+
+                totalPoints += tournamentPoints;
+            });
+
+            // Skip players who have not participated in any included tournament period.
+            if (!participated) {
+                continue;
+            }
+
+            if (tournamentsInPeriod < 3) {
+                totalPoints *= 0.5;
+            }
+            if (finishCount > 0) {
+                const avgFinish = totalFinishSum / finishCount;
+                if (avgFinish <= 6) {
+                    totalPoints *= 1.10;
+                }
+            }
+            if (hasHistoricalWin) {
+                totalPoints *= 1.10;
+            }
+
+            rankings.push({
+                ...stats,
+                seed_points: Math.round(totalPoints),
+                tournaments_in_period: tournamentsInPeriod,
+                championships: championshipCount,
+                podium_finishes: podiumCount,
+                avg_finish: finishCount > 0 ? (totalFinishSum / finishCount).toFixed(1) : 'N/A',
+                has_legacy: hasHistoricalWin
+            });
+        }
+
+        rankings.sort((a, b) => (b.seed_points || 0) - (a.seed_points || 0));
+        rankings.forEach((player, index) => {
+            player.seed_rank = index + 1;
+        });
+        return rankings;
+    }
+
+    getSeedRankingsByYear(includeSharedHands = true) {
+        // Returns Map<year, rankings[]> where rankings[] contains { name, seed_rank, seed_points, ... }
+        const tournaments = this.getAllTournamentsUnique('asc').filter(t => t && Number.isFinite(t.year));
+        const yearToRankings = new Map();
+        const years = Array.from(new Set(tournaments.map(t => t.year))).sort((a, b) => a - b);
+
+        for (const year of years) {
+            const upToYear = tournaments.filter(t => t.year <= year);
+            const rankings = this.computeOfficialSeedRankingsForTournaments(upToYear, includeSharedHands);
+            yearToRankings.set(year, rankings);
+        }
+
+        return yearToRankings;
+    }
+
+    getSeedRankHistory(playerName, includeSharedHands = true) {
+        const history = [];
+        const byYear = this.getSeedRankingsByYear(includeSharedHands);
+        const years = Array.from(byYear.keys()).sort((a, b) => a - b);
+        for (const year of years) {
+            const rankings = byYear.get(year) || [];
+            const entry = rankings.find(r => r.name === playerName);
+            if (!entry) {
+                continue;
+            }
+            history.push({
+                year,
+                seed_rank: entry.seed_rank || null,
+                seed_points: entry.seed_points || null
+            });
+        }
+        return history;
+    }
+
+    /**
      * Get player data
      */
     getPlayer(playerName) {
@@ -3925,66 +4410,7 @@ class TournamentEngine {
         };
     }
 
-    /**
-     * Create sample CSV data with shared hands for testing
-     */
-    generateSampleSharedHandCSV() {
-        const csvData = `Tournament,Year,Round,Trump_Suit,Player1,Player2,Tricks_Won,Opponent1,Opponent2,Opponent_Tricks
-Christmas,2023,1,Hearts,James Ruston,Margaret Wilson,8,David Smith+Sarah Brown,Emma Jones,5
-Christmas,2023,1,Hearts,David Smith+Sarah Brown,Emma Jones,5,James Ruston,Margaret Wilson,8
-Christmas,2023,2,Diamonds,James Ruston,Emma Jones,7,Margaret Wilson,David Smith+Sarah Brown,6
-Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston,Emma Jones,7`;
-        
-        return csvData;
-    }
-
-    /**
-     * Test shared hand parsing with sample data
-     */
-    testSharedHands() {
-        console.log('🧪 Testing Shared Hand System...');
-        
-        // Test the parsing function
-        const testCases = [
-            'James Ruston',
-            'David Smith+Sarah Brown',
-            'Tom Wilson + Jane Smith',
-            'Player A+Player B+Player C'
-        ];
-        
-        testCases.forEach(playerName => {
-            const result = this.parseSharedHand(playerName);
-            console.log(`Input: "${playerName}" -> Players: [${result.players.join(', ')}], Shared: ${result.isShared}`);
-        });
-        
-        // Process sample data
-        const sampleCSV = this.generateSampleSharedHandCSV();
-        console.log('\n📄 Sample CSV with shared hands:');
-        console.log(sampleCSV);
-        
-        // Process the sample data
-        this.processScorecardCSV(sampleCSV).then(recordCount => {
-            console.log(`\n✅ Processed ${recordCount} scorecard records`);
-            
-            // Show player stats
-            console.log('\n👥 Player Statistics:');
-            for (const [playerName, playerData] of this.players) {
-                const combinedStats = this.getPlayerStats(playerName, true);
-                const individualStats = this.getPlayerStats(playerName, false);
-                const hasShared = this.playerHasSharedHands(playerName);
-                
-                console.log(`\n${playerName}:`);
-                console.log(`  Combined: ${combinedStats.total_tricks} tricks, ${combinedStats.average_tricks} avg`);
-                console.log(`  Individual: ${individualStats.total_tricks} tricks, ${individualStats.average_tricks} avg`);
-                console.log(`  Has shared hands: ${hasShared}`);
-                if (hasShared) {
-                    console.log(`  Shared rounds: ${combinedStats.shared_rounds}, Shared tricks: ${combinedStats.shared_tricks}`);
-                }
-            }
-        });
-        
-        return true;
-    }
+    // (Removed sample/dummy shared-hand test helpers.)
 
     // =========================
     // Player Statistics Methods (Designed for Caching)

@@ -144,7 +144,15 @@
                         </div>
                     </div>
 
-                    <!-- Rank progression chart removed as requested -->
+                    <div class="stats-section full-width">
+                        <h3 class="section-title">
+                            <span class="title-icon">📉</span>
+                            Seed Rank History
+                        </h3>
+                        <div class="chart-container" id="seed-rank-chart">
+                            <div class="loading-message">Loading seed rank history...</div>
+                        </div>
+                    </div>
 
                     <div class="stats-section full-width">
                         <h3 class="section-title">
@@ -165,7 +173,6 @@
             <div class="footer-content">
                 <div class="footer-section">
                     <h4>Featured Players</h4>
-                    <p><a href="margaret-wilson/">Margaret Wilson</a></p>
                     <p><a href="./">All Players</a></p>
                 </div>
                 <div class="footer-section">
@@ -396,7 +403,8 @@
                 document.getElementById('avg-tricks').textContent = avgTricks;
                 document.getElementById('top-finishes').textContent = topThreeFinishes;
                 
-                updatePerformanceStats(performanceStats);
+                updatePerformanceStats(player.name, performanceStats);
+                renderSeedRankHistoryChart(player.name);
                 
                 // Generate career statistics table
                 generateCareerStats(player, playerTournaments);
@@ -453,21 +461,47 @@
                 generateTrumpSuitStats(player.name);
         }
 
-        function updatePerformanceStats(performanceStats) {
+        function updatePerformanceStats(playerName, performanceStats) {
             const performanceContainer = document.getElementById('performance-stats');
             if (!performanceContainer) return;
+            const engine = window.tournamentEngine;
             
             const seedRank = performanceStats.seed_rank ? `#${performanceStats.seed_rank}` : 'Unranked';
             const seedScore = performanceStats.seed_points ? `${performanceStats.seed_points} pts` : '—';
             const avgTricks = performanceStats.average_tricks ?? '0.00';
             const topPercentile = typeof performanceStats.top_percentile === 'number' ? `${performanceStats.top_percentile.toFixed(1)}%` : '—';
             const topThreeRate = `${(performanceStats.top_three_rate ?? 0).toFixed(1)}%`;
+
+            let peakSeedRow = '';
+            if (engine && typeof engine.getSeedRankHistory === 'function' && playerName) {
+                const history = engine.getSeedRankHistory(playerName, true) || [];
+                let bestRank = null;
+                let lastYear = null;
+                history.forEach(entry => {
+                    if (!entry || !entry.seed_rank) return;
+                    if (bestRank === null || entry.seed_rank < bestRank) {
+                        bestRank = entry.seed_rank;
+                        lastYear = entry.year;
+                    } else if (entry.seed_rank === bestRank) {
+                        lastYear = entry.year;
+                    }
+                });
+                if (bestRank !== null) {
+                    peakSeedRow = `
+                        <div class="stats-row">
+                            <div class="stat-label">Peak Seed Rank</div>
+                            <div class="stat-value">#${bestRank} <span class="stat-detail">(last in ${lastYear})</span></div>
+                        </div>
+                    `;
+                }
+            }
             
             performanceContainer.innerHTML = `
                 <div class="stats-row">
                     <div class="stat-label">Seed Ranking</div>
                     <div class="stat-value">${seedRank} <span class="stat-detail">(${seedScore})</span></div>
                 </div>
+                ${peakSeedRow}
                 <div class="stats-row">
                     <div class="stat-label">Average Tricks/Round</div>
                     <div class="stat-value">${avgTricks}</div>
@@ -479,6 +513,63 @@
                 <div class="stats-row">
                     <div class="stat-label">Top 3 Win Rate</div>
                     <div class="stat-value">${topThreeRate}</div>
+                </div>
+            `;
+        }
+
+        function renderSeedRankHistoryChart(playerName) {
+            const container = document.getElementById('seed-rank-chart');
+            const engine = window.tournamentEngine;
+            if (!container) return;
+            if (!engine || typeof engine.getSeedRankHistory !== 'function') {
+                container.innerHTML = '<p class="muted">Seed rank history unavailable.</p>';
+                return;
+            }
+
+            const history = engine.getSeedRankHistory(playerName, true) || [];
+            if (!history.length) {
+                container.innerHTML = '<p class="muted">No seed rank history yet.</p>';
+                return;
+            }
+
+            const years = history.map(h => h.year);
+            const ranks = history.map(h => h.seed_rank).filter(Boolean);
+            const minYear = Math.min(...years);
+            const maxYear = Math.max(...years);
+            const maxRank = Math.max(...ranks);
+
+            const width = 900;
+            const height = 220;
+            const pad = 32;
+
+            const xForYear = (y) => {
+                if (maxYear === minYear) return pad;
+                return pad + ((y - minYear) / (maxYear - minYear)) * (width - pad * 2);
+            };
+            const yForRank = (r) => {
+                // Lower rank is better: rank 1 at top.
+                if (maxRank <= 1) return pad;
+                return pad + ((r - 1) / (maxRank - 1)) * (height - pad * 2);
+            };
+
+            const points = history
+                .filter(h => h && typeof h.seed_rank === 'number')
+                .map(h => `${xForYear(h.year).toFixed(1)},${yForRank(h.seed_rank).toFixed(1)}`)
+                .join(' ');
+
+            const latest = history[history.length - 1];
+            const latestLabel = latest ? `Latest: ${latest.year} (#${latest.seed_rank})` : '';
+
+            container.innerHTML = `
+                <div class="muted" style="margin-bottom: 0.5rem;">${latestLabel}</div>
+                <svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" role="img" aria-label="Seed rank history">
+                    <rect x="0" y="0" width="${width}" height="${height}" fill="rgba(255,255,255,0.02)" />
+                    <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" stroke="rgba(255,255,255,0.18)" />
+                    <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" stroke="rgba(255,255,255,0.18)" />
+                    <polyline points="${points}" fill="none" stroke="rgba(245, 158, 11, 0.95)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <div class="muted" style="margin-top: 0.5rem;">
+                    ${minYear}${minYear !== maxYear ? `–${maxYear}` : ''} • lower rank is better
                 </div>
             `;
         }
