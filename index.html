@@ -121,7 +121,7 @@
         </div>
     </footer>
 
-            <script src="assets/js/tournament-engine.js?v=60"></script>
+            <script src="assets/js/tournament-engine.js?v=cache1"></script>
     <script>
         // Load real tournament data from Google Sheets
         document.addEventListener('DOMContentLoaded', async function() {
@@ -172,7 +172,7 @@
                         <h3>Tournament Results</h3>
                         <div class="stat-value">${tournament.name}</div>
                         <p>${tournament.total_players} Players • ${tournament.total_rounds} Rounds • Year ${tournament.year}</p>
-                        <a href="tournaments/#${tournament.year}">View Results</a>
+                        <a href="tournaments/results.html?year=${tournament.year}">View Results</a>
                     </div>
                     <div class="quick-stat-card">
                         <h3>Champion</h3>
@@ -202,7 +202,7 @@
                         <h3 class="tournament-title">${tournament.name}</h3>
                         <div class="tournament-winner">Champion: ${tournamentEngine.getDisplayName(tournament.winner)}</div>
                         <div class="tournament-stats">${tournament.total_players} Players • ${tournament.final_standings.reduce((sum, s) => sum + s.total_tricks, 0)} Total Tricks</div>
-                        <a href="tournaments/#${tournament.year}" class="tournament-link">Full Results</a>
+                        <a href="tournaments/results.html?year=${tournament.year}" class="tournament-link">Full Results</a>
                     </div>
                 `).join('');
                 document.getElementById('tournament-grid').innerHTML = tournamentGridHTML;

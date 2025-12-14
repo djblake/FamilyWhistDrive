@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "cache:raw": "node scripts/build-cache.js raw",
+    "cache:stats": "node scripts/build-cache.js stats",
+    "cache:all": "node scripts/build-cache.js all"
+  },
   "dependencies": {
     "node-fetch": "^2.7.0"
   }

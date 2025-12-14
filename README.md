@@ -125,6 +125,70 @@ WhistWebsite/
 - A dedicated validation report is available at `data-validation.html` (often routed locally as `/data-validation`).
 - It loads the tournament data and lists any games where `Tricks_Won + Opponent_Tricks !== 13`, including whether the issue is approved via `Imbalance_OK=YES` and any `Inconsistency` notes.
 
+### Site-wide caching (raw data + stats)
+
+To avoid re-loading Google Sheets on every page view, the site supports **site-wide cache files**:
+
+- `assets/cache/raw-data.json`: parsed + standardized raw scorecards + metadata
+- `assets/cache/stats.json`: derived tournaments/players/partnership stats
+
+#### Option A: Static cache files (simple)
+
+Use the maintenance page to generate caches and then publish them by committing/redeploying:
+
+- `update-data.html`
+
+Steps:
+
+1. Update the raw data Google Sheet: [Whist Website Raw Data](https://docs.google.com/spreadsheets/d/1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k/edit?gid=212239001#gid=212239001)
+2. Click **Refresh data cache** (downloads `raw-data.json` as a backup)
+3. Click **Refresh stats** (downloads `stats.json` as a backup)
+4. Replace the files in `assets/cache/` and redeploy
+
+#### Option B: Cloudflare Pages Functions + KV (one-click site-wide refresh)
+
+If you want “press refresh and everyone sees it immediately” on Cloudflare Pages, configure KV and use the built-in API.\n
+**Bindings required (Cloudflare Pages project settings):**
+
+- KV namespace binding: `WHIST_CACHE`
+- Environment variable: `WHIST_ADMIN_TOKEN` (a random secret string you keep private)
+
+**Endpoints:**
+
+- `GET /api/cache/manifest` (always fresh; used to discover current version)\n
+- `GET /api/cache/raw?rawHash=<hash>` (versioned; long-cache)\n
+- `GET /api/cache/stats?rawHash=<hash>&alg=<alg>` (versioned; long-cache)\n
+- `POST /api/admin/cache/raw` (stores raw cache; requires `Authorization: Bearer <WHIST_ADMIN_TOKEN>`)\n
+- `POST /api/admin/cache/stats` (stores stats cache; requires `Authorization: Bearer <WHIST_ADMIN_TOKEN>`)\n
+The site uses a **versioned URL strategy**: clients fetch the manifest (no-store) to get the latest `rawHash`, then fetch `raw/stats` with that hash so browsers can cache the JSON aggressively without missing updates.
+
+### Developer mode (bypass cache)
+
+For development/troubleshooting, you can enable a browser-local developer mode that forces pages to load directly from Google Sheets (skipping KV/static caches):
+
+- Toggle it in `update-data.html`
+- It is stored in `localStorage` as `whist_developer_mode=true`
+- Turning it OFF will prompt to run a full refresh (raw+stats) to ensure caches are up to date
+
+#### Update workflow (recommended)
+
+Use the maintenance page:
+
+- `update-data.html`
+
+Steps:
+
+1. Update the raw data Google Sheet: [Whist Website Raw Data](https://docs.google.com/spreadsheets/d/1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k/edit?gid=212239001#gid=212239001)
+2. Click **Refresh data cache** (downloads `raw-data.json`)
+3. Click **Refresh stats** (downloads `stats.json`)
+4. Replace the files in `assets/cache/` and redeploy
+
+#### CLI build step (optional)
+
+You can regenerate caches locally (writes directly into `assets/cache/`):
+
+- `npm run cache:all`
+
 ### Data Management
 The website uses a CSV-to-JSON conversion system:
 

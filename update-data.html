@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Data Cache | Ruston Family Whist Drive</title>
+    <meta name="description" content="Admin page to refresh the site-wide raw data cache and stats cache.">
+    <link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
+                    <h1 class="site-title">Ruston Family Whist Drive</h1>
+                    <p class="site-subtitle">Site Maintenance • Data Cache Refresh</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="./" class="nav-link">Home</a>
+                    <a href="tournaments/" class="nav-link">Tournaments</a>
+                    <a href="players/" class="nav-link">Players</a>
+                    <a href="leaderboard/" class="nav-link">Hall of Fame</a>
+                    <a href="stats/" class="nav-link">Statistics</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="stats-hero">
+            <div class="container">
+                <div class="hero-content">
+                    <h1 class="hero-title">Update Data & Caches</h1>
+                    <p class="hero-subtitle">
+                        This site is updated roughly once a year. Use this page to refresh the site-wide cached JSON files
+                        so normal browsing doesn’t repeatedly load Google Sheets.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section class="tournament-summary-section">
+            <div class="container">
+                <h2 class="section-title">
+                    <span class="title-icon">🗂️</span>
+                    Yearly update workflow
+                </h2>
+
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h3 class="card-title">1) Update the raw data</h3>
+                        <p>
+                            Edit the Google Sheet:
+                            <a id="sheet-link" href="#" rel="noopener">Open Whist Website Raw Data</a>
+                        </p>
+                        <p class="muted">
+                            Make sure the new year has a new <code>Scorecards_YYYY</code> tab (and that it’s listed in the <code>Index</code> tab).
+                        </p>
+                    </div>
+                    <div class="analytics-card">
+                        <h3 class="card-title">2) Refresh the raw data cache</h3>
+                        <p>
+                            This reads the Google Sheet and produces a downloadable <code>raw-data.json</code>.
+                        </p>
+                    </div>
+                    <div class="analytics-card">
+                        <h3 class="card-title">3) Refresh the stats cache</h3>
+                        <p>
+                            This recomputes derived stats (tournaments, players, partnerships) from the raw cache and produces <code>stats.json</code>.
+                        </p>
+                        <p class="muted">
+                            You can refresh stats without changing raw data (useful when new analytics are added to the site).
+                        </p>
+                    </div>
+                    <div class="analytics-card">
+                        <h3 class="card-title">4) Publish the files</h3>
+                        <p>
+                            Replace the files in <code>assets/cache/</code> on the hosted site (commit + deploy).
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="advanced-metrics-section">
+            <div class="container">
+                <h2 class="section-title">
+                    <span class="title-icon">🔄</span>
+                    Refresh actions
+                </h2>
+
+                <div class="analytics-card" style="margin-bottom: var(--spacing-lg);">
+                    <h3 class="card-title">Current cache status</h3>
+                    <p class="muted">Reads the live KV manifest (if configured) to show what the site is currently using.</p>
+                    <div id="cache-status" class="muted">Loading…</div>
+                    <div style="margin-top:0.75rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+                        <button id="btn-refresh-status" class="btn btn-secondary" type="button">Refresh status</button>
+                        <a class="btn btn-secondary" href="/api/cache/manifest" target="_blank" rel="noopener">Open manifest JSON</a>
+                    </div>
+                </div>
+
+                <div class="analytics-card" style="margin-bottom: var(--spacing-lg);">
+                    <h3 class="card-title">Admin token</h3>
+                    <p class="muted">Required to write caches to Cloudflare KV.</p>
+                    <input id="admin-token" type="password" autocomplete="current-password" placeholder="Enter admin token" style="width:100%; max-width:520px; padding: 0.65rem 0.75rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.08); color: #fff;" />
+                </div>
+
+                <div class="analytics-card" style="margin-bottom: var(--spacing-lg);">
+                    <h3 class="card-title">Developer mode</h3>
+                    <p class="muted">
+                        When enabled, the site will bypass caches and load directly from Google Sheets (slower, but useful while developing).
+                    </p>
+                    <label style="display:flex; align-items:center; gap:0.6rem; user-select:none;">
+                        <input id="dev-mode-toggle" type="checkbox" />
+                        <span>Enable developer mode (bypass cache)</span>
+                    </label>
+                    <div id="dev-mode-note" class="muted" style="margin-top:0.5rem;"></div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="analytics-card">
+                        <h3 class="card-title">Raw data cache</h3>
+                        <p class="muted">Creates <code>assets/cache/raw-data.json</code></p>
+                        <button id="btn-refresh-raw" class="btn btn-primary" type="button">Refresh data cache</button>
+                        <div class="progress-block" id="raw-progress" style="display:none;">
+                            <div class="progress-line"><span class="spinner" aria-hidden="true"></span><span id="raw-progress-text">Working...</span></div>
+                        </div>
+                        <div class="download-block" id="raw-download" style="display:none;"></div>
+                        <div class="report-block" id="raw-report" style="display:none;"></div>
+                    </div>
+
+                    <div class="analytics-card">
+                        <h3 class="card-title">Stats cache</h3>
+                        <p class="muted">Creates <code>assets/cache/stats.json</code></p>
+                        <button id="btn-refresh-stats" class="btn btn-primary" type="button">Refresh stats</button>
+                        <div class="progress-block" id="stats-progress" style="display:none;">
+                            <div class="progress-line"><span class="spinner" aria-hidden="true"></span><span id="stats-progress-text">Working...</span></div>
+                        </div>
+                        <div class="download-block" id="stats-download" style="display:none;"></div>
+                        <div class="report-block" id="stats-report" style="display:none;"></div>
+                    </div>
+                </div>
+
+                <p class="muted" style="margin-top:1rem;">
+                    Tip: you can download both files here, then copy them into <code>assets/cache/</code> and redeploy.
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive. Maintenance tools.</p>
+            </div>
+        </div>
+    </footer>
+
+    <style>
+        .muted { opacity: 0.85; }
+        code { background: rgba(0,0,0,0.06); padding: 0.1rem 0.3rem; border-radius: 6px; }
+        .progress-line { display:flex; align-items:center; gap: 0.5rem; margin-top: 0.75rem; }
+        .spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff; display:inline-block; animation: spin 0.9s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .download-block, .report-block { margin-top: 0.75rem; }
+        .download-block a { text-decoration: underline; }
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+        .report-table th, .report-table td { text-align: left; padding: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.15); }
+        .pill { display:inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; background: rgba(255,255,255,0.12); margin-right: 0.35rem; }
+        .ok { color: #86efac; }
+        .warn { color: #fde68a; }
+        .bad { color: #fca5a5; }
+    </style>
+
+    <script src="assets/js/tournament-engine.js?v=cache1"></script>
+    <script>
+        const SHEET_ID = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k/edit?gid=212239001#gid=212239001';
+
+        const state = {
+            latestRawCache: null
+        };
+
+        function downloadJson(filename, obj) {
+            const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        async function postJson(url, token, body) {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(body)
+            });
+            const text = await response.text();
+            let json = null;
+            try { json = JSON.parse(text); } catch (_) {}
+            if (!response.ok) {
+                const message = (json && json.error) ? json.error : text || `HTTP ${response.status}`;
+                throw new Error(message);
+            }
+            return json;
+        }
+
+        async function getJson(url) {
+            const response = await fetch(url, { cache: 'no-store' });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return await response.json();
+        }
+
+        function setBusy(section, busy, text) {
+            const progress = document.getElementById(section + '-progress');
+            const label = document.getElementById(section + '-progress-text');
+            progress.style.display = busy ? 'block' : 'none';
+            label.textContent = text || 'Working...';
+        }
+
+        function setHtml(id, html, show) {
+            const el = document.getElementById(id);
+            el.innerHTML = html || '';
+            el.style.display = show ? 'block' : 'none';
+        }
+
+        function renderIssuesSummary(issuesSummary) {
+            if (!issuesSummary || !issuesSummary.summary) {
+                return '<p>No data issues summary available.</p>';
+            }
+            const total = issuesSummary.total || 0;
+            const entries = Object.entries(issuesSummary.summary).sort((a, b) => b[1] - a[1]);
+            const pills = entries.map(([type, count]) => `<span class="pill">${type}: ${count}</span>`).join(' ');
+            return `<p><span class="pill">total_issues: ${total}</span> ${pills}</p>`;
+        }
+
+        function renderTrickMismatch(engine) {
+            if (!engine || typeof engine.getTrickImbalanceSummary !== 'function') {
+                return '';
+            }
+            const summary = engine.getTrickImbalanceSummary();
+            if (!summary || !summary.totalIssues) {
+                return '<p class="ok">No trick imbalance issues found.</p>';
+            }
+            const rows = (summary.details || []).slice(0, 25).map(d => `
+                <tr>
+                    <td>${d.year || ''}</td>
+                    <td>${d.round ?? ''}</td>
+                    <td>${d.table ?? ''}</td>
+                    <td>${d.total ?? ''}</td>
+                    <td>${d.message || ''}</td>
+                </tr>
+            `).join('');
+            return `
+                <p class="warn">Trick mismatch issues: ${summary.totalIssues} (showing first ${Math.min(25, (summary.details || []).length)})</p>
+                <table class="report-table">
+                    <thead><tr><th>Year</th><th>Round</th><th>Table</th><th>Total</th><th>Message</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                <p class="muted"><a href="data-validation.html">Open data-validation report</a></p>
+            `;
+        }
+
+        async function refreshRaw() {
+            setBusy('raw', true, 'Loading from Google Sheets…');
+            setHtml('raw-download', '', false);
+            setHtml('raw-report', '', false);
+
+            try {
+                const token = (document.getElementById('admin-token').value || '').trim();
+                if (!token) {
+                    throw new Error('Enter the admin token first.');
+                }
+
+                const engine = new TournamentEngine();
+                await engine.loadFromGoogleSheets(SHEET_ID, { bypassCache: true });
+
+                const rawCache = engine.exportRawCache();
+                state.latestRawCache = rawCache;
+
+                setBusy('raw', true, 'Storing raw cache to Cloudflare KV…');
+                const storeResult = await postJson('/api/admin/cache/raw', token, rawCache);
+
+                setHtml('raw-download',
+                    `<p class="ok">Raw cache stored site-wide.</p>
+                     <p class="muted">rawHash: <code>${rawCache.rawHash}</code></p>
+                     <p><a href="#" id="dl-raw">Download raw-data.json (backup)</a></p>
+                     <p class="muted">KV manifest updated at: <code>${storeResult?.manifest?.updatedAt || ''}</code></p>`,
+                    true
+                );
+                document.getElementById('dl-raw').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    downloadJson('raw-data.json', rawCache);
+                }, { once: true });
+
+                const issuesSummary = engine.getDataIssues();
+                const reportHtml = `
+                    <h4>Validation summary</h4>
+                    ${renderIssuesSummary(issuesSummary)}
+                    ${renderTrickMismatch(engine)}
+                `;
+                setHtml('raw-report', reportHtml, true);
+
+                // Automatically refresh stats after raw refresh (site-wide consistency).
+                setBusy('stats', true, 'Computing stats…');
+                setHtml('stats-download', '', false);
+                setHtml('stats-report', '', false);
+
+                const statsCache = engine.exportStatsCache(rawCache.rawHash);
+                setBusy('stats', true, 'Storing stats cache to Cloudflare KV…');
+                const statsStoreResult = await postJson('/api/admin/cache/stats', token, statsCache);
+
+                setHtml('stats-download',
+                    `<p class="ok">Stats cache stored site-wide (auto after raw refresh).</p>
+                     <p class="muted">rawHash: <code>${rawCache.rawHash}</code> • statsAlgorithmVersion: <code>${statsCache.statsAlgorithmVersion}</code></p>
+                     <p><a href="#" id="dl-stats">Download stats.json (backup)</a></p>
+                     <p class="muted">KV manifest updated at: <code>${statsStoreResult?.manifest?.updatedAt || ''}</code></p>`,
+                    true
+                );
+                document.getElementById('dl-stats').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    downloadJson('stats.json', statsCache);
+                }, { once: true });
+
+                const tournaments = engine.getAllTournaments();
+                const players = engine.getAllPlayers('total_tricks');
+                setHtml('stats-report',
+                    `<h4>Stats summary</h4>
+                     <p><span class="pill">tournaments: ${tournaments.length}</span> <span class="pill">players: ${players.length}</span> <span class="pill">rawScorecards: ${engine.rawScorecards.length}</span></p>`,
+                    true
+                );
+
+            } catch (error) {
+                setHtml('raw-report', `<p class="bad">Error: ${error && error.message ? error.message : String(error)}</p>`, true);
+            } finally {
+                setBusy('raw', false);
+                setBusy('stats', false);
+            }
+        }
+
+        async function refreshStats() {
+            setBusy('stats', true, 'Computing stats from raw cache…');
+            setHtml('stats-download', '', false);
+            setHtml('stats-report', '', false);
+
+            try {
+                const token = (document.getElementById('admin-token').value || '').trim();
+                if (!token) {
+                    throw new Error('Enter the admin token first.');
+                }
+
+                let rawCache = state.latestRawCache;
+                if (!rawCache) {
+                    // Prefer KV-served raw cache
+                    const engineForUrl = new TournamentEngine();
+                    const manifestUrl = engineForUrl.cacheInfo && engineForUrl.cacheInfo.apiManifestUrl ? engineForUrl.cacheInfo.apiManifestUrl : null;
+                    const rawApiUrl = engineForUrl.cacheInfo && engineForUrl.cacheInfo.apiRawUrl ? engineForUrl.cacheInfo.apiRawUrl : null;
+
+                    if (manifestUrl && rawApiUrl) {
+                        const manifest = await getJson(manifestUrl);
+                        const rawHash = manifest && manifest.rawHash ? manifest.rawHash : null;
+                        if (!rawHash) {
+                            throw new Error('KV cache manifest has no rawHash. Refresh data cache first.');
+                        }
+                        rawCache = await getJson(`${rawApiUrl}?rawHash=${encodeURIComponent(rawHash)}`);
+                    } else {
+                        // Fallback to static file
+                        const rawUrl = engineForUrl.cacheInfo && engineForUrl.cacheInfo.rawUrl ? engineForUrl.cacheInfo.rawUrl : null;
+                        if (!rawUrl) {
+                            throw new Error('Could not resolve raw cache URL.');
+                        }
+                        rawCache = await getJson(rawUrl);
+                    }
+                }
+
+                const engine = new TournamentEngine();
+                engine.importRawCache(rawCache);
+                engine.processRawScorecards();
+
+                const statsCache = engine.exportStatsCache(rawCache.rawHash);
+
+                setBusy('stats', true, 'Storing stats cache to Cloudflare KV…');
+                const storeResult = await postJson('/api/admin/cache/stats', token, statsCache);
+
+                setHtml('stats-download',
+                    `<p class="ok">Stats cache stored site-wide.</p>
+                     <p class="muted">rawHash: <code>${rawCache.rawHash}</code> • statsAlgorithmVersion: <code>${statsCache.statsAlgorithmVersion}</code></p>
+                     <p><a href="#" id="dl-stats">Download stats.json (backup)</a></p>
+                     <p class="muted">KV manifest updated at: <code>${storeResult?.manifest?.updatedAt || ''}</code></p>`,
+                    true
+                );
+                document.getElementById('dl-stats').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    downloadJson('stats.json', statsCache);
+                }, { once: true });
+
+                const tournaments = engine.getAllTournaments();
+                const players = engine.getAllPlayers('total_tricks');
+                setHtml('stats-report',
+                    `<h4>Stats summary</h4>
+                     <p><span class="pill">tournaments: ${tournaments.length}</span> <span class="pill">players: ${players.length}</span> <span class="pill">rawScorecards: ${engine.rawScorecards.length}</span></p>`,
+                    true
+                );
+
+            } catch (error) {
+                setHtml('stats-report', `<p class="bad">Error: ${error && error.message ? error.message : String(error)}</p>`, true);
+            } finally {
+                setBusy('stats', false);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const sheetLink = document.getElementById('sheet-link');
+            sheetLink.href = SHEET_URL;
+            sheetLink.textContent = 'Open Whist Website Raw Data';
+
+            const tokenInput = document.getElementById('admin-token');
+            const storedToken = localStorage.getItem('whist_admin_token') || '';
+            tokenInput.value = storedToken;
+            tokenInput.addEventListener('change', () => {
+                localStorage.setItem('whist_admin_token', tokenInput.value || '');
+            });
+
+            const devToggle = document.getElementById('dev-mode-toggle');
+            const devNote = document.getElementById('dev-mode-note');
+            const storedDev = localStorage.getItem('whist_developer_mode') === 'true';
+            devToggle.checked = storedDev;
+            devNote.textContent = storedDev
+                ? 'Developer mode is ON. Pages will load from Google Sheets instead of caches.'
+                : 'Developer mode is OFF. Pages will use KV/static cache when available.';
+
+            devToggle.addEventListener('change', async () => {
+                const enabled = devToggle.checked === true;
+                localStorage.setItem('whist_developer_mode', enabled ? 'true' : 'false');
+                devNote.textContent = enabled
+                    ? 'Developer mode is ON. Pages will load from Google Sheets instead of caches.'
+                    : 'Developer mode is OFF. Pages will use KV/static cache when available.';
+
+                // When turning developer mode OFF, automatically refresh caches so nothing is stale.
+                if (!enabled) {
+                    const token = (tokenInput.value || '').trim();
+                    if (!token) {
+                        devNote.textContent += ' Enter the admin token and click “Refresh data cache” to refresh site-wide caches.';
+                        return;
+                    }
+                    const confirmed = window.confirm('Developer mode turned OFF. Refresh data+stats caches now to ensure nothing is stale?');
+                    if (!confirmed) {
+                        return;
+                    }
+                    await refreshRaw();
+                }
+            });
+
+            async function refreshCacheStatus() {
+                const el = document.getElementById('cache-status');
+                el.textContent = 'Loading…';
+
+                try {
+                    // Try KV manifest endpoint first
+                    const manifest = await getJson('/api/cache/manifest');
+                    if (!manifest || manifest.exists === false) {
+                        el.innerHTML = `
+                            <p class="warn">KV cache not initialized yet.</p>
+                            <p class="muted">Press “Refresh data cache” first to populate the cache.</p>
+                        `;
+                        return;
+                    }
+
+                    const rawHash = manifest.rawHash || '';
+                    const alg = manifest.statsAlgorithmVersion || '';
+                    const updatedAt = manifest.updatedAt || '';
+                    const rawUpdatedAt = manifest.rawUpdatedAt || '';
+                    const statsUpdatedAt = manifest.statsUpdatedAt || '';
+
+                    el.innerHTML = `
+                        <p>
+                            <span class="pill ok">KV active</span>
+                            <span class="pill">rawHash: <code>${rawHash}</code></span>
+                            <span class="pill">statsAlg: <code>${alg}</code></span>
+                        </p>
+                        <p class="muted">
+                            Updated: <code>${updatedAt}</code><br/>
+                            Raw updated: <code>${rawUpdatedAt}</code><br/>
+                            Stats updated: <code>${statsUpdatedAt}</code>
+                        </p>
+                    `;
+                } catch (error) {
+                    // Likely running locally without Pages Functions (python http.server) or KV not configured.
+                    el.innerHTML = `
+                        <p class="warn">KV status unavailable.</p>
+                        <p class="muted">Reason: ${(error && error.message) ? error.message : String(error)}</p>
+                        <p class="muted">If you’re running locally (e.g. python/http server), Pages Functions won’t be available. On Cloudflare Pages, configure KV binding <code>WHIST_CACHE</code> and reload.</p>
+                    `;
+                }
+            }
+
+            document.getElementById('btn-refresh-status').addEventListener('click', refreshCacheStatus);
+            refreshCacheStatus();
+
+            document.getElementById('btn-refresh-raw').addEventListener('click', refreshRaw);
+            document.getElementById('btn-refresh-stats').addEventListener('click', refreshStats);
+        });
+    </script>
+</body>
+</html>
+
+

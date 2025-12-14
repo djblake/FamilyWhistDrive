@@ -10,6 +10,7 @@
  */
 class TournamentEngine {
     constructor() {
+        this.sheetId = null;
         this.tournaments = new Map();
         this.players = new Map();
         this.partnerships = new Map();
@@ -20,12 +21,322 @@ class TournamentEngine {
         this.lastReportedDataIssues = [];
         this.tournamentMetadata = new Map();
         this.tieBreakers = new Map();
+
+        // Cache (site-wide static JSON files under assets/cache/)
+        this.cacheInfo = {
+            rootUrl: this.getSiteRootUrl(),
+            rawUrl: null,
+            statsUrl: null,
+            apiManifestUrl: null,
+            apiRawUrl: null,
+            apiStatsUrl: null
+        };
+        if (this.cacheInfo.rootUrl) {
+            this.cacheInfo.rawUrl = `${this.cacheInfo.rootUrl}assets/cache/raw-data.json`;
+            this.cacheInfo.statsUrl = `${this.cacheInfo.rootUrl}assets/cache/stats.json`;
+            this.cacheInfo.apiManifestUrl = `${this.cacheInfo.rootUrl}api/cache/manifest`;
+            this.cacheInfo.apiRawUrl = `${this.cacheInfo.rootUrl}api/cache/raw`;
+            this.cacheInfo.apiStatsUrl = `${this.cacheInfo.rootUrl}api/cache/stats`;
+        }
+        this.loadedFromCache = false;
+        this.loadedCacheSummary = null;
         
         // Trump suit rotation
         this.trumpSuits = ['Hearts', 'Diamonds', 'Spades', 'Clubs'];
         
         // Official 20-player tournament schedule (from devenezia.com)
         this.officialSchedule = this.generateOfficialSchedule();
+
+        // Add "Update data" link into footer across the site
+        try {
+            if (typeof document !== 'undefined') {
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => this.injectUpdateDataFooterLink(), { once: true });
+                } else {
+                    this.injectUpdateDataFooterLink();
+                }
+            }
+        } catch (error) {
+            // ignore
+        }
+    }
+
+    static get RAW_CACHE_SCHEMA_VERSION() { return 1; }
+    static get STATS_CACHE_SCHEMA_VERSION() { return 1; }
+    static get STATS_ALGORITHM_VERSION() { return 1; }
+
+    resetState() {
+        this.tournaments = new Map();
+        this.players = new Map();
+        this.partnerships = new Map();
+        this.missingPlayerLog = new Set();
+        this.rawScorecards = [];
+        this.playersLookup = new Map();
+        this.dataIssues = [];
+        this.lastReportedDataIssues = [];
+        this.tournamentMetadata = new Map();
+        this.tieBreakers = new Map();
+        this.loadedFromCache = false;
+        this.loadedCacheSummary = null;
+    }
+
+    isDeveloperModeEnabled() {
+        if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+            return false;
+        }
+        try {
+            return localStorage.getItem('whist_developer_mode') === 'true';
+        } catch (error) {
+            return false;
+        }
+    }
+
+    getSiteRootUrl() {
+        // Determine site root from this script URL so this works on static hosts with a base path (e.g. GitHub Pages).
+        try {
+            if (typeof document === 'undefined') {
+                return '';
+            }
+            const scripts = Array.from(document.getElementsByTagName('script') || []);
+            const engineScript = scripts.find(s => s && s.src && s.src.includes('/assets/js/tournament-engine.js'));
+            if (!engineScript || !engineScript.src) {
+                return '';
+            }
+            const parts = engineScript.src.split('/assets/js/');
+            if (!parts[0]) {
+                return '';
+            }
+            return `${parts[0]}/`;
+        } catch (error) {
+            return '';
+        }
+    }
+
+    async tryFetchJson(url, options = {}) {
+        if (!url) {
+            return null;
+        }
+        try {
+            const fetchOptions = {};
+            if (options.noStore === true) {
+                fetchOptions.cache = 'no-store';
+            }
+            const response = await fetch(url, fetchOptions);
+            if (!response.ok) {
+                return null;
+            }
+            return await response.json();
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async loadFromCache() {
+        // Returns true if cache was loaded successfully.
+        if (!this.cacheInfo) {
+            return false;
+        }
+
+        // 1) Prefer Cloudflare KV API (site-wide mutable cache)
+        if (this.cacheInfo.apiManifestUrl && this.cacheInfo.apiRawUrl && this.cacheInfo.apiStatsUrl) {
+            const manifest = await this.tryFetchJson(this.cacheInfo.apiManifestUrl, { noStore: true });
+            const rawHash = manifest && manifest.rawHash ? String(manifest.rawHash) : null;
+            const alg = manifest && manifest.statsAlgorithmVersion ? String(manifest.statsAlgorithmVersion) : String(TournamentEngine.STATS_ALGORITHM_VERSION);
+
+            if (rawHash) {
+                const rawUrl = `${this.cacheInfo.apiRawUrl}?rawHash=${encodeURIComponent(rawHash)}`;
+                const statsUrl = `${this.cacheInfo.apiStatsUrl}?rawHash=${encodeURIComponent(rawHash)}&alg=${encodeURIComponent(alg)}`;
+
+                const statsCache = await this.tryFetchJson(statsUrl);
+                if (statsCache &&
+                    statsCache.schemaVersion === TournamentEngine.STATS_CACHE_SCHEMA_VERSION &&
+                    statsCache.statsAlgorithmVersion === TournamentEngine.STATS_ALGORITHM_VERSION &&
+                    statsCache.rawHash === rawHash) {
+                    this.importStatsCache(statsCache);
+                    this.loadedFromCache = true;
+                    this.loadedCacheSummary = { source: 'kv:stats', rawHash };
+                    return true;
+                }
+
+                const rawCache = await this.tryFetchJson(rawUrl);
+                if (rawCache && rawCache.schemaVersion === TournamentEngine.RAW_CACHE_SCHEMA_VERSION) {
+                    this.importRawCache(rawCache);
+                    this.processRawScorecards();
+                    this.loadedFromCache = true;
+                    this.loadedCacheSummary = { source: 'kv:raw', rawHash: rawCache.rawHash || rawHash };
+                    return true;
+                }
+            }
+        }
+
+        // 2) Fallback to static assets cache (site-wide but redeploy-based)
+        if (this.cacheInfo.rawUrl) {
+            const rawCache = await this.tryFetchJson(this.cacheInfo.rawUrl);
+            if (!rawCache || rawCache.schemaVersion !== TournamentEngine.RAW_CACHE_SCHEMA_VERSION) {
+                return false;
+            }
+
+            this.importRawCache(rawCache);
+
+            const statsCache = await this.tryFetchJson(this.cacheInfo.statsUrl);
+            if (statsCache &&
+                statsCache.schemaVersion === TournamentEngine.STATS_CACHE_SCHEMA_VERSION &&
+                statsCache.statsAlgorithmVersion === TournamentEngine.STATS_ALGORITHM_VERSION &&
+                statsCache.rawHash &&
+                rawCache.rawHash &&
+                statsCache.rawHash === rawCache.rawHash) {
+                this.importStatsCache(statsCache);
+                this.loadedCacheSummary = { source: 'asset:raw+stats', rawHash: rawCache.rawHash };
+            } else {
+                this.processRawScorecards();
+                this.loadedCacheSummary = { source: 'asset:raw-only', rawHash: rawCache.rawHash };
+            }
+
+            this.loadedFromCache = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    exportRawCache() {
+        const playersLookupEntries = Array.from(this.playersLookup.entries());
+        const tournamentMetadataEntries = Array.from(this.tournamentMetadata.entries());
+        const tieBreakersEntries = Array.from(this.tieBreakers.entries());
+
+        const payload = {
+            schemaVersion: TournamentEngine.RAW_CACHE_SCHEMA_VERSION,
+            generatedAt: new Date().toISOString(),
+            source: { sheetId: this.sheetId || null },
+            playersLookupEntries,
+            tournamentMetadataEntries,
+            tieBreakersEntries,
+            rawScorecards: Array.isArray(this.rawScorecards) ? this.rawScorecards : [],
+            dataIssues: Array.isArray(this.dataIssues) ? this.dataIssues : []
+        };
+
+        const rawHash = this.hashString(this.stableStringify({
+            playersLookupEntries,
+            tournamentMetadataEntries,
+            tieBreakersEntries,
+            rawScorecards: payload.rawScorecards
+        }));
+        payload.rawHash = rawHash;
+
+        return payload;
+    }
+
+    importRawCache(rawCache) {
+        this.resetState();
+        this.sheetId = rawCache?.source?.sheetId || null;
+
+        const playersLookupEntries = Array.isArray(rawCache.playersLookupEntries) ? rawCache.playersLookupEntries : [];
+        const tournamentMetadataEntries = Array.isArray(rawCache.tournamentMetadataEntries) ? rawCache.tournamentMetadataEntries : [];
+        const tieBreakersEntries = Array.isArray(rawCache.tieBreakersEntries) ? rawCache.tieBreakersEntries : [];
+
+        this.playersLookup = new Map(playersLookupEntries);
+        this.tournamentMetadata = new Map(tournamentMetadataEntries);
+        this.tieBreakers = new Map(tieBreakersEntries);
+        this.rawScorecards = Array.isArray(rawCache.rawScorecards) ? rawCache.rawScorecards : [];
+        this.dataIssues = Array.isArray(rawCache.dataIssues) ? rawCache.dataIssues : [];
+    }
+
+    exportStatsCache(rawHash) {
+        return {
+            schemaVersion: TournamentEngine.STATS_CACHE_SCHEMA_VERSION,
+            statsAlgorithmVersion: TournamentEngine.STATS_ALGORITHM_VERSION,
+            generatedAt: new Date().toISOString(),
+            rawHash: rawHash || null,
+            tournamentsEntries: Array.from(this.tournaments.entries()),
+            playersEntries: Array.from(this.players.entries()),
+            partnershipsEntries: Array.from(this.partnerships.entries()),
+            // include lookup/metadata so name rendering works even if only stats.json is loaded elsewhere
+            playersLookupEntries: Array.from(this.playersLookup.entries()),
+            tournamentMetadataEntries: Array.from(this.tournamentMetadata.entries()),
+            tieBreakersEntries: Array.from(this.tieBreakers.entries()),
+            dataIssues: Array.isArray(this.dataIssues) ? this.dataIssues : []
+        };
+    }
+
+    importStatsCache(statsCache) {
+        this.tournaments = new Map(Array.isArray(statsCache.tournamentsEntries) ? statsCache.tournamentsEntries : []);
+        this.players = new Map(Array.isArray(statsCache.playersEntries) ? statsCache.playersEntries : []);
+        this.partnerships = new Map(Array.isArray(statsCache.partnershipsEntries) ? statsCache.partnershipsEntries : []);
+
+        if (Array.isArray(statsCache.playersLookupEntries)) {
+            this.playersLookup = new Map(statsCache.playersLookupEntries);
+        }
+        if (Array.isArray(statsCache.tournamentMetadataEntries)) {
+            this.tournamentMetadata = new Map(statsCache.tournamentMetadataEntries);
+        }
+        if (Array.isArray(statsCache.tieBreakersEntries)) {
+            this.tieBreakers = new Map(statsCache.tieBreakersEntries);
+        }
+        if (Array.isArray(statsCache.dataIssues)) {
+            this.dataIssues = statsCache.dataIssues;
+        }
+    }
+
+    stableStringify(value) {
+        const seen = new WeakSet();
+        const normalize = (val) => {
+            if (val === null || typeof val === 'undefined') return null;
+            if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return val;
+            if (Array.isArray(val)) return val.map(normalize);
+            if (typeof val === 'object') {
+                if (seen.has(val)) return null;
+                seen.add(val);
+                const out = {};
+                Object.keys(val).sort().forEach((k) => { out[k] = normalize(val[k]); });
+                return out;
+            }
+            return String(val);
+        };
+        return JSON.stringify(normalize(value));
+    }
+
+    hashString(input) {
+        // FNV-1a 32-bit
+        let hash = 0x811c9dc5;
+        for (let i = 0; i < input.length; i++) {
+            hash ^= input.charCodeAt(i);
+            hash = (hash * 0x01000193) >>> 0;
+        }
+        return `fnv1a32:${hash.toString(16).padStart(8, '0')}`;
+    }
+
+    injectUpdateDataFooterLink() {
+        // Adds an "Update data" link into the footer on any page that has a footer.
+        try {
+            if (typeof document === 'undefined') {
+                return;
+            }
+            const footerBottom = document.querySelector('.footer-bottom');
+            if (!footerBottom) {
+                return;
+            }
+            if (footerBottom.querySelector('[data-update-data-link]')) {
+                return;
+            }
+            const rootUrl = this.cacheInfo && this.cacheInfo.rootUrl ? this.cacheInfo.rootUrl : '';
+            if (!rootUrl) {
+                return;
+            }
+            const link = document.createElement('a');
+            link.href = `${rootUrl}update-data.html`;
+            link.textContent = 'Update data';
+            link.setAttribute('data-update-data-link', 'true');
+
+            const p = footerBottom.querySelector('p');
+            if (p) {
+                p.appendChild(document.createTextNode(' | '));
+                p.appendChild(link);
+            } else {
+                footerBottom.appendChild(link);
+            }
+        } catch (error) {
+            // ignore
+        }
     }
 
     /**
@@ -274,17 +585,23 @@ class TournamentEngine {
      */
     async loadFromGoogleSheets(sheetId) {
         try {
-            console.log(`📊 Loading complete tournament data from Google Sheets: ${sheetId}`);
-            this.dataIssues = [];
-            this.lastReportedDataIssues = [];
-            this.rawScorecards = [];
-            this.tournaments = new Map();
-            this.players = new Map();
-            this.partnerships = new Map();
-            this.tournamentMetadata = new Map();
-            this.dataIssues = [];
-            this.tieBreakers = new Map();
-            this.missingPlayerLog = new Set();
+            const options = (arguments.length > 1 && arguments[1]) ? arguments[1] : {};
+            const developerMode = this.isDeveloperModeEnabled();
+            const bypassCache = options.bypassCache === true || developerMode;
+            const preferCache = (options.preferCache !== false) && !developerMode;
+
+            this.sheetId = sheetId;
+            console.log(`📊 Loading complete tournament data: ${sheetId}`);
+            this.resetState();
+            this.sheetId = sheetId;
+
+            if (preferCache && !bypassCache) {
+                const loaded = await this.loadFromCache();
+                if (loaded) {
+                    this.reportDataIssues();
+                    return this.rawScorecards.length;
+                }
+            }
             
             // Read the Index sheet to get list of sheets to process
             const indexSheetNames = await this.readIndexSheet(sheetId);
@@ -4193,5 +4510,12 @@ Christmas,2023,2,Diamonds,Margaret Wilson,David Smith+Sarah Brown,6,James Ruston
     }
 }
 
-// Export for use in other scripts
-window.TournamentEngine = TournamentEngine;
+// Export for browsers
+if (typeof window !== 'undefined') {
+    window.TournamentEngine = TournamentEngine;
+}
+
+// Export for Node scripts (static cache build step)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { TournamentEngine };
+}
