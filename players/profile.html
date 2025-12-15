@@ -169,6 +169,10 @@
                         <div class="tournament-timeline" id="tournament-timeline">
                             <div class="loading-message">Loading tournament history...</div>
                         </div>
+                        <div class="timeline-controls">
+                            <div class="timeline-meta" id="tournament-timeline-meta"></div>
+                            <button type="button" class="timeline-toggle-btn" id="toggle-tournament-history" style="display:none;"></button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -316,6 +320,9 @@
                 
                 const players = tournamentEngine.getAllPlayers('total_tricks');
                 const tournaments = Array.from(tournamentEngine.tournaments.values());
+
+                // Precompute global min/max avg tricks per round (for barometer scaling)
+                window.__globalAvgTricksRange = computeGlobalAvgTricksRange(tournamentEngine, tournaments);
                 
                 // Find the player
                 const player = players.find(p => p.name.toLowerCase() === playerName.toLowerCase());
@@ -739,6 +746,10 @@
         function generateTournamentTimeline(player, tournaments) {
             // Use centralized calculation methods for caching compatibility
             const engine = window.tournamentEngine;
+            const HISTORY_LIMIT = 10;
+            if (typeof window.__showAllTournamentHistory !== 'boolean') {
+                window.__showAllTournamentHistory = true; // default: show full history
+            }
             
             if (!engine || typeof engine.getPositionEmoji !== 'function') {
                 console.error('❌ Tournament engine not available or missing methods');
@@ -746,14 +757,23 @@
                 return;
             }
             
-            const timelineHTML = tournaments
-                .sort((a, b) => b.year - a.year)
-                .slice(0, 10) // Show last 10 tournaments
+            const sorted = (tournaments || []).slice().sort((a, b) => (b.year || 0) - (a.year || 0));
+            const totalCount = sorted.length;
+            const showingAll = window.__showAllTournamentHistory;
+            const visible = showingAll ? sorted : sorted.slice(0, HISTORY_LIMIT);
+            const range = window.__globalAvgTricksRange || { min: 0, max: 13 };
+            const rangeMin = Number.isFinite(range.min) ? range.min : 0;
+            const rangeMax = Number.isFinite(range.max) ? range.max : 13;
+            const rangeSpan = rangeMax > rangeMin ? (rangeMax - rangeMin) : 1;
+
+            const timelineHTML = visible
                 .map(tournament => {
                     // Check for individual ranking first
                     let playerRanking = tournament.final_standings.findIndex(s => s.player === player.name) + 1;
                     let isSharedHand = false;
                     let partnershipName = null;
+                    let tricksForDisplay = null; // For shared hands, use partnership total (not split)
+                    let sharingWithText = null;
                     
                     // If not found individually, check shared hand partnerships
                     if (playerRanking === 0) {
@@ -767,6 +787,14 @@
                             playerRanking = tournament.final_standings.findIndex(s => s === sharedHandEntry) + 1;
                             isSharedHand = true;
                             partnershipName = sharedHandEntry.player;
+                            const partners = Array.isArray(sharedHandEntry.partnership_players) ? sharedHandEntry.partnership_players : [];
+                            const others = partners.filter(p => p && p.toLowerCase() !== player.name.toLowerCase());
+                            const prettyOthers = others.map(p => (engine && typeof engine.getDisplayName === 'function') ? engine.getDisplayName(p) : p);
+                            sharingWithText = prettyOthers.length ? prettyOthers.join(' & ') : null;
+                            const sharedTricks = Number.isFinite(sharedHandEntry.total_tricks)
+                                ? sharedHandEntry.total_tricks
+                                : parseFloat(sharedHandEntry.total_tricks);
+                            tricksForDisplay = Number.isFinite(sharedTricks) ? sharedTricks : null;
                         } else {
                             // Player not found in this tournament - should not happen but handle gracefully
                             playerRanking = null;
@@ -779,42 +807,46 @@
                     
                     // Use centralized methods for calculations
                     const positionEmoji = engine.getPositionEmoji(playerRanking, totalPlayers);
-                    const totalTricks = engine.getPlayerTricksInTournament(player.name, tournament);
                     const actualRounds = engine.getTournamentRoundsCount(tournament);
-                    const avgTricks = engine.getPlayerAverageTricksPerRound(player.name, tournament).toFixed(1);
                     
+                    // Avg tricks/round for the barometer:
+                    // - Shared hand: use partnership total tricks (not split)
+                    // - Solo: use engine helper
+                    let avgTricksValue = null;
+                    if (isSharedHand && Number.isFinite(tricksForDisplay) && actualRounds > 0) {
+                        avgTricksValue = tricksForDisplay / actualRounds;
+                    } else {
+                        const avg = engine.getPlayerAverageTricksPerRound(player.name, tournament);
+                        avgTricksValue = Number.isFinite(avg) ? avg : null;
+                    }
+                    const avgTricks = avgTricksValue === null ? null : avgTricksValue.toFixed(2);
+                    const capped = avgTricksValue === null ? null : Math.max(rangeMin, Math.min(rangeMax, avgTricksValue));
+                    const pctRaw = capped === null ? 0 : ((capped - rangeMin) / rangeSpan);
+                    const pct = Math.max(0, Math.min(1, pctRaw));
+                    const barPct = pct * 100;
+                    const barTitle = avgTricksValue === null
+                        ? 'Performance unavailable'
+                        : `${avgTricks} avg tricks/round (range ${rangeMin.toFixed(2)}–${rangeMax.toFixed(2)})`;
+
                     return `
-                        <a href="../tournaments/results.html?year=${tournament.year}" class="timeline-item ${isWinner ? 'winner' : isTopThree ? 'top-three' : ''}">
-                            <div class="timeline-year-column">
-                                <div class="timeline-year">${tournament.year}</div>
-                                <div class="tricks-box">
-                                    <div class="tricks-number">${totalTricks}</div>
-                                    <div class="tricks-label">tricks</div>
-                                </div>
+                        <a href="../tournaments/results.html?year=${tournament.year}" class="timeline-item timeline-item--compact ${isWinner ? 'winner' : isTopThree ? 'top-three' : ''}">
+                            <span class="timeline-year">${tournament.year}</span>
+                            <div class="timeline-line1">
+                                <span class="timeline-tournament">${tournament.name}</span>
+                                ${isSharedHand ? '<span class="shared-hand-badge">🤝 Shared Hand</span>' : ''}
+                                ${isSharedHand && sharingWithText ? `<span class="partnership-text">with: ${sharingWithText}</span>` : ''}
                             </div>
-                            <div class="timeline-content">
-                                <div class="timeline-header">
-                                    <div class="timeline-tournament">${tournament.name}</div>
-                                </div>
+                            <div class="timeline-line2">
                                 <div class="timeline-result">
                                     <span class="position-emoji">${positionEmoji}</span>
                                     <span class="result-position">${playerRanking ? `${playerRanking}${engine.getOrdinalSuffix(playerRanking)} Place` : 'Participated'}</span>
-                                    ${isSharedHand ? '<span class="shared-hand-badge">🤝 Shared Hand</span>' : ''}
                                     ${isWinner ? '<span class="winner-badge">🏆 Champion</span>' : ''}
                                 </div>
-                                ${isSharedHand ? `<div class="partnership-info">Partnership: ${partnershipName}</div>` : ''}
-                                <div class="timeline-stats">
-                                    <div class="stat-item">
-                                        <span class="stat-icon">👥</span>
-                                        <span>${totalPlayers} players</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-icon">🎲</span>
-                                        <span>${actualRounds} rounds</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-icon">🎯</span>
-                                        <span>${avgTricks} avg/round</span>
+                                <div class="timeline-performance-stack" title="${barTitle}">
+                                    <div class="perf-label">${avgTricks === null ? '—' : `${avgTricks} avg/round`}</div>
+                                    <div class="perf-bar" aria-hidden="true">
+                                        <div class="perf-bar-mask" style="left:${barPct.toFixed(1)}%"></div>
+                                        <div class="perf-bar-marker" style="left:${barPct.toFixed(1)}%"></div>
                                     </div>
                                 </div>
                             </div>
@@ -824,6 +856,68 @@
                 .join('');
             
             document.getElementById('tournament-timeline').innerHTML = timelineHTML || '<p>No tournament history available.</p>';
+
+            const meta = document.getElementById('tournament-timeline-meta');
+            const toggleBtn = document.getElementById('toggle-tournament-history');
+            if (meta) {
+                if (!totalCount) {
+                    meta.textContent = '';
+                } else if (showingAll) {
+                    meta.textContent = `Showing all ${totalCount} tournaments`;
+                } else {
+                    meta.textContent = `Showing latest ${Math.min(HISTORY_LIMIT, totalCount)} of ${totalCount} tournaments`;
+                }
+            }
+            if (toggleBtn) {
+                if (totalCount <= HISTORY_LIMIT) {
+                    toggleBtn.style.display = 'none';
+                    toggleBtn.onclick = null;
+                } else {
+                    toggleBtn.style.display = 'inline-flex';
+                    toggleBtn.textContent = showingAll ? 'Show latest 10' : `Show all (${totalCount})`;
+                    toggleBtn.onclick = () => {
+                        window.__showAllTournamentHistory = !window.__showAllTournamentHistory;
+                        generateTournamentTimeline(player, tournaments);
+                    };
+                }
+            }
+        }
+
+        function computeGlobalAvgTricksRange(engine, tournaments) {
+            const values = [];
+            const list = Array.isArray(tournaments) ? tournaments : [];
+            list.forEach(t => {
+                if (!t || !Array.isArray(t.final_standings) || t.final_standings.length === 0) return;
+                const rounds = (engine && typeof engine.getTournamentRoundsCount === 'function')
+                    ? engine.getTournamentRoundsCount(t)
+                    : 13;
+                const denom = Number.isFinite(rounds) && rounds > 0 ? rounds : 13;
+
+                t.final_standings.forEach(s => {
+                    const tricks = Number.isFinite(s.total_tricks) ? s.total_tricks : parseFloat(s.total_tricks);
+                    if (!Number.isFinite(tricks)) return;
+                    const avg = tricks / denom;
+                    if (!Number.isFinite(avg)) return;
+                    values.push(avg);
+                });
+            });
+
+            if (!values.length) {
+                return { min: 0, max: 13, mean: 0, std: 0 };
+            }
+
+            const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+            const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
+            const std = Math.sqrt(variance);
+
+            const min = mean - (2 * std);
+            const max = mean + (2 * std);
+
+            if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
+                return { min: 0, max: 13, mean, std: Number.isFinite(std) ? std : 0 };
+            }
+
+            return { min, max, mean, std };
         }
 
         // getOrdinalSuffix function moved to TournamentEngine class for centralized caching
@@ -1162,19 +1256,57 @@
             gap: var(--spacing-md);
         }
 
-        .timeline-item {
+        .timeline-controls {
             display: flex;
-            gap: var(--spacing-lg);
-            padding: var(--spacing-xl);
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 16px;
-            border: 2px solid #dee2e6;
+            justify-content: space-between;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-md);
+        }
+
+        .timeline-meta {
+            color: var(--text-secondary-dark);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .timeline-toggle-btn {
+            background: rgba(34, 197, 94, 0.12);
+            border: 1px solid rgba(34, 197, 94, 0.28);
+            color: var(--text-primary-dark);
+            padding: 0.4rem 0.8rem;
+            border-radius: 999px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        .timeline-toggle-btn:hover {
+            background: rgba(34, 197, 94, 0.18);
+            transform: translateY(-1px);
+        }
+
+        .timeline-item {
+            display: block;
+            padding: 0.85rem 1rem;
+            background: white;
+            border-radius: 14px;
+            border: 1px solid rgba(34, 197, 94, 0.18);
             text-decoration: none;
             color: inherit;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
             position: relative;
             overflow: hidden;
-            align-items: flex-start;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+        }
+
+        .timeline-item--compact {
+            display: grid;
+            grid-template-columns: 64px 1fr;
+            grid-template-rows: auto auto;
+            column-gap: 14px;
+            row-gap: 6px;
+            align-items: start;
         }
 
         .timeline-item::before {
@@ -1194,124 +1326,83 @@
         }
 
         .timeline-item:hover {
-            transform: translateY(-4px) scale(1.02);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
             text-decoration: none;
-            border-color: var(--primary-color);
+            border-color: rgba(212, 175, 55, 0.5);
         }
 
         .timeline-item.winner {
-            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-            border-color: #ffc107;
-            color: #1a1a1a;
-            box-shadow: 0 8px 20px rgba(255, 193, 7, 0.3);
+            border-color: rgba(212, 175, 55, 0.55);
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.10) 0%, rgba(255, 255, 255, 1) 80%);
         }
 
         .timeline-item.winner:hover {
-            box-shadow: 0 12px 32px rgba(255, 193, 7, 0.4);
-            border-color: #ffb300;
+            border-color: rgba(212, 175, 55, 0.75);
         }
 
         .timeline-item.top-three {
-            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-            border-color: var(--accent-color);
-        }
-
-        .timeline-year-column {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: var(--spacing-md);
-            min-width: 80px;
-            flex-shrink: 0;
+            border-color: rgba(34, 197, 94, 0.35);
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.10) 0%, rgba(255, 255, 255, 1) 80%);
         }
 
         .timeline-year {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 900;
-            color: #2c3e50;
-            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
-            text-align: center;
-        }
-
-        .timeline-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-sm);
-        }
-
-        .timeline-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+            color: var(--text-secondary-dark);
+            text-align: left;
+            grid-column: 1;
+            grid-row: 1;
+            line-height: 1.1;
+            align-self: center;
         }
 
         .timeline-tournament {
-            font-weight: 700;
-            font-size: 1.25rem;
-            margin-bottom: 0.25rem;
-            color: var(--text-primary-dark);
+            font-weight: 850;
+            font-size: 1.18rem;
+            color: #1a1a1a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 0 1 auto;
+            display: inline-block;
+            max-width: clamp(220px, 48vw, 620px);
+        }
+
+        .timeline-line1 {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            min-width: 0;
+            grid-column: 2;
+            grid-row: 1;
+            align-self: center;
+            justify-content: flex-start;
+        }
+
+        .timeline-line2 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            grid-column: 2;
+            grid-row: 2;
         }
 
         .timeline-result {
             display: flex;
             align-items: center;
-            gap: var(--spacing-md);
-            margin-bottom: var(--spacing-sm);
+            gap: 0.45rem;
+            margin-bottom: 0;
+            min-width: 0;
         }
 
         .result-position {
-            font-weight: 600;
-            font-size: 1.1rem;
+            font-weight: 800;
+            font-size: 1.12rem;
             color: #2c3e50;
-        }
-
-        .tricks-box {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: 60px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0.95);
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            flex-shrink: 0;
-        }
-
-        .tricks-number {
-            font-size: 1.4rem;
-            font-weight: 900;
-            color: #1a1a1a;
-            line-height: 1;
-        }
-
-        .tricks-label {
-            font-size: 0.6rem;
-            font-weight: 500;
-            color: #666;
-            text-transform: lowercase;
-            margin-top: 1px;
-        }
-
-        .timeline-item.winner .tricks-box {
-            background: rgba(255, 255, 255, 0.98);
-            border-color: #ffc107;
-        }
-
-        .timeline-item.winner .tricks-number {
-            color: #1a1a1a;
-        }
-
-        .timeline-item.top-three .tricks-box {
-            background: rgba(255, 255, 255, 0.98);
-            border-color: var(--accent-color);
-        }
-
-        .timeline-item.top-three .tricks-number {
-            color: #1a1a1a;
+            white-space: nowrap;
         }
 
         .timeline-item.winner .timeline-year,
@@ -1327,38 +1418,74 @@
         }
 
         .position-emoji {
-            font-size: 1.5rem;
-            margin-right: var(--spacing-xs);
-        }
-
-        .timeline-stats {
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--spacing-lg);
-            align-items: center;
-            padding-top: var(--spacing-sm);
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
-            font-size: 0.9rem;
-            color: var(--text-secondary-dark);
-        }
-
-        .stat-item {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-xs);
-        }
-
-        .stat-icon {
-            font-size: 1rem;
+            font-size: 1.05rem;
+            margin-right: 0;
         }
 
         .winner-badge {
-            background: #1a1a1a;
-            color: #ffd700;
-            padding: 0.25rem 0.5rem;
-            border-radius: var(--border-radius-sm);
-            font-size: 0.75rem;
-            font-weight: 600;
+            background: rgba(212, 175, 55, 0.22);
+            color: var(--text-primary-dark);
+            padding: 0.18rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 900;
+        }
+
+        .timeline-performance-stack {
+            width: 260px;
+            display: flex;
+            align-items: center;
+            margin-left: auto; /* lock to same x position */
+            position: relative;
+            /* Keep a stable box height so the bar can be vertically centered */
+            height: 26px;
+        }
+
+        .perf-bar {
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(239, 68, 68, 0.85) 0%, rgba(245, 158, 11, 0.85) 55%, rgba(34, 197, 94, 0.9) 100%);
+            overflow: hidden;
+            border: 1px solid rgba(26, 26, 26, 0.10);
+            position: relative;
+            /* Center bar within the stack regardless of label */
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .perf-bar-mask {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            /* left is set inline (same as marker percentage) */
+            background: rgba(238, 238, 238, 0.92);
+        }
+
+        .perf-bar-marker {
+            position: absolute;
+            top: -2px;
+            bottom: -2px;
+            width: 2px;
+            background: rgba(26, 26, 26, 0.55);
+            transform: translateX(-1px);
+            border-radius: 2px;
+        }
+
+        .perf-label {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: var(--text-secondary-dark);
+            white-space: nowrap;
+            text-align: right;
+            width: 100%;
+            /* Float above the bar without affecting layout */
+            position: absolute;
+            right: 0;
+            bottom: calc(50% + 9px);
+            line-height: 1;
         }
 
         .loading-message {
@@ -1384,68 +1511,52 @@
             }
 
             .timeline-item {
-                flex-direction: row;
-                gap: var(--spacing-md);
-                padding: var(--spacing-lg);
-            }
-
-            .timeline-year-column {
-                min-width: 60px;
-                gap: var(--spacing-sm);
+                padding: 0.85rem 0.9rem;
             }
 
             .timeline-year {
-                font-size: 1.25rem;
-                text-align: center;
-            }
-
-            .timeline-tournament {
                 font-size: 1.1rem;
             }
 
-            .timeline-stats {
-                gap: var(--spacing-md);
+            .timeline-tournament {
+                font-size: 0.98rem;
             }
 
-            .timeline-stats .stat-item {
-                flex: 0 0 calc(50% - var(--spacing-sm));
-                min-width: 0;
+            .timeline-line2 {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
             }
 
-            .timeline-stats .stat-item {
-                font-size: 0.85rem;
+            .timeline-performance-stack {
+                width: 100%;
+                max-width: none;
+                align-self: stretch;
+                margin-left: 0;
             }
 
-            .tricks-box {
-                width: 50px;
-                height: 50px;
-            }
-
-            .tricks-number {
-                font-size: 1.2rem;
-            }
-
-            .tricks-label {
-                font-size: 0.55rem;
+            .perf-bar {
+                width: 100%;
             }
         }
 
-        /* Shared Hand Styling */
         .shared-hand-badge {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-left: 8px;
+            background: rgba(59, 130, 246, 0.10);
+            color: #1d4ed8;
+            padding: 0.18rem 0.55rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 900;
+            border: 1px solid rgba(59, 130, 246, 0.22);
+            flex: 0 0 auto;
         }
 
-        .partnership-info {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            margin-top: 4px;
-            font-style: italic;
+        .partnership-text {
+            color: var(--text-secondary-dark);
+            font-size: 0.9rem;
+            font-weight: 800;
+            white-space: nowrap;
+            flex: 0 0 auto;
         }
     </style>
 </body>

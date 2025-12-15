@@ -23,7 +23,6 @@
             <div class="header-content">
                 <div class="logo-section">
                     <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
-
                     <h1 class="site-title">Ruston Family Whist Drive</h1>
                     <p class="site-subtitle">Est. 1984 • The World's Most Elite Family Tournament</p>
                 </div>
@@ -339,9 +338,16 @@
         }
 
         function generateTournamentTimeline(player, tournaments) {
-            const timelineHTML = tournaments
-                .sort((a, b) => b.year - a.year)
-                .slice(0, 10) // Show last 10 tournaments
+            const HISTORY_LIMIT = 10;
+            if (typeof window.__showAllTournamentHistory !== 'boolean') {
+                window.__showAllTournamentHistory = true; // default: show full history
+            }
+            const sorted = (tournaments || []).slice().sort((a, b) => (b.year || 0) - (a.year || 0));
+            const totalCount = sorted.length;
+            const showingAll = window.__showAllTournamentHistory;
+            const visible = showingAll ? sorted : sorted.slice(0, HISTORY_LIMIT);
+
+            const timelineHTML = visible
                 .map(tournament => {
                     const playerRanking = tournament.final_standings.findIndex(s => s.player === player.name) + 1;
                     const isWinner = tournament.winner === player.name;
