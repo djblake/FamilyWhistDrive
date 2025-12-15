@@ -60,11 +60,29 @@
                 </div>
 
                 <div class="full-rankings-tools">
+                    <button type="button" class="year-scrubber-btn" id="year-scrubber-btn" aria-haspopup="dialog" aria-expanded="false">
+                        <span class="year-scrubber-btn__label" id="year-scrubber-btn-label">Year: Latest</span>
+                        <span class="year-scrubber-btn__caret">▾</span>
+                    </button>
                     <label class="sample-filter-toggle sample-filter-toggle--dark" for="toggle-sample-filter">
                         <input type="checkbox" id="toggle-sample-filter" checked>
                         <span class="sample-filter-toggle__text">Exclude players with low sample size</span>
                         <span class="sample-filter-toggle__hint">(2+ tournaments)</span>
                     </label>
+                </div>
+
+                <div class="year-scrubber-overlay" id="year-scrubber-overlay" style="display:none;">
+                    <div class="year-scrubber-backdrop" id="year-scrubber-backdrop" aria-hidden="true"></div>
+                    <div class="year-scrubber-panel" role="dialog" aria-modal="true" aria-label="Year scrubber">
+                        <div class="year-scrubber-panel__header">
+                            <div class="year-scrubber-panel__title" id="year-scrubber-title">Year: —</div>
+                            <button type="button" class="year-scrubber-panel__close" id="year-scrubber-close" aria-label="Close year scrubber">Close</button>
+                        </div>
+                        <div class="year-scrubber-panel__body">
+                            <input type="range" id="year-scrubber-range" class="year-scrubber-range" min="0" max="0" step="1" value="0">
+                            <div class="year-scrubber-ticks" id="year-scrubber-ticks" aria-hidden="true"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="full-rankings">
@@ -310,10 +328,17 @@
         let tournamentEngine = null;
         let showingAllPlayers = false;
         let currentSortedPlayers = [];
-        let recentFormScores = new Map();
-        let performanceScores = new Map();
+        let recentFormScoresAllTime = new Map();
+        let performanceScoresAllTime = new Map();
+        let currentRecentFormScores = new Map();
+        let currentPerformanceScores = new Map();
         let excludeLowSampleSize = true;
         const MIN_TOURNAMENT_SAMPLE_SIZE = 2;
+        const YEAR_SCRUBBER_RECENT_COUNT = 5;
+        let availableYears = [];
+        let latestYear = null;
+        let selectedYear = null;
+        let yearSnapshots = new Map(); // Map<year, { players, seedRankings, recentFormScores, performanceScores }>
 
         const rankingTypes = ['overall', 'championships', 'booby', 'career_stats', 'recent_form', 'performance'];
         const validRankingTypes = new Set(rankingTypes);
@@ -341,12 +366,18 @@
                 allPlayers = tournamentEngine.getAllPlayers('overall');
                 
                 // Pre-calculate recent form and performance scores from actual tournament results
-                recentFormScores = typeof tournamentEngine.calculateRecentFormScores === 'function'
-                    ? tournamentEngine.calculateRecentFormScores(5)
+                recentFormScoresAllTime = typeof tournamentEngine.calculateRecentFormScores === 'function'
+                    ? tournamentEngine.calculateRecentFormScores(YEAR_SCRUBBER_RECENT_COUNT)
                     : new Map();
-                performanceScores = typeof tournamentEngine.calculatePerformanceScores === 'function'
+                performanceScoresAllTime = typeof tournamentEngine.calculatePerformanceScores === 'function'
                     ? tournamentEngine.calculatePerformanceScores()
                     : new Map();
+
+                // Build all year snapshots up-front (fast scrubbing)
+                buildYearSnapshots();
+                // Default to latest year (button still says "Latest")
+                selectedYear = latestYear;
+                setCurrentYearSnapshot(selectedYear);
                 
                 // Initialize rankings display
                 updateRankingsDisplay(currentRankingType);
@@ -365,6 +396,9 @@
 
                 // Sample size filter toggle
                 setupSampleSizeToggle();
+                
+                // Year scrubber UI + handlers
+                setupYearScrubber();
 
                 console.log('🏆 Hall of Fame loaded successfully with real data');
 
@@ -430,9 +464,9 @@
 
                 // Best recent form
                 let bestRecent = null;
-                if (recentFormScores && recentFormScores.size) {
+                if (recentFormScoresAllTime && recentFormScoresAllTime.size) {
                     for (const player of (allPlayers || [])) {
-                        const score = recentFormScores.get(player.name);
+                        const score = recentFormScoresAllTime.get(player.name);
                         if (typeof score !== 'number') continue;
                         if (!bestRecent || score > bestRecent.score) {
                             bestRecent = { playerId: player.name, score };
@@ -1081,6 +1115,87 @@
             updateRankingsTable(filtered, showingAllPlayers ? filtered.length : 10);
         }
 
+        let rankingsFlipToken = 0;
+
+        function prefersReducedMotion() {
+            try {
+                return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function captureRankRowRects(container) {
+            const map = new Map();
+            if (!container) return map;
+            const rows = container.querySelectorAll('.ranking-row[data-player-id]');
+            rows.forEach(row => {
+                const id = row.getAttribute('data-player-id');
+                if (!id) return;
+                map.set(id, row.getBoundingClientRect());
+            });
+            return map;
+        }
+
+        function animateRankingsFLIP(container, prevRects, hadRowsBefore) {
+            if (!container) return;
+            if (!hadRowsBefore) return; // avoid animating initial load from "nothing"
+            if (prefersReducedMotion()) return;
+
+            const token = ++rankingsFlipToken;
+            const rows = Array.from(container.querySelectorAll('.ranking-row[data-player-id]'));
+            if (!rows.length) return;
+
+            rows.forEach(row => {
+                row.style.transition = 'none';
+                row.style.transform = '';
+                row.style.opacity = '';
+            });
+
+            // Invert: set transform to keep old position
+            rows.forEach(row => {
+                const id = row.getAttribute('data-player-id');
+                if (!id) return;
+                const prev = prevRects.get(id);
+                const next = row.getBoundingClientRect();
+
+                if (prev) {
+                    const dx = prev.left - next.left;
+                    const dy = prev.top - next.top;
+                    if (dx || dy) {
+                        row.style.transform = `translate(${dx}px, ${dy}px)`;
+                        row.dataset.flip = '1';
+                    }
+                } else {
+                    // New entry fades/slides in slightly
+                    row.style.opacity = '0';
+                    row.style.transform = 'translate(0px, 10px)';
+                    row.dataset.flip = '1';
+                }
+            });
+
+            // Play: animate back to natural position
+            requestAnimationFrame(() => {
+                if (token !== rankingsFlipToken) return;
+                rows.forEach(row => {
+                    if (row.dataset.flip !== '1') return;
+                    row.style.transition = 'transform 520ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 420ms ease';
+                    row.style.transform = 'translate(0px, 0px)';
+                    row.style.opacity = '1';
+                });
+
+                window.setTimeout(() => {
+                    if (token !== rankingsFlipToken) return;
+                    rows.forEach(row => {
+                        delete row.dataset.flip;
+                        row.style.transition = '';
+                        row.style.transform = '';
+                        row.style.opacity = '';
+                    });
+                }, 560);
+            });
+        }
+
         function setupSampleSizeToggle() {
             const toggle = document.getElementById('toggle-sample-filter');
             if (!toggle) return;
@@ -1089,6 +1204,310 @@
                 excludeLowSampleSize = toggle.checked;
                 refreshRankingsTable();
             });
+        }
+
+        function getYearSnapshot(year) {
+            const y = Number.isFinite(year) ? year : latestYear;
+            return yearSnapshots && yearSnapshots.get(y);
+        }
+
+        function getPlayersForSelectedYear() {
+            const snap = getYearSnapshot(selectedYear);
+            return snap && Array.isArray(snap.players) ? snap.players : allPlayers;
+        }
+
+        function setCurrentYearSnapshot(year) {
+            const snap = getYearSnapshot(year);
+            if (!snap) {
+                currentRecentFormScores = recentFormScoresAllTime;
+                currentPerformanceScores = performanceScoresAllTime;
+                return;
+            }
+            currentRecentFormScores = snap.recentFormScores || new Map();
+            currentPerformanceScores = snap.performanceScores || new Map();
+        }
+
+        function buildYearSnapshots() {
+            if (!tournamentEngine || typeof tournamentEngine.getAllTournamentsUnique !== 'function') {
+                return;
+            }
+
+            const tournamentsAsc = tournamentEngine.getAllTournamentsUnique('asc')
+                .filter(t => t && Number.isFinite(t.year) && Array.isArray(t.final_standings));
+            const years = Array.from(new Set(tournamentsAsc.map(t => t.year))).sort((a, b) => a - b);
+            availableYears = years;
+            latestYear = years.length ? years[years.length - 1] : null;
+
+            const tournamentsUpToYear = new Map();
+            const running = [];
+            years.forEach(y => {
+                tournamentsAsc.filter(t => t.year === y).forEach(t => running.push(t));
+                tournamentsUpToYear.set(y, running.slice());
+            });
+
+            const computePerformanceScoresForTournaments = (tournaments) => {
+                const totals = new Map();
+                (tournaments || []).forEach(t => {
+                    const standings = Array.isArray(t.final_standings) ? t.final_standings : [];
+                    if (!standings.length) return;
+                    const totalPlayers = standings.length;
+                    standings.forEach(standing => {
+                        const percentile = (standing.position / totalPlayers) * 100;
+                        const players = standing.is_partnership && standing.partnership_players
+                            ? standing.partnership_players
+                            : [standing.player];
+                        players.forEach(playerId => {
+                            if (!totals.has(playerId)) totals.set(playerId, { sum: 0, count: 0 });
+                            const agg = totals.get(playerId);
+                            agg.sum += percentile;
+                            agg.count += 1;
+                        });
+                    });
+                });
+                const averages = new Map();
+                for (const [playerId, stats] of totals.entries()) {
+                    if (stats.count > 0) averages.set(playerId, stats.sum / stats.count);
+                }
+                return averages;
+            };
+
+            const computeRecentFormScoresForTournaments = (tournaments, recentCount = 5) => {
+                const scores = new Map();
+                const list = (tournaments || []).slice().sort((a, b) => (b.year || 0) - (a.year || 0)).slice(0, recentCount);
+                if (!list.length) return scores;
+                list.forEach((tournament, index) => {
+                    const weight = recentCount - index;
+                    const standings = Array.isArray(tournament.final_standings) ? tournament.final_standings : [];
+                    const participantCount = standings.length;
+                    if (!participantCount) return;
+                    standings.forEach((standing, positionIndex) => {
+                        const baseScore = participantCount - positionIndex;
+                        const score = baseScore * weight;
+                        const players = standing.is_partnership && standing.partnership_players
+                            ? standing.partnership_players
+                            : [standing.player];
+                        players.forEach(playerId => {
+                            scores.set(playerId, (scores.get(playerId) || 0) + score);
+                        });
+                    });
+                });
+                return scores;
+            };
+
+            const computeRoundWinsForTournament = (tournament) => {
+                const wins = new Map();
+                const rounds = Array.isArray(tournament.rounds) ? tournament.rounds : [];
+                rounds.forEach(round => {
+                    const tables = Array.isArray(round.tables) ? round.tables : [];
+                    tables.forEach(table => {
+                        const ps = Array.isArray(table.partnerships) ? table.partnerships : [];
+                        ps.forEach(partnership => {
+                            const tricks = Number.isFinite(partnership?.tricks) ? partnership.tricks : parseInt(partnership?.tricks, 10);
+                            if (!Number.isFinite(tricks) || tricks < 7) return;
+                            const pos1 = Array.isArray(partnership.position1) ? partnership.position1 : [];
+                            const pos2 = Array.isArray(partnership.position2) ? partnership.position2 : [];
+                            const creditPos1 = pos1.length ? (1 / pos1.length) : 0;
+                            const creditPos2 = pos2.length ? (1 / pos2.length) : 0;
+                            pos1.forEach(id => wins.set(id, (wins.get(id) || 0) + creditPos1));
+                            pos2.forEach(id => wins.set(id, (wins.get(id) || 0) + creditPos2));
+                        });
+                    });
+                });
+                return wins;
+            };
+
+            // Build cumulative player stats year-by-year (to keep consistent with the main engine approach)
+            const cumulative = new Map();
+            const ensure = (playerId) => {
+                if (!cumulative.has(playerId)) {
+                    cumulative.set(playerId, {
+                        name: playerId,
+                        tournaments_played: 0,
+                        total_tricks: 0,
+                        total_rounds: 0,
+                        rounds_won: 0,
+                        tournament_wins: 0,
+                        top_three_finishes: 0,
+                        booby_prizes: 0,
+                        booby_percentage: 0,
+                        average_tricks: '0.00',
+                        win_percentage: '0.0'
+                    });
+                }
+                return cumulative.get(playerId);
+            };
+
+            const applyTournamentToCumulative = (tournament) => {
+                const standings = Array.isArray(tournament.final_standings) ? tournament.final_standings : [];
+                if (!standings.length) return;
+                const totalEntrants = standings.length;
+                const fallbackPosition = totalEntrants || 1;
+                const worstPosition = standings.reduce((max, entry) => {
+                    const entryPos = Number.isFinite(entry.position) ? entry.position : fallbackPosition;
+                    return Math.max(max, entryPos);
+                }, fallbackPosition);
+
+                standings.forEach(standing => {
+                    const entryPosition = Number.isFinite(standing.position) ? standing.position : fallbackPosition;
+                    const isBoobyPlacement = totalEntrants > 0 && entryPosition >= worstPosition;
+                    const isShared = standing.is_partnership && Array.isArray(standing.partnership_players) && standing.partnership_players.length;
+
+                    if (isShared) {
+                        const partners = standing.partnership_players;
+                        const numPartners = partners.length || 2;
+                        const splitTricks = (Number.isFinite(standing.total_tricks) ? standing.total_tricks : parseFloat(standing.total_tricks)) / numPartners;
+                        const splitRounds = (Number.isFinite(standing.rounds_played) ? standing.rounds_played : parseFloat(standing.rounds_played)) / numPartners;
+                        partners.forEach(playerId => {
+                            const stats = ensure(playerId);
+                            stats.tournaments_played += 1;
+                            stats.total_tricks += Number.isFinite(splitTricks) ? splitTricks : 0;
+                            stats.total_rounds += Number.isFinite(splitRounds) ? splitRounds : 0;
+                            if (entryPosition === 1) stats.tournament_wins += 1;
+                            if (entryPosition <= 3) stats.top_three_finishes += 1;
+                            if (isBoobyPlacement) stats.booby_prizes += 1;
+                        });
+                    } else {
+                        const playerId = standing.player;
+                        if (!playerId) return;
+                        const stats = ensure(playerId);
+                        const tricks = Number.isFinite(standing.total_tricks) ? standing.total_tricks : parseFloat(standing.total_tricks);
+                        const rounds = Number.isFinite(standing.rounds_played) ? standing.rounds_played : parseFloat(standing.rounds_played);
+                        stats.tournaments_played += 1;
+                        stats.total_tricks += Number.isFinite(tricks) ? tricks : 0;
+                        stats.total_rounds += Number.isFinite(rounds) ? rounds : 0;
+                        if (entryPosition === 1) stats.tournament_wins += 1;
+                        if (entryPosition <= 3) stats.top_three_finishes += 1;
+                        if (isBoobyPlacement) stats.booby_prizes += 1;
+                    }
+                });
+
+                // Add rounds_won credits based on per-round results (7+ tricks)
+                const winCredits = computeRoundWinsForTournament(tournament);
+                for (const [playerId, credit] of winCredits.entries()) {
+                    const stats = ensure(playerId);
+                    stats.rounds_won += credit;
+                }
+            };
+
+            const byYear = new Map();
+            years.forEach(y => byYear.set(y, tournamentsAsc.filter(t => t.year === y)));
+
+            years.forEach(year => {
+                const yearTournaments = byYear.get(year) || [];
+                yearTournaments.forEach(t => applyTournamentToCumulative(t));
+
+                const players = Array.from(cumulative.values()).map(p => {
+                    const avg = p.total_rounds > 0 ? (p.total_tricks / p.total_rounds) : 0;
+                    const winPct = p.tournaments_played > 0 ? (p.tournament_wins / p.tournaments_played) * 100 : 0;
+                    const boobyPct = p.tournaments_played > 0 ? (p.booby_prizes / p.tournaments_played) * 100 : 0;
+                    return {
+                        ...p,
+                        average_tricks: avg ? avg.toFixed(2) : '0.00',
+                        win_percentage: winPct.toFixed(1),
+                        booby_percentage: parseFloat(boobyPct.toFixed(1))
+                    };
+                });
+
+                const tournaments = tournamentsUpToYear.get(year) || [];
+                const recentFormScores = computeRecentFormScoresForTournaments(tournaments, YEAR_SCRUBBER_RECENT_COUNT);
+                const performanceScores = computePerformanceScoresForTournaments(tournaments);
+
+                let seedRankings = [];
+                if (typeof tournamentEngine.computeOfficialSeedRankingsForTournaments === 'function') {
+                    seedRankings = tournamentEngine.computeOfficialSeedRankingsForTournaments(tournaments, true) || [];
+                    // Ensure tournaments_played etc reflect the selected year window (for sample-size filter)
+                    const mapByName = new Map(players.map(p => [p.name, p]));
+                    seedRankings = seedRankings.map(entry => {
+                        const stats = mapByName.get(entry.name);
+                        return stats ? { ...entry, ...stats } : entry;
+                    });
+                }
+
+                yearSnapshots.set(year, { players, seedRankings, recentFormScores, performanceScores });
+            });
+        }
+
+        function updateYearButtonLabel() {
+            const label = document.getElementById('year-scrubber-btn-label');
+            if (!label) return;
+            if (latestYear !== null && selectedYear === latestYear) {
+                label.textContent = 'Year: Latest';
+            } else if (selectedYear !== null) {
+                label.textContent = `Year: ${selectedYear}`;
+            } else {
+                label.textContent = 'Year: Latest';
+            }
+        }
+
+        function openYearScrubber() {
+            const overlay = document.getElementById('year-scrubber-overlay');
+            const btn = document.getElementById('year-scrubber-btn');
+            if (!overlay || !btn) return;
+            overlay.style.display = 'block';
+            btn.setAttribute('aria-expanded', 'true');
+            updateYearScrubberTitle();
+        }
+
+        function closeYearScrubber() {
+            const overlay = document.getElementById('year-scrubber-overlay');
+            const btn = document.getElementById('year-scrubber-btn');
+            if (!overlay || !btn) return;
+            overlay.style.display = 'none';
+            btn.setAttribute('aria-expanded', 'false');
+        }
+
+        function updateYearScrubberTitle() {
+            const title = document.getElementById('year-scrubber-title');
+            if (!title) return;
+            title.textContent = selectedYear ? `Year: ${selectedYear}` : 'Year: —';
+        }
+
+        function setupYearScrubber() {
+            const btn = document.getElementById('year-scrubber-btn');
+            const overlay = document.getElementById('year-scrubber-overlay');
+            const backdrop = document.getElementById('year-scrubber-backdrop');
+            const closeBtn = document.getElementById('year-scrubber-close');
+            const range = document.getElementById('year-scrubber-range');
+            const ticks = document.getElementById('year-scrubber-ticks');
+
+            if (!btn || !overlay || !backdrop || !closeBtn || !range || !ticks) return;
+            if (!Array.isArray(availableYears) || availableYears.length === 0) {
+                btn.disabled = true;
+                return;
+            }
+
+            range.min = '0';
+            range.max = String(Math.max(0, availableYears.length - 1));
+            range.step = '1';
+            const idx = Math.max(0, availableYears.indexOf(selectedYear));
+            range.value = String(idx);
+
+            // Build tick marks
+            ticks.innerHTML = availableYears.map((y, i) => {
+                const pct = availableYears.length <= 1 ? 0 : (i / (availableYears.length - 1)) * 100;
+                return `<div class="year-scrubber-tick" style="left:${pct}%"></div>`;
+            }).join('');
+
+            updateYearButtonLabel();
+            updateYearScrubberTitle();
+
+            btn.addEventListener('click', () => openYearScrubber());
+            closeBtn.addEventListener('click', () => closeYearScrubber());
+            backdrop.addEventListener('click', () => closeYearScrubber());
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeYearScrubber();
+            });
+
+            const onChange = () => {
+                const newIdx = parseInt(range.value, 10);
+                const y = availableYears[Math.max(0, Math.min(newIdx, availableYears.length - 1))];
+                selectedYear = y;
+                setCurrentYearSnapshot(selectedYear);
+                updateYearButtonLabel();
+                updateYearScrubberTitle();
+                updateRankingsDisplay(currentRankingType);
+            };
+            range.addEventListener('input', onChange);
         }
 
         const TRICK_WARNING_STORAGE_KEY = 'whist_hide_trick_mismatch_warning';
@@ -1248,17 +1667,25 @@
         function updateRankingsDisplay(rankingType) {
             let sortedPlayers;
             currentRankingType = rankingType;
+
+            // Apply year-scoped maps for tab sorting/display
+            const snapshot = getYearSnapshot(selectedYear);
+            if (snapshot) {
+                setCurrentYearSnapshot(selectedYear);
+            }
             
             if (rankingType === 'overall') {
                 // Use the new Official Seed Ranking system
-                if (tournamentEngine && typeof tournamentEngine.getOfficialSeedRankings === 'function') {
+                if (snapshot && Array.isArray(snapshot.seedRankings)) {
+                    sortedPlayers = snapshot.seedRankings;
+                } else if (tournamentEngine && typeof tournamentEngine.getOfficialSeedRankings === 'function') {
                     sortedPlayers = tournamentEngine.getOfficialSeedRankings(true);
                 } else {
                     console.warn('Official seed rankings not available, falling back to legacy method');
-                    sortedPlayers = sortPlayersByRanking(allPlayers, rankingType);
+                    sortedPlayers = sortPlayersByRanking(getPlayersForSelectedYear(), rankingType);
                 }
             } else {
-                sortedPlayers = sortPlayersByRanking(allPlayers, rankingType);
+                sortedPlayers = sortPlayersByRanking(getPlayersForSelectedYear(), rankingType);
             }
             
             // Store sorted players for toggle functionality
@@ -1328,11 +1755,11 @@
                 
                 case 'recent_form':
                     // Use recent form scores derived from latest tournaments
-                    return recentFormScores.get(player.name) || 0;
+                    return currentRecentFormScores.get(player.name) || 0;
                 
                 case 'performance':
-                    if (!performanceScores.size) return 0;
-                    const percentile = performanceScores.get(player.name);
+                    if (!currentPerformanceScores.size) return 0;
+                    const percentile = currentPerformanceScores.get(player.name);
                     if (typeof percentile !== 'number') return 0;
                     // Lower percentile is better, so convert to performance score where higher is better
                     return 100 - percentile;
@@ -1384,6 +1811,8 @@
 
         function updateRankingsTable(players, limit = players.length) {
             const tableBody = document.getElementById('rankings-table-body');
+            const hadRowsBefore = !!(tableBody && tableBody.children && tableBody.children.length);
+            const prevRects = captureRankRowRects(tableBody);
             
             // Update table headers based on ranking type
             updateTableHeaders(currentRankingType);
@@ -1400,7 +1829,7 @@
                     const roundsWonDisplay = Math.floor(parseFloat(player.rounds_won ?? 0) || 0).toString();
                     const roundsPlayedDisplay = Math.floor(parseFloat(player.total_rounds ?? 0) || 0).toString();
                     return `
-                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
+                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}" data-player-id="${player.name}">
                             <div class="rank-col">
                                 <span class="rank-number">${index + 1}</span>
                                 <span class="rank-medal">${medalIcon}</span>
@@ -1418,7 +1847,7 @@
                     `;
                 } else if (currentRankingType === 'performance') {
                     return `
-                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
+                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}" data-player-id="${player.name}">
                             <div class="rank-col">
                                 <span class="rank-number">${index + 1}</span>
                                 <span class="rank-medal">${medalIcon}</span>
@@ -1436,7 +1865,7 @@
                 } else if (currentRankingType === 'championships') {
                     const topThreeDisplay = player.top_three_finishes ?? player.top_three ?? 0;
                     return `
-                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
+                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}" data-player-id="${player.name}">
                             <div class="rank-col">
                                 <span class="rank-number">${index + 1}</span>
                                 <span class="rank-medal">${medalIcon}</span>
@@ -1463,7 +1892,7 @@
                     }
                     const boobyPctDisplay = boobyPctValue.toFixed(1);
                     return `
-                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
+                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}" data-player-id="${player.name}">
                             <div class="rank-col">
                                 <span class="rank-number">${index + 1}</span>
                                 <span class="rank-medal">${medalIcon}</span>
@@ -1481,7 +1910,7 @@
                     `;
                 } else if (currentRankingType === 'overall') {
                     return `
-                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
+                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}" data-player-id="${player.name}">
                             <div class="rank-col">
                                 <span class="rank-number">${index + 1}</span>
                                 <span class="rank-medal">${medalIcon}</span>
@@ -1502,7 +1931,7 @@
                 } else {
                     // Standard layout for other ranking types
                     return `
-                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}">
+                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}" data-player-id="${player.name}">
                             <div class="rank-col">
                                 <span class="rank-number">${index + 1}</span>
                                 <span class="rank-medal">${medalIcon}</span>
@@ -1523,6 +1952,7 @@
             }).join('');
             
             tableBody.innerHTML = tableHTML;
+            animateRankingsFLIP(tableBody, prevRects, hadRowsBefore);
         }
 
         function updateTableHeaders(rankingType) {
@@ -1635,7 +2065,7 @@
                 case 'recent_form':
                     return Math.round(player.rankingScore || 0);
                 case 'performance':
-                    const percentile = performanceScores.get(player.name);
+                    const percentile = currentPerformanceScores.get(player.name);
                     return typeof percentile === 'number' ? `${percentile.toFixed(1)}%` : '—';
                 case 'booby':
                     return player.booby_prizes || 0;
@@ -1816,8 +2246,133 @@
 
         .full-rankings-tools {
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: var(--spacing-md);
+        }
+
+        .year-scrubber-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            color: var(--text-primary);
+            padding: 0.45rem 0.8rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        .year-scrubber-btn:hover {
+            background: rgba(255, 255, 255, 0.14);
+            transform: translateY(-1px);
+        }
+
+        .year-scrubber-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .year-scrubber-btn__caret {
+            opacity: 0.9;
+        }
+
+        .year-scrubber-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+        }
+
+        .year-scrubber-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0);
+        }
+
+        .year-scrubber-panel {
+            position: absolute;
+            left: 50%;
+            top: 140px;
+            transform: translateX(-50%);
+            width: min(1200px, calc(100% - 2rem));
+            background: var(--card-bg);
+            border: 2px solid rgba(34, 197, 94, 0.25);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-xl);
+            padding: var(--spacing-lg);
+        }
+
+        .year-scrubber-panel__header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .year-scrubber-panel__title {
+            font-weight: 900;
+            color: var(--text-primary-dark);
+        }
+
+        .year-scrubber-panel__close {
+            background: transparent;
+            border: 1px solid rgba(26, 26, 26, 0.18);
+            border-radius: 999px;
+            padding: 0.35rem 0.75rem;
+            font-weight: 700;
+            color: var(--text-primary-dark);
+            cursor: pointer;
+        }
+
+        .year-scrubber-panel__body {
+            position: relative;
+            padding-bottom: 0.25rem;
+        }
+
+        .year-scrubber-range {
+            width: 100%;
+            margin: 0;
+            accent-color: var(--primary);
+        }
+
+        /* Make the handle feel like a vertical grab bar */
+        .year-scrubber-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 42px;
+            border-radius: 10px;
+            background: var(--primary);
+            border: 2px solid rgba(10, 26, 15, 0.25);
+            cursor: grab;
+        }
+        .year-scrubber-range::-moz-range-thumb {
+            width: 14px;
+            height: 42px;
+            border-radius: 10px;
+            background: var(--primary);
+            border: 2px solid rgba(10, 26, 15, 0.25);
+            cursor: grab;
+        }
+
+        .year-scrubber-ticks {
+            position: relative;
+            height: 12px;
+            margin-top: 0.35rem;
+        }
+
+        .year-scrubber-tick {
+            position: absolute;
+            top: 0;
+            width: 2px;
+            height: 10px;
+            background: rgba(26, 26, 26, 0.22);
+            transform: translateX(-1px);
         }
 
         .sample-filter-toggle {
@@ -1900,6 +2455,7 @@
             box-shadow: var(--shadow-sm);
             position: relative;
             overflow: hidden;
+            will-change: transform, opacity;
         }
 
         .ranking-row::before {
@@ -1916,6 +2472,12 @@
             transform: translateY(-2px);
             box-shadow: var(--shadow-md);
             border-color: rgba(212, 175, 55, 0.55);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .ranking-row {
+                transition: none !important;
+            }
         }
 
         .ranking-row.podium-row {
