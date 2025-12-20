@@ -70,7 +70,7 @@
                                 <span class="meta-value" id="total-tournaments">-</span>
                             </div>
                             <div class="meta-item">
-                                <span class="meta-label">Current Ranking</span>
+                                <span class="meta-label">Seed Rank</span>
                                 <span class="meta-value" id="current-ranking">-</span>
                             </div>
                         </div>
@@ -122,20 +122,10 @@
                 <div class="stats-grid">
                     <div class="stats-section">
                         <h3 class="section-title">
-                            <span class="title-icon">📈</span>
-                            Career Statistics
-                        </h3>
-                        <div class="stats-table" id="career-stats">
-                            <div class="loading-message">Loading career statistics...</div>
-                        </div>
-                    </div>
-
-                    <div class="stats-section">
-                        <h3 class="section-title">
                             <span class="title-icon">📊</span>
                             Performance
                         </h3>
-                        <div class="stats-table" id="performance-stats">
+                        <div class="meta-grid" id="performance-stats">
                             <div class="loading-message">Loading performance metrics...</div>
                         </div>
                     </div>
@@ -145,7 +135,7 @@
                             <span class="title-icon">🃏</span>
                             Trump Suit Performance
                         </h3>
-                        <div class="trump-stats-grid" id="trump-stats">
+                        <div class="meta-grid" id="trump-stats">
                             <div class="loading-message">Loading trump suit statistics...</div>
                         </div>
                     </div>
@@ -155,6 +145,9 @@
                             <span class="title-icon">📉</span>
                             Seed Rank History
                         </h3>
+                        <div class="meta-grid seed-rank-meta" id="seed-rank-meta">
+                            <div class="loading-message">Loading seed metrics...</div>
+                        </div>
                         <div class="chart-container" id="seed-rank-chart">
                             <div class="loading-message">Loading seed rank history...</div>
                         </div>
@@ -412,12 +405,10 @@
                 document.getElementById('years-active').textContent = `${yearsActive} year${yearsActive !== 1 ? 's' : ''}`;
                 document.getElementById('total-tournaments').textContent = player.tournaments_played;
                 
-                // Get current ranking
-                const playerRanking = players.findIndex(p => p.name === player.name) + 1;
-                document.getElementById('current-ranking').textContent = `#${playerRanking}`;
-                
                 // Update career highlights
                 const performanceStats = tournamentEngine.getPlayerPerformanceStats(player.name) || {};
+                const seedRankText = performanceStats.seed_rank ? `#${performanceStats.seed_rank}` : 'Unranked';
+                document.getElementById('current-ranking').textContent = seedRankText;
                 
                 document.getElementById('tournament-victories').textContent = championships;
                 document.getElementById('total-tricks').textContent = player.total_tricks.toLocaleString();
@@ -425,11 +416,10 @@
                 document.getElementById('top-finishes').textContent = topThreeFinishes;
                 
                 updatePerformanceStats(player.name, performanceStats);
+                renderSeedRankMeta(player.name, performanceStats);
+                generateTrumpSuitStats(player.name);
                 generateTrophyCabinet(player.name, playerTournaments);
                 renderSeedRankHistoryChart(player.name);
-                
-                // Generate career statistics table
-                generateCareerStats(player, playerTournaments);
                 
                 // Generate tournament timeline
                 generateTournamentTimeline(player, playerTournaments);
@@ -445,96 +435,77 @@
             }
         });
 
-        function generateCareerStats(player, tournaments) {
-            // Use centralized calculation methods for caching compatibility
-            const engine = window.tournamentEngine;
-            
-            if (!engine || typeof engine.getPlayerVictoryCount !== 'function') {
-                console.error('❌ Tournament engine not available or missing methods');
-                return;
-            }
-            
-            const victories = engine.getPlayerVictoryCount(player.name);
-            const top3Finishes = engine.getPlayerTop3Count(player.name);
-            const winRate = engine.getPlayerWinRate(player.name);
-
-            const statsHTML = `
-                <div class="stats-row">
-                    <div class="stat-label">Tournament Victories</div>
-                    <div class="stat-value">${victories}</div>
-                </div>
-                <div class="stats-row">
-                    <div class="stat-label">Top 3 Finishes</div>
-                    <div class="stat-value">${top3Finishes}</div>
-                </div>
-                <div class="stats-row">
-                    <div class="stat-label">Total Tournaments</div>
-                    <div class="stat-value">${player.tournaments_played}</div>
-                </div>
-                <div class="stats-row">
-                    <div class="stat-label">Total Tricks</div>
-                    <div class="stat-value">${player.total_tricks.toLocaleString()}</div>
-                </div>
-            `;
-            
-                document.getElementById('career-stats').innerHTML = statsHTML;
-            
-                // Generate trump suit statistics
-                generateTrumpSuitStats(player.name);
-        }
-
         function updatePerformanceStats(playerName, performanceStats) {
             const performanceContainer = document.getElementById('performance-stats');
             if (!performanceContainer) return;
             const engine = window.tournamentEngine;
             
-            const seedRank = performanceStats.seed_rank ? `#${performanceStats.seed_rank}` : 'Unranked';
-            const seedScore = performanceStats.seed_points ? `${performanceStats.seed_points} pts` : '—';
-            const avgTricks = performanceStats.average_tricks ?? '0.00';
             const topPercentile = typeof performanceStats.top_percentile === 'number' ? `${performanceStats.top_percentile.toFixed(1)}%` : '—';
             const topThreeRate = `${(performanceStats.top_three_rate ?? 0).toFixed(1)}%`;
-
-            let peakSeedRow = '';
-            if (engine && typeof engine.getSeedRankHistory === 'function' && playerName) {
-                const history = engine.getSeedRankHistory(playerName, true) || [];
-                let bestRank = null;
-                let lastYear = null;
-                history.forEach(entry => {
-                    if (!entry || !entry.seed_rank) return;
-                    if (bestRank === null || entry.seed_rank < bestRank) {
-                        bestRank = entry.seed_rank;
-                        lastYear = entry.year;
-                    } else if (entry.seed_rank === bestRank) {
-                        lastYear = entry.year;
-                    }
-                });
-                if (bestRank !== null) {
-                    peakSeedRow = `
-                        <div class="stats-row">
-                            <div class="stat-label">Peak Seed Rank</div>
-                            <div class="stat-value">#${bestRank} <span class="stat-detail">(last in ${lastYear})</span></div>
-                        </div>
-                    `;
-                }
-            }
             
             performanceContainer.innerHTML = `
-                <div class="stats-row">
-                    <div class="stat-label">Seed Ranking</div>
-                    <div class="stat-value">${seedRank} <span class="stat-detail">(${seedScore})</span></div>
+                <div class="meta-item">
+                    <span class="meta-label">Avg Finish Position, Top:</span>
+                    <span class="meta-value">${topPercentile}</span>
                 </div>
-                ${peakSeedRow}
-                <div class="stats-row">
-                    <div class="stat-label">Average Tricks/Round</div>
-                    <div class="stat-value">${avgTricks}</div>
+                <div class="meta-item">
+                    <span class="meta-label">Top 3 Rate</span>
+                    <span class="meta-value">${topThreeRate}</span>
                 </div>
-                <div class="stats-row">
-                    <div class="stat-label">Top Percentile Finish Position</div>
-                    <div class="stat-value">${topPercentile}</div>
+            `;
+        }
+
+        function renderSeedRankMeta(playerName, performanceStats) {
+            const container = document.getElementById('seed-rank-meta');
+            if (!container) return;
+            const engine = window.tournamentEngine;
+
+            const seedRank = performanceStats && performanceStats.seed_rank ? `#${performanceStats.seed_rank}` : 'Unranked';
+            const seedPointsNum = performanceStats && Number.isFinite(performanceStats.seed_points)
+                ? performanceStats.seed_points
+                : (performanceStats && performanceStats.seed_points ? parseFloat(performanceStats.seed_points) : NaN);
+            const seedPointsText = Number.isFinite(seedPointsNum) ? `${seedPointsNum} pts` : null;
+
+            let peakRank = null; // best (lowest) seed_rank
+            let peakRankYear = null; // last year best rank achieved
+            let peakPoints = null;
+            let peakPointsYear = null;
+            if (engine && typeof engine.getSeedRankHistory === 'function' && playerName) {
+                const history = (engine.getSeedRankHistory(playerName, true) || [])
+                    .filter(h => h && Number.isFinite(h.year));
+                history.forEach(entry => {
+                    const r = Number.isFinite(entry.seed_rank) ? entry.seed_rank : parseFloat(entry.seed_rank);
+                    if (Number.isFinite(r)) {
+                        if (peakRank === null || r < peakRank || (r === peakRank && entry.year > peakRankYear)) {
+                            peakRank = r;
+                            peakRankYear = entry.year;
+                        }
+                    }
+                    const pts = Number.isFinite(entry.seed_points) ? entry.seed_points : parseFloat(entry.seed_points);
+                    if (!Number.isFinite(pts)) return;
+                    if (peakPoints === null || pts > peakPoints || (pts === peakPoints && entry.year > peakPointsYear)) {
+                        peakPoints = pts;
+                        peakPointsYear = entry.year;
+                    }
+                });
+            }
+
+            const currentText = seedPointsText ? `${seedRank} (${seedPointsText})` : `${seedRank}`;
+            const peakRankText = peakRank === null ? '—' : `#${peakRank}`;
+            const peakPointsText = peakPoints === null ? '—' : `${peakPoints} pts`;
+
+            container.innerHTML = `
+                <div class="meta-item">
+                    <span class="meta-label">Current Seed Rank</span>
+                    <span class="meta-value">${currentText}</span>
                 </div>
-                <div class="stats-row">
-                    <div class="stat-label">Top 3 Win Rate</div>
-                    <div class="stat-value">${topThreeRate}</div>
+                <div class="meta-item">
+                    <span class="meta-label">Peak Seed Rank</span>
+                    <span class="meta-value">${peakRankText}${peakRankYear ? ` <span class="meta-subvalue">(${peakRankYear})</span>` : ''}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Peak Seed Points</span>
+                    <span class="meta-value">${peakPointsText}${peakPointsYear ? ` <span class="meta-subvalue">(${peakPointsYear})</span>` : ''}</span>
                 </div>
             `;
         }
@@ -564,11 +535,11 @@
             const maxRank = Math.max(...ranks);
 
             const width = 980;
-            const height = 300;
-            const padLeft = 46;
-            const padRight = 18;
-            const padTop = 26;
-            const padBottom = 86;
+            const height = 320;
+            const padLeft = 70;
+            const padRight = 26;
+            const padTop = 18;
+            const padBottom = 92;
 
             const xForYear = (y) => {
                 if (maxYear === minYear) return padLeft;
@@ -582,51 +553,148 @@
 
             const points = history.map(h => `${xForYear(h.year).toFixed(1)},${yForRank(h.seed_rank).toFixed(1)}`).join(' ');
 
-            const latest = history[history.length - 1];
-            const latestLabel = latest ? `Latest: ${latest.year} (#${latest.seed_rank})` : '';
-
-            const uniqueYears = Array.from(new Set(years)).sort((a, b) => a - b);
-            const labelStep = Math.max(1, Math.ceil(uniqueYears.length / 18)); // keep labels readable
             const xAxisY = height - padBottom;
             const yAxisX = padLeft;
             const tickLen = 8;
-            const yearLabels = uniqueYears
-                .filter((_, idx) => idx % labelStep === 0 || idx === uniqueYears.length - 1)
+            const innerW = (width - padLeft - padRight);
+            const yearSpan = Math.max(1, (maxYear - minYear));
+            const yearDx = innerW / yearSpan;
+            const yearLabelEvery = Math.max(1, Math.ceil(12 / Math.max(1, yearDx)));
+            const allYears = [];
+            for (let y = minYear; y <= maxYear; y += 1) allYears.push(y);
+            const yearTicks = allYears.map(y => {
+                const x = xForYear(y).toFixed(1);
+                return `<line x1="${x}" y1="${xAxisY}" x2="${x}" y2="${(xAxisY + tickLen).toFixed(1)}" stroke="rgba(26,26,26,0.28)" />`;
+            }).join('');
+            const yearGrid = allYears.map(y => {
+                const x = xForYear(y).toFixed(1);
+                return `<line x1="${x}" y1="${padTop}" x2="${x}" y2="${xAxisY}" stroke="rgba(26,26,26,0.03)" />`;
+            }).join('');
+            const yearLabels = allYears
+                .filter((_, idx) => (idx % yearLabelEvery) === 0 || idx === allYears.length - 1)
                 .map(y => {
                     const x = xForYear(y).toFixed(1);
-                    const labelY = (xAxisY + 70).toFixed(1);
-                    return `
-                        <line x1="${x}" y1="${xAxisY}" x2="${x}" y2="${(xAxisY + tickLen).toFixed(1)}" stroke="rgba(26,26,26,0.25)" />
-                        <text transform="translate(${x},${labelY}) rotate(-90)" text-anchor="end" font-size="10" fill="rgba(26,26,26,0.75)">${y}</text>
-                    `;
+                    const labelY = (xAxisY + tickLen + 6).toFixed(1);
+                    return `<text transform="translate(${x},${labelY}) rotate(-90)" text-anchor="end" font-size="11" font-weight="700" fill="rgba(26,26,26,0.80)">${String(y).padStart(4, '0')}</text>`;
+                })
+                .join('');
+
+            // Y axis tick labels (seed ranks)
+            const innerH = (height - padTop - padBottom);
+            const rankSpan = Math.max(1, (maxRank - 1));
+            const rankDy = innerH / rankSpan;
+            const yLabelEvery = Math.max(1, Math.ceil(16 / Math.max(1, rankDy)));
+            const yTickMarks = [];
+            for (let r = 1; r <= maxRank; r += 1) yTickMarks.push(r);
+            const yTickLines = yTickMarks.map(r => {
+                const y = yForRank(r).toFixed(1);
+                return `<line x1="${yAxisX}" y1="${y}" x2="${(yAxisX - 7).toFixed(1)}" y2="${y}" stroke="rgba(26,26,26,0.30)" />`;
+            }).join('');
+            const yGrid = yTickMarks.map(r => {
+                const y = yForRank(r).toFixed(1);
+                return `<line x1="${yAxisX}" y1="${y}" x2="${(width - padRight).toFixed(1)}" y2="${y}" stroke="rgba(26,26,26,0.05)" />`;
+            }).join('');
+            const yTickLabels = yTickMarks
+                .filter((_, idx) => (idx % yLabelEvery) === 0 || idx === yTickMarks.length - 1)
+                .map(r => {
+                    const y = yForRank(r).toFixed(1);
+                    return `<text x="${(yAxisX - 12).toFixed(1)}" y="${(parseFloat(y) + 4).toFixed(1)}" text-anchor="end" font-size="11" font-weight="700" fill="rgba(26,26,26,0.82)">#${r}</text>`;
                 })
                 .join('');
 
             const pointDots = history.map(h => {
                 const x = xForYear(h.year).toFixed(1);
                 const y = yForRank(h.seed_rank).toFixed(1);
-                const title = `Year ${h.year} • Seed #${h.seed_rank}`;
+                const pts = Number.isFinite(h.seed_points) ? h.seed_points : parseFloat(h.seed_points);
+                const ptsAttr = Number.isFinite(pts) ? String(pts) : '';
                 return `
-                    <circle cx="${x}" cy="${y}" r="4.5" fill="rgba(245, 158, 11, 0.95)">
-                        <title>${title}</title>
-                    </circle>
+                    <g class="seed-dot" data-year="${h.year}" data-rank="${h.seed_rank}" data-points="${ptsAttr}" data-x="${x}" data-y="${y}">
+                        <circle cx="${x}" cy="${y}" r="4.25" fill="rgba(245, 158, 11, 0.95)" stroke="rgba(26,26,26,0.10)" stroke-width="1"></circle>
+                        <circle class="seed-dot-hit" cx="${x}" cy="${y}" r="12" fill="transparent"></circle>
+                    </g>
                 `;
             }).join('');
 
             container.innerHTML = `
-                <div class="muted" style="margin-bottom: 0.5rem;">${latestLabel}</div>
-                <svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" role="img" aria-label="Seed rank history">
+                <svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" role="img" aria-label="Seed rank history" style="display:block;">
                     <rect x="0" y="0" width="${width}" height="${height}" fill="#ffffff" />
-                    <line x1="${yAxisX}" y1="${padTop}" x2="${yAxisX}" y2="${xAxisY}" stroke="rgba(26,26,26,0.25)" />
-                    <line x1="${yAxisX}" y1="${xAxisY}" x2="${width - padRight}" y2="${xAxisY}" stroke="rgba(26,26,26,0.25)" />
+                    <line x1="${yAxisX}" y1="${padTop}" x2="${yAxisX}" y2="${xAxisY}" stroke="rgba(26,26,26,0.32)" stroke-width="1.3" />
+                    <line x1="${yAxisX}" y1="${xAxisY}" x2="${width - padRight}" y2="${xAxisY}" stroke="rgba(26,26,26,0.32)" stroke-width="1.3" />
+                    ${yearGrid}
+                    ${yGrid}
+                    ${yearTicks}
+                    ${yTickLines}
+                    ${yTickLabels}
                     ${yearLabels}
                     <polyline points="${points}" fill="none" stroke="rgba(245, 158, 11, 0.95)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                    <circle id="seed-hover-dot" cx="0" cy="0" r="7" fill="rgba(245, 158, 11, 1)" stroke="rgba(26,26,26,0.35)" stroke-width="2" style="display:none;"></circle>
                     ${pointDots}
+                    <text transform="translate(14,${((padTop + xAxisY) / 2).toFixed(1)}) rotate(-90)" text-anchor="middle" font-size="12.5" font-weight="900" fill="rgba(26,26,26,0.75)">Seed rank</text>
+                    <text x="${((yAxisX + (width - padRight)) / 2).toFixed(1)}" y="${(height - 10).toFixed(1)}" text-anchor="middle" font-size="12.5" font-weight="900" fill="rgba(26,26,26,0.75)">Year</text>
                 </svg>
-                <div class="muted" style="margin-top: 0.5rem;">
-                    ${minYear}${minYear !== maxYear ? `–${maxYear}` : ''} • lower rank is better
-                </div>
+                <div class="seed-rank-tooltip" aria-hidden="true"></div>
             `;
+
+            // Custom tooltip + active point highlight
+            const tooltip = container.querySelector('.seed-rank-tooltip');
+            const svg = container.querySelector('svg');
+            const hoverDot = container.querySelector('#seed-hover-dot');
+            const hits = Array.from(container.querySelectorAll('.seed-dot-hit'));
+
+            const hide = () => {
+                if (tooltip) tooltip.style.display = 'none';
+                if (hoverDot) hoverDot.style.display = 'none';
+            };
+
+            const positionTooltip = (evt) => {
+                if (!tooltip) return;
+                const rect = container.getBoundingClientRect();
+                let x = (evt.clientX - rect.left) + 12;
+                let y = (evt.clientY - rect.top) + 12;
+                // clamp within container bounds
+                const maxX = rect.width - 10;
+                const maxY = rect.height - 10;
+                tooltip.style.display = 'block';
+                // measure after display
+                const tRect = tooltip.getBoundingClientRect();
+                const tW = tRect.width;
+                const tH = tRect.height;
+                if (x + tW > maxX) x = Math.max(10, maxX - tW);
+                if (y + tH > maxY) y = Math.max(10, maxY - tH);
+                tooltip.style.left = `${x}px`;
+                tooltip.style.top = `${y}px`;
+            };
+
+            hits.forEach(hit => {
+                const g = hit.closest('.seed-dot');
+                if (!g) return;
+                const year = g.getAttribute('data-year');
+                const rank = g.getAttribute('data-rank');
+                const points = g.getAttribute('data-points');
+                const x = g.getAttribute('data-x');
+                const y = g.getAttribute('data-y');
+
+                const show = (evt) => {
+                    if (tooltip) {
+                        const pointsText = points ? `${points} pts` : '—';
+                        tooltip.innerHTML = `<div><strong>Year</strong>: ${year}</div><div><strong>Seed</strong>: #${rank}</div><div><strong>Points</strong>: ${pointsText}</div>`;
+                    }
+                    if (hoverDot) {
+                        hoverDot.setAttribute('cx', x);
+                        hoverDot.setAttribute('cy', y);
+                        hoverDot.style.display = 'block';
+                    }
+                    positionTooltip(evt);
+                };
+
+                hit.addEventListener('mouseenter', show);
+                hit.addEventListener('mousemove', show);
+                hit.addEventListener('mouseleave', hide);
+            });
+
+            if (svg) {
+                svg.addEventListener('mouseleave', hide);
+            }
         }
 
         function generateTrophyCabinet(playerId, tournaments) {
@@ -716,37 +784,25 @@
                 'Clubs': '♣'
             };
             
-            const suitClasses = {
-                'Hearts': 'heart',
-                'Diamonds': 'diamond',
-                'Spades': 'spade',
-                'Clubs': 'club'
-            };
-
             // Order: Hearts, Clubs, Diamonds, Spades
             const suitOrder = ['Hearts', 'Clubs', 'Diamonds', 'Spades'];
             
             const trumpHTML = suitOrder.map((suit, index) => {
                 const stats = trumpStats[suit];
                 const icon = suitIcons[suit];
-                const cssClass = suitClasses[suit];
+                const suitClass = String(suit || '').toLowerCase();
                 const average = stats.rounds_played > 0 ? stats.average.toFixed(2) : '0.00';
                 
                 return `
-                    <div class="trump-suit-row">
-                        <span class="trump-suit-icon ${cssClass}">${icon}</span>
-                        <span class="trump-suit-name">${suit}</span>
-                        <span class="trump-average">${average}</span>
+                    <div class="meta-item">
+                        <span class="meta-label"><span class="suit-icon suit-icon--${suitClass}">${icon}</span> ${suit}</span>
+                        <span class="meta-value">${average} <span class="meta-subvalue">avg/round</span></span>
                     </div>
-                    ${index < suitOrder.length - 1 ? '<div class="trump-divider"></div>' : ''}
                 `;
             }).join('');
 
             document.getElementById('trump-stats').innerHTML = `
-                <div class="trump-stats-list">
-                    <div class="trump-title">avg tricks</div>
-                    ${trumpHTML}
-                </div>
+                ${trumpHTML}
             `;
         }
 
@@ -1039,6 +1095,23 @@
             color: var(--text-primary);
         }
 
+        .meta-subvalue {
+            font-size: 0.9em;
+            font-weight: 700;
+            opacity: 0.85;
+        }
+
+        .suit-icon {
+            display: inline-block;
+            min-width: 0.9em;
+            font-weight: 900;
+        }
+
+        .suit-icon--hearts,
+        .suit-icon--diamonds {
+            color: #dc2626;
+        }
+
         .family-tree-link {
             margin-bottom: var(--spacing-xl);
         }
@@ -1206,6 +1279,8 @@
         .stats-grid {
             display: grid;
             gap: var(--spacing-2xl);
+            /* Override global auto-fit columns: stack panels vertically */
+            grid-template-columns: 1fr;
         }
 
         .stats-section {
@@ -1215,11 +1290,22 @@
             box-shadow: var(--shadow-card);
             position: relative;
             z-index: 1;
+            /* Ensure default text is readable on white panels */
+            color: var(--text-primary-dark);
         }
 
         .stats-section .section-title {
             color: var(--text-primary-dark);
             margin-bottom: var(--spacing-lg);
+            text-align: left;
+            font-size: 1.28rem;
+            font-weight: 800;
+        }
+
+        .stats-section .section-title::after {
+            /* Disable global centered underline for panel titles */
+            content: none;
+            display: none;
         }
 
         .stats-section .title-icon {
@@ -1228,6 +1314,29 @@
 
         .stats-section.full-width {
             grid-column: 1 / -1;
+        }
+
+        .meta-grid {
+            display: grid;
+            /* Always 4 columns; items fill left-to-right then wrap */
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .seed-rank-meta {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        /* Make header-style tiles readable on white panels */
+        .stats-section .meta-label {
+            color: var(--text-secondary-dark);
+            font-weight: 700;
+        }
+
+        .stats-section .meta-value {
+            color: var(--text-primary-dark);
+            font-weight: 800;
+            font-size: 1.15rem;
         }
 
         .stats-table {
@@ -1263,10 +1372,36 @@
             border-radius: var(--border-radius-lg);
             padding: var(--spacing-lg);
             height: 400px;
+            position: relative;
         }
 
         .chart-container canvas {
             max-height: 100% !important;
+        }
+
+        /* Used by small chart meta lines inside white panels */
+        .muted {
+            color: var(--text-secondary-dark);
+        }
+
+        .seed-rank-tooltip {
+            position: absolute;
+            z-index: 5;
+            display: none;
+            max-width: 220px;
+            background: rgba(17, 24, 39, 0.96);
+            color: #fff;
+            padding: 0.5rem 0.6rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            line-height: 1.2;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+            pointer-events: none;
+            backdrop-filter: blur(10px);
+        }
+
+        .seed-rank-tooltip strong {
+            font-weight: 800;
         }
 
         .tournament-timeline {
@@ -1529,6 +1664,11 @@
                 grid-template-columns: 1fr;
             }
 
+            /* Responsive: keep tiles readable */
+            .meta-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
             .timeline-item {
                 padding: 0.85rem 0.9rem;
             }
@@ -1556,6 +1696,12 @@
 
             .perf-bar {
                 width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .meta-grid {
+                grid-template-columns: 1fr;
             }
         }
 
