@@ -41,6 +41,12 @@
                             <div class="avatar-initial" id="player-initial">--</div>
                         </div>
                         <div class="champion-badge" id="champion-badge" style="display: none;">Champion</div>
+                        <div class="family-tree-link family-tree-link--avatar">
+                            <a href="../families/" class="family-tree-btn" id="family-tree-btn">
+                                <span class="tree-icon">🌳</span>
+                                Family Tree
+                            </a>
+                        </div>
                     </div>
                     
                     <div class="player-info">
@@ -67,13 +73,6 @@
                                 <span class="meta-label">Current Ranking</span>
                                 <span class="meta-value" id="current-ranking">-</span>
                             </div>
-                        </div>
-
-                        <div class="family-tree-link">
-                            <a href="../families/" class="family-tree-btn">
-                                <span class="tree-icon">🌳</span>
-                                View in Family Tree
-                            </a>
                         </div>
 
                         <div class="career-highlights" id="career-highlights">
@@ -336,6 +335,14 @@
 
                 // Get full name for profile display
                 const fullName = tournamentEngine.getPlayerFullName(player.name);
+                
+                // Family tree deep link (highlight/focus this player)
+                const familyTreeBtn = document.getElementById('family-tree-btn');
+                if (familyTreeBtn) {
+                    familyTreeBtn.href = `../families/?player=${encodeURIComponent(player.name)}`;
+                    familyTreeBtn.setAttribute('aria-label', `View ${fullName} in Family Tree`);
+                    familyTreeBtn.title = `View ${fullName} in Family Tree`;
+                }
                 
                 // Update page title and meta
                 document.title = `${fullName} - Player Profile | Ruston Family Whist Drive`;
@@ -1036,6 +1043,11 @@
             margin-bottom: var(--spacing-xl);
         }
 
+        .family-tree-link--avatar {
+            margin-top: var(--spacing-sm);
+            margin-bottom: 0;
+        }
+
         .family-tree-btn {
             display: inline-flex;
             align-items: center;
@@ -1051,6 +1063,13 @@
 
         .family-tree-btn:hover {
             background: var(--bg-accent);
+        }
+
+        .family-tree-link--avatar .family-tree-btn {
+            width: 100%;
+            justify-content: center;
+            padding: 0.65rem 1rem;
+            font-weight: 700;
         }
 
         .career-highlights {

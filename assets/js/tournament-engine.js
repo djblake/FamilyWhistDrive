@@ -1267,45 +1267,149 @@ class TournamentEngine {
             }
             
             const csvData = await response.text();
-            const lines = csvData.trim().split('\n');
-            const headers = this.parseCSVLine(lines[0]);
+            const rows = this.parseCSVRows(csvData.trim());
+            const headers = Array.isArray(rows[0]) ? rows[0] : [];
             
             console.log(`📋 Players sheet headers: ${headers.join(', ')}`);
             
             // Clear existing players data
             this.playersLookup = new Map();
+
+            const normalizeRosterHeader = (h) => (typeof h === 'string' ? h : '')
+                .replace(/\ufeff/g, '')
+                .replace(/^"|"$/g, '')
+                .trim()
+                .toLowerCase()
+                .replace(/\s+/g, '')
+                .replace(/_/g, '');
+
+            const headerIndex = new Map(headers.map((h, idx) => [normalizeRosterHeader(h), idx]));
+            const findHeaderIdx = (needle) => {
+                const normNeedle = normalizeRosterHeader(needle);
+                if (headerIndex.has(normNeedle)) return headerIndex.get(normNeedle);
+                // Fuzzy: if the roster header contains the needle as a substring
+                for (const [k, idx] of headerIndex.entries()) {
+                    if (k && k.includes(normNeedle)) return idx;
+                }
+                return null;
+            };
+
+            const parseKeyList = (raw) => {
+                if (raw === null || typeof raw === 'undefined') return [];
+                const s = String(raw).trim();
+                if (!s) return [];
+                return s
+                    .split(',')
+                    .map(v => v.trim())
+                    .filter(Boolean)
+                    .sort((a, b) => a.localeCompare(b));
+            };
+
+            const keyIdx = findHeaderIdx('Key') ?? 0;
+            const displayIdx = findHeaderIdx('DisplayName') ?? 1;
+            const firstIdx = findHeaderIdx('FirstName') ?? 2;
+            const lastIdx = findHeaderIdx('LastName') ?? 3;
+            const nickIdx = findHeaderIdx('NickName') ?? 4;
+            const dobIdx = findHeaderIdx('DateOfBirth');
+            const parentsIdx = findHeaderIdx('FamilyTree_Parents');
+            const hadChildrenWithIdx = findHeaderIdx('FamilyTree_HadChildrenWith');
+            const isPartneredWithIdx = findHeaderIdx('FamilyTree_IsPartneredWith');
+            const linkedToIdx = findHeaderIdx('FamilyTree_LinkedTo');
+
+            this.playersSheetMeta = {
+                headers: headers.slice(),
+                normalizedHeaders: headers.map(h => normalizeRosterHeader(h)),
+                familyTreeColumns: {
+                    parents: Number.isInteger(parentsIdx),
+                    hadChildrenWith: Number.isInteger(hadChildrenWithIdx),
+                    isPartneredWith: Number.isInteger(isPartneredWithIdx),
+                    linkedTo: Number.isInteger(linkedToIdx)
+                }
+            };
             
-            // Debug: Show first few lines of raw CSV data
-            console.log('🔍 First few lines of Players CSV:');
-            lines.slice(0, Math.min(5, lines.length)).forEach((line, index) => {
-                console.log(`  Line ${index}: "${line}"`);
+            // Track whether FamilyTree columns actually contain data
+            this.playersSheetMeta.familyTreeNonEmptyCounts = {
+                parents: 0,
+                hadChildrenWith: 0,
+                isPartneredWith: 0,
+                linkedTo: 0
+            };
+            this.playersSheetMeta.familyTreeSamples = {
+                parents: [],
+                hadChildrenWith: [],
+                isPartneredWith: [],
+                linkedTo: []
+            };
+
+            // Debug: Show first few parsed rows
+            console.log('🔍 First few rows of Players CSV (parsed):');
+            rows.slice(0, Math.min(5, rows.length)).forEach((row, index) => {
+                console.log(`  Row ${index}: [${(row || []).map(v => `"${v}"`).join(', ')}]`);
             });
             
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
-                
-                const values = this.parseCSVLine(line);
-                if (values.length < 3 || !values[0]) continue;
+            for (let i = 1; i < rows.length; i++) {
+                const values = rows[i];
+                if (!Array.isArray(values) || values.length === 0) continue;
+                const playerKey = values[keyIdx];
+                if (values.length < 3 || !playerKey) continue;
                 
                 // Debug logging for SteveBlake specifically
-                if (values[0] === 'SteveBlake' || line.includes('Steve') || line.includes('Stephen')) {
-                    console.log(`🔍 Processing player line: "${line}"`);
+                const joinedLine = values.join(',');
+                if (playerKey === 'SteveBlake' || joinedLine.includes('Steve') || joinedLine.includes('Stephen')) {
+                    console.log(`🔍 Processing player row for: "${playerKey}"`);
                     console.log(`  Parsed values: [${values.map(v => `"${v}"`).join(', ')}]`);
-                    console.log(`  values[0] (ID): "${values[0]}"`);
-                    console.log(`  values[1] (displayName): "${values[1]}"`);
-                    console.log(`  values[2] (firstName): "${values[2]}"`);
-                    console.log(`  values[3] (lastName): "${values[3]}"`);
-                    console.log(`  values[4] (nickname): "${values[4]}"`);
+                    console.log(`  values[${keyIdx}] (Key): "${values[keyIdx]}"`);
+                    console.log(`  values[${displayIdx}] (DisplayName): "${values[displayIdx]}"`);
+                    console.log(`  values[${firstIdx}] (FirstName): "${values[firstIdx]}"`);
+                    console.log(`  values[${lastIdx}] (LastName): "${values[lastIdx]}"`);
+                    console.log(`  values[${nickIdx}] (NickName): "${values[nickIdx]}"`);
+                    console.log(`  values[${parentsIdx}] (FamilyTree_Parents): "${values[parentsIdx]}"`);
+                    console.log(`  values[${hadChildrenWithIdx}] (FamilyTree_HadChildrenWith): "${values[hadChildrenWithIdx]}"`);
+                    console.log(`  values[${linkedToIdx}] (FamilyTree_LinkedTo): "${values[linkedToIdx]}"`);
+                }
+
+                const rawParents = Number.isInteger(parentsIdx) ? (values[parentsIdx] ?? '') : '';
+                const rawHadChildrenWith = Number.isInteger(hadChildrenWithIdx) ? (values[hadChildrenWithIdx] ?? '') : '';
+                const rawIsPartneredWith = Number.isInteger(isPartneredWithIdx) ? (values[isPartneredWithIdx] ?? '') : '';
+                const rawLinkedTo = Number.isInteger(linkedToIdx) ? (values[linkedToIdx] ?? '') : '';
+
+                if (String(rawParents).trim()) {
+                    this.playersSheetMeta.familyTreeNonEmptyCounts.parents += 1;
+                    if (this.playersSheetMeta.familyTreeSamples.parents.length < 4) {
+                        this.playersSheetMeta.familyTreeSamples.parents.push({ key: playerKey, value: String(rawParents).trim() });
+                    }
+                }
+                if (String(rawHadChildrenWith).trim()) {
+                    this.playersSheetMeta.familyTreeNonEmptyCounts.hadChildrenWith += 1;
+                    if (this.playersSheetMeta.familyTreeSamples.hadChildrenWith.length < 4) {
+                        this.playersSheetMeta.familyTreeSamples.hadChildrenWith.push({ key: playerKey, value: String(rawHadChildrenWith).trim() });
+                    }
+                }
+                if (String(rawIsPartneredWith).trim()) {
+                    this.playersSheetMeta.familyTreeNonEmptyCounts.isPartneredWith += 1;
+                    if (this.playersSheetMeta.familyTreeSamples.isPartneredWith.length < 4) {
+                        this.playersSheetMeta.familyTreeSamples.isPartneredWith.push({ key: playerKey, value: String(rawIsPartneredWith).trim() });
+                    }
+                }
+                if (String(rawLinkedTo).trim()) {
+                    this.playersSheetMeta.familyTreeNonEmptyCounts.linkedTo += 1;
+                    if (this.playersSheetMeta.familyTreeSamples.linkedTo.length < 4) {
+                        this.playersSheetMeta.familyTreeSamples.linkedTo.push({ key: playerKey, value: String(rawLinkedTo).trim() });
+                    }
                 }
                 
                 const player = {
-                    id: values[0],
-                    displayName: values[1] || values[0], // DisplayName is column 1, fallback to ID
-                    firstName: values[2] || '', // FirstName is column 2
-                    lastName: values[3] || '', // LastName is column 3
-                    nickname: values[4] || '', // Nickname field is column 4
-                    fullName: `${values[2] || ''} ${values[3] || ''}`.trim() // firstName + lastName
+                    id: playerKey,
+                    displayName: values[displayIdx] || playerKey,
+                    firstName: values[firstIdx] || '',
+                    lastName: values[lastIdx] || '',
+                    nickname: values[nickIdx] || '',
+                    fullName: `${values[firstIdx] || ''} ${values[lastIdx] || ''}`.trim(),
+                    dateOfBirth: Number.isInteger(dobIdx) ? (values[dobIdx] || '').trim() : '',
+                    familyTreeParents: Number.isInteger(parentsIdx) ? parseKeyList(values[parentsIdx]) : [],
+                    familyTreeHadChildrenWith: Number.isInteger(hadChildrenWithIdx) ? parseKeyList(values[hadChildrenWithIdx]) : [],
+                    familyTreeIsPartneredWith: Number.isInteger(isPartneredWithIdx) ? parseKeyList(values[isPartneredWithIdx]) : [],
+                    familyTreeLinkedTo: Number.isInteger(linkedToIdx) ? parseKeyList(values[linkedToIdx]) : []
                 };
                 
                 
@@ -1319,6 +1423,14 @@ class TournamentEngine {
             console.error('❌ Error loading players data:', error);
             throw error;
         }
+    }
+
+    /**
+     * Get roster player objects from Players sheet.
+     * @returns {Array<Object>}
+     */
+    getPlayersRoster() {
+        return Array.from(this.playersLookup?.values?.() || []);
     }
 
     /**

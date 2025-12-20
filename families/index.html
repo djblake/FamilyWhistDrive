@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Families | Ruston Family Whist Drive</title>
-    <meta name="description" content="Family trees and lineages for the Ruston Family Whist Drive (coming soon).">
+    <meta name="description" content="Family tree view for the Ruston Family Whist Drive.">
     <link rel="stylesheet" href="../assets/css/main.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,7 +17,7 @@
                 <div class="logo-section">
                     <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
                     <h1 class="site-title">Ruston Family Whist Drive</h1>
-                    <p class="site-subtitle">Families • Coming soon</p>
+                    <p class="site-subtitle">Families • Family tree</p>
                 </div>
                 <nav class="main-nav">
                     <a href="../" class="nav-link">Home</a>
@@ -31,18 +31,36 @@
     </header>
 
     <main class="main-content">
-        <section class="leaderboard-hero">
-            <div class="container">
-                <div class="hero-content">
-                    <div class="hall-of-fame-badge">🌳 FAMILIES</div>
-                    <h1 class="hero-title">Family Trees (Coming Soon)</h1>
-                    <p class="hero-subtitle">
-                        Tournament data is real, but it doesn’t yet include a maintained mapping of <strong>player → family</strong>.
-                        Once we add that, we can build real family trees, dynasties, and rivalries without dummy data.
-                    </p>
-                    <div style="display:flex; gap:0.75rem; justify-content:center; flex-wrap:wrap; margin-top: 1.25rem;">
-                        <a class="btn btn-primary" href="../players/">Browse players</a>
-                        <a class="btn btn-secondary" href="../leaderboard/">View Hall of Fame</a>
+        <section class="family-tree-stage" aria-label="Family tree stage">
+            <div class="family-tree-overlay">
+                <div class="family-tree-overlay__inner container">
+                    <div class="family-tree-overlay__hero">
+                        <div class="hall-of-fame-badge">🌳 FAMILIES</div>
+                        <h1 class="hero-title">Family Tree</h1>
+                    </div>
+
+                    <div class="family-tree-toolbar">
+                        <div class="family-tree-toolbar__left">
+                            <strong>Zoom</strong>
+                            <span class="family-tree-toolbar__value" id="zoom-value">100%</span>
+                        </div>
+                        <div class="family-tree-toolbar__right">
+                            <button type="button" class="zoom-btn" id="zoom-out" aria-label="Zoom out">−</button>
+                            <input type="range" id="zoom-range" class="zoom-range" min="25" max="250" step="5" value="100" aria-label="Zoom level">
+                            <button type="button" class="zoom-btn" id="zoom-in" aria-label="Zoom in">+</button>
+                            <button type="button" class="zoom-btn zoom-btn--secondary" id="zoom-reset" aria-label="Reset zoom">Reset</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="family-tree-viewport" id="family-tree-viewport">
+                <div class="family-tree-zoom-sizer" id="family-tree-zoom-sizer">
+                    <div class="family-tree-zoom-content" id="family-tree-zoom-content">
+                        <svg id="family-tree-lines" class="family-tree-lines"></svg>
+                        <div id="family-tree-grid" class="family-tree-grid">
+                            <div class="loading-message">Loading family tree…</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -57,8 +75,1777 @@
         </div>
     </footer>
 
-    <script src="../assets/js/tournament-engine.js?v=cache1"></script>
+    <script src="../assets/js/tournament-engine.js?v=cache22"></script>
+    <script>
+        const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+
+        function getHighlightedKey() {
+            const params = new URLSearchParams(window.location.search);
+            const fromQuery = params.get('player') || params.get('highlight') || null;
+            if (fromQuery) return fromQuery;
+
+            // Optional: allow hash links like /families/#player=George
+            const hash = String(window.location.hash || '').replace(/^#/, '');
+            if (!hash) return null;
+            const hashParams = new URLSearchParams(hash);
+            return hashParams.get('player') || hashParams.get('highlight') || null;
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function unique(arr) {
+            return Array.from(new Set((arr || []).filter(Boolean)));
+        }
+
+        function parseDobSortKey(raw) {
+            if (raw === null || typeof raw === 'undefined') return Number.POSITIVE_INFINITY;
+            const s = String(raw).trim();
+            if (!s) return Number.POSITIVE_INFINITY;
+            // DD/MM/YYYY
+            const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (m) {
+                const dd = parseInt(m[1], 10);
+                const mm = parseInt(m[2], 10);
+                const yy = parseInt(m[3], 10);
+                if (Number.isFinite(dd) && Number.isFinite(mm) && Number.isFinite(yy)) {
+                    return (yy * 10000) + (mm * 100) + dd;
+                }
+            }
+            // YYYY
+            const y = s.match(/^(\d{4})$/);
+            if (y) {
+                const yy = parseInt(y[1], 10);
+                if (Number.isFinite(yy)) return yy * 10000;
+            }
+            return Number.POSITIVE_INFINITY;
+        }
+
+        function alphaCompare(a, b) {
+            return String(a || '').localeCompare(String(b || ''));
+        }
+
+        function computeLevel(personId, byId, memo, stack) {
+            if (memo.has(personId)) return memo.get(personId);
+            if (stack.has(personId)) return 0; // cycle guard
+            stack.add(personId);
+            const p = byId.get(personId);
+            const parents = Array.isArray(p?.parents) ? p.parents : [];
+            let lvl = 0;
+            if (parents.length) {
+                let best = 0;
+                for (const pid of parents) {
+                    if (!byId.has(pid)) continue;
+                    best = Math.max(best, computeLevel(pid, byId, memo, stack));
+                }
+                lvl = best + 1;
+            }
+            stack.delete(personId);
+            memo.set(personId, lvl);
+            return lvl;
+        }
+
+        function computeLevelWithRules(personId, model, memo, stack) {
+            if (memo.has(personId)) return memo.get(personId);
+            if (stack.has(personId)) return 0;
+            stack.add(personId);
+
+            const p = model.byId.get(personId);
+            if (!p) {
+                stack.delete(personId);
+                memo.set(personId, 0);
+                return 0;
+            }
+
+            // Rule: George and Doris are the only true Gen 0.
+            if (model.foundersSet.has(personId)) {
+                stack.delete(personId);
+                memo.set(personId, 0);
+                return 0;
+            }
+
+            const parents = Array.isArray(p.parents) ? p.parents : [];
+            if (parents.length) {
+                let best = 0;
+                for (const pid of parents) {
+                    if (!model.byId.has(pid)) continue;
+                    best = Math.max(best, computeLevelWithRules(pid, model, memo, stack));
+                }
+                const lvl = best + 1;
+                stack.delete(personId);
+                memo.set(personId, lvl);
+                return lvl;
+            }
+
+            // No parents: place on the line of the person they are LinkedTo (if present)
+            const linkedTo = Array.isArray(p.linkedTo) ? p.linkedTo : [];
+            const anchor = linkedTo.find(id => model.byId.has(id));
+            if (anchor) {
+                const lvl = computeLevelWithRules(anchor, model, memo, stack);
+                stack.delete(personId);
+                memo.set(personId, lvl);
+                return lvl;
+            }
+
+            // Otherwise default to Gen 1 (so they don't become Gen 0)
+            stack.delete(personId);
+            memo.set(personId, 1);
+            return 1;
+        }
+
+        function renderWarnings(warnings) {
+            const box = document.getElementById('family-tree-warnings');
+            if (!box) return;
+            if (!warnings || !warnings.length) {
+                box.style.display = 'none';
+                box.innerHTML = '';
+                return;
+            }
+            box.style.display = 'block';
+            box.innerHTML = `
+                <div class="family-tree-warnings__title">Family tree data notes</div>
+                <ul class="family-tree-warnings__list">
+                    ${warnings.map(w => `<li>${w}</li>`).join('')}
+                </ul>
+            `;
+        }
+
+        let currentZoom = 1;
+        const ZOOM_MIN = 0.25;
+        const ZOOM_MAX = 2.5;
+        let currentModel = null;
+        const FAMILY_TREE_LAYOUT_VERSION = 'ft-layout-2025-12-19-01';
+
+        function updateFamilyTreeStageMetrics() {
+            const header = document.querySelector('.header');
+            const h = header ? header.getBoundingClientRect().height : 0;
+            document.documentElement.style.setProperty('--family-tree-header-h', `${Math.ceil(h)}px`);
+
+            const overlayInner = document.querySelector('.family-tree-overlay__inner');
+            const oh = overlayInner ? overlayInner.getBoundingClientRect().height : 0;
+            document.documentElement.style.setProperty('--family-tree-overlay-h', `${Math.ceil(oh)}px`);
+        }
+
+        function clampZoom(z) {
+            if (!Number.isFinite(z)) return 1;
+            return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+        }
+
+        function setSvgSize(svg, content) {
+            const w = Math.max(1, content.scrollWidth || content.clientWidth || 1);
+            const h = Math.max(1, content.scrollHeight || content.clientHeight || 1);
+            svg.setAttribute('width', w);
+            svg.setAttribute('height', h);
+            svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+        }
+
+        function updateZoomLayout() {
+            const viewport = document.getElementById('family-tree-viewport');
+            const sizer = document.getElementById('family-tree-zoom-sizer');
+            const content = document.getElementById('family-tree-zoom-content');
+            const range = document.getElementById('zoom-range');
+            const value = document.getElementById('zoom-value');
+            if (!viewport || !sizer || !content) return;
+
+            const baseW = Math.max(1, content.scrollWidth || 1);
+            const baseH = Math.max(1, content.scrollHeight || 1);
+            sizer.style.width = `${Math.ceil(baseW * currentZoom)}px`;
+            sizer.style.height = `${Math.ceil(baseH * currentZoom)}px`;
+            content.style.transform = `scale(${currentZoom})`;
+
+            if (range) range.value = String(Math.round(currentZoom * 100));
+            if (value) value.textContent = `${Math.round(currentZoom * 100)}%`;
+        }
+
+        function setZoom(nextZoom) {
+            const viewport = document.getElementById('family-tree-viewport');
+            const content = document.getElementById('family-tree-zoom-content');
+            if (!viewport || !content) return;
+
+            const oldZoom = currentZoom;
+            currentZoom = clampZoom(nextZoom);
+            if (currentZoom === oldZoom) return;
+
+            // Keep the viewport center stable while zooming
+            const centerX = (viewport.scrollLeft + viewport.clientWidth / 2) / oldZoom;
+            const centerY = (viewport.scrollTop + viewport.clientHeight / 2) / oldZoom;
+
+            updateZoomLayout();
+
+            viewport.scrollLeft = (centerX * currentZoom) - (viewport.clientWidth / 2);
+            viewport.scrollTop = (centerY * currentZoom) - (viewport.clientHeight / 2);
+        }
+
+        function setupZoomControls() {
+            const zoomOut = document.getElementById('zoom-out');
+            const zoomIn = document.getElementById('zoom-in');
+            const zoomReset = document.getElementById('zoom-reset');
+            const zoomRange = document.getElementById('zoom-range');
+
+            if (zoomOut) {
+                zoomOut.addEventListener('click', () => {
+                    setZoom(currentZoom / 1.15);
+                    if (currentModel) redrawConnections(currentModel);
+                });
+            }
+            if (zoomIn) {
+                zoomIn.addEventListener('click', () => {
+                    setZoom(currentZoom * 1.15);
+                    if (currentModel) redrawConnections(currentModel);
+                });
+            }
+            if (zoomReset) {
+                zoomReset.addEventListener('click', () => {
+                    setZoom(1);
+                    if (currentModel) redrawConnections(currentModel);
+                });
+            }
+            if (zoomRange) {
+                zoomRange.addEventListener('input', () => {
+                    const pct = parseInt(zoomRange.value, 10);
+                    const z = Number.isFinite(pct) ? pct / 100 : 1;
+                    setZoom(z);
+                    if (currentModel) redrawConnections(currentModel);
+                });
+            }
+        }
+
+        function getCenter(el, contentRect) {
+            const r = el.getBoundingClientRect();
+            return {
+                x: (r.left - contentRect.left) / currentZoom + (r.width / (2 * currentZoom)),
+                y: (r.top - contentRect.top) / currentZoom + (r.height / (2 * currentZoom)),
+                top: (r.top - contentRect.top) / currentZoom,
+                bottom: (r.bottom - contentRect.top) / currentZoom,
+                left: (r.left - contentRect.left) / currentZoom,
+                right: (r.right - contentRect.left) / currentZoom
+            };
+        }
+
+        function focusViewportOnNode(nodeEl, opts = {}) {
+            const viewport = document.getElementById('family-tree-viewport');
+            if (!viewport || !nodeEl) return;
+            const behavior = opts.behavior || 'auto';
+
+            const vr = viewport.getBoundingClientRect();
+            const er = nodeEl.getBoundingClientRect();
+            const nodeCenterX = (er.left + er.right) / 2;
+            const nodeCenterY = (er.top + er.bottom) / 2;
+            const viewportCenterX = (vr.left + vr.right) / 2;
+            const viewportCenterY = (vr.top + vr.bottom) / 2;
+
+            const deltaX = nodeCenterX - viewportCenterX;
+            const deltaY = nodeCenterY - viewportCenterY;
+
+            const targetLeft = Math.max(0, viewport.scrollLeft + deltaX);
+            const targetTop = Math.max(0, viewport.scrollTop + deltaY);
+
+            viewport.scrollTo({ left: targetLeft, top: targetTop, behavior });
+        }
+
+        function drawLine(svg, x1, y1, x2, y2, cls) {
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', x1);
+            line.setAttribute('y1', y1);
+            line.setAttribute('x2', x2);
+            line.setAttribute('y2', y2);
+            line.setAttribute('class', cls);
+            svg.appendChild(line);
+        }
+
+        function drawPath(svg, d, cls) {
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', d);
+            path.setAttribute('class', cls);
+            svg.appendChild(path);
+        }
+
+        function laneOffset(index, step = 4) {
+            if (!index) return 0;
+            const k = Math.ceil(index / 2);
+            const sign = (index % 2 === 1) ? 1 : -1;
+            return sign * k * step;
+        }
+
+        function redrawConnections(model) {
+            const content = document.getElementById('family-tree-zoom-content');
+            const svg = document.getElementById('family-tree-lines');
+            if (!content || !svg) return;
+
+            const contentRect = content.getBoundingClientRect();
+            setSvgSize(svg, content);
+            svg.innerHTML = '';
+
+            const nodeEls = new Map();
+            content.querySelectorAll('[data-person-key]').forEach(el => {
+                nodeEls.set(el.getAttribute('data-person-key'), el);
+            });
+
+            // For connection de-duping
+            const pairKey = (a, b) => [a, b].sort((x, y) => x.localeCompare(y)).join('|');
+            const partneredPairs = new Set(Array.isArray(model.partnerPairs) ? model.partnerPairs : []);
+
+            // Parent/couple -> children connectors
+            const joinYLanes = new Map(); // yRounded -> count
+            const fanYLanes = new Map(); // yRounded -> count
+            for (const [parentSetKey, children] of model.childrenByParents.entries()) {
+                const parents = parentSetKey.split('|').filter(Boolean);
+                const parentCenters = parents
+                    .map(pid => nodeEls.get(pid))
+                    .filter(Boolean)
+                    .map(el => getCenter(el, contentRect));
+                if (!parentCenters.length) continue;
+
+                const joinYBase = Math.max(...parentCenters.map(p => p.bottom)) + 10;
+                const joinKey = Math.round(joinYBase);
+                const joinLane = joinYLanes.get(joinKey) || 0;
+                joinYLanes.set(joinKey, joinLane + 1);
+                const joinY = joinYBase + laneOffset(joinLane, 4);
+                const minParentX = Math.min(...parentCenters.map(p => p.x));
+                const maxParentX = Math.max(...parentCenters.map(p => p.x));
+                // Always join/descend from the midpoint between the parents.
+                const joinX = (minParentX + maxParentX) / 2;
+
+                // vertical down from each parent to joinY
+                parentCenters.forEach(pc => {
+                    drawLine(svg, pc.x, pc.bottom, pc.x, joinY, 'ft-line');
+                });
+
+                // horizontal join line for multi-parent sets
+                if (parentCenters.length > 1) {
+                    drawLine(svg, minParentX, joinY, maxParentX, joinY, 'ft-line');
+                }
+
+                const childCenters = (children || [])
+                    .map(id => nodeEls.get(id))
+                    .filter(Boolean);
+                const childCentersResolved = childCenters.map(el => getCenter(el, contentRect));
+                if (!childCentersResolved.length) continue;
+
+                // Fan-out rail: run above children, then drop into top of each child cell.
+                const railBase = Math.min(...childCentersResolved.map(c => c.top)) - 16;
+                const railY = Math.max(joinY + 26, railBase);
+                const railKey = Math.round(railY);
+                const railLane = fanYLanes.get(railKey) || 0;
+                fanYLanes.set(railKey, railLane + 1);
+                const fanY = railY + laneOffset(railLane, 4);
+
+                // trunk from join point down to fan rail
+                drawLine(svg, joinX, joinY, joinX, fanY, 'ft-line');
+
+                // Draw one shared horizontal rail (prevents overlapping horizontals)
+                const minChildX = Math.min(...childCentersResolved.map(c => c.x));
+                const maxChildX = Math.max(...childCentersResolved.map(c => c.x));
+                drawLine(svg, minChildX, fanY, maxChildX, fanY, 'ft-line');
+
+                // Drop into each child at top edge
+                for (const cc of childCentersResolved) {
+                    drawLine(svg, cc.x, fanY, cc.x, cc.top, 'ft-line');
+                }
+            }
+
+            // Linked connections (dashed)
+            // De-dupe: if A links to B and B links to A, draw only one line.
+            // Also: if a pair is partnered, don't also draw a LinkedTo dashed line.
+            const drawnLinkedPairs = new Set();
+            const linkLanesByFrom = new Map();
+            const linkLanesByTo = new Map();
+            const linkLanesByLift = new Map(); // liftKey -> count
+
+            const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+            const SAFE_LINK_TOP = 18; // prevent routed links going above the SVG viewBox
+
+            for (const [fromId, targets] of model.linkedEdges.entries()) {
+                const fromEl = nodeEls.get(fromId);
+                if (!fromEl) continue;
+                const a = getCenter(fromEl, contentRect);
+                for (const toId of targets) {
+                    const k = pairKey(fromId, toId);
+                    if (partneredPairs.has(k)) continue;
+                    if (drawnLinkedPairs.has(k)) continue;
+                    drawnLinkedPairs.add(k);
+
+                    const toEl = nodeEls.get(toId);
+                    if (!toEl) continue;
+                    const b = getCenter(toEl, contentRect);
+
+                    // Connect from the SIDES of each cell (not center)
+                    const leftToRight = b.x >= a.x;
+                    const startX = leftToRight ? a.right : a.left;
+                    const endX = leftToRight ? b.left : b.right;
+                    const origSameRow = Math.abs(a.y - b.y) < 10;
+                    // Slight per-node lane offsets so multiple links from/to the same person don't overlap.
+                    const fromLane = linkLanesByFrom.get(fromId) || 0;
+                    linkLanesByFrom.set(fromId, fromLane + 1);
+                    const toLane = linkLanesByTo.get(toId) || 0;
+                    linkLanesByTo.set(toId, toLane + 1);
+                    const startYOffset = laneOffset(fromLane, 6);
+                    const endYOffset = laneOffset(toLane, 6);
+
+                    const startY = clamp(a.y + startYOffset, a.top + 8, a.bottom - 8);
+                    const endY = clamp(b.y + endYOffset, b.top + 8, b.bottom - 8);
+
+                    const gap = Math.abs(endX - startX);
+
+                    // Direct adjacent: don't route up/down
+                    if (origSameRow && gap < 120) {
+                        drawPath(svg, `M ${startX} ${startY} L ${endX} ${endY}`, 'ft-line ft-line--dashed');
+                        continue;
+                    }
+
+                    // Offset y so multiple routed links don't overlap each other
+                    const baseLift = Math.min(a.top, b.top) - 34;
+                    const liftKey = Math.round(baseLift / 18) * 18;
+                    const lane = linkLanesByLift.get(liftKey) || 0;
+                    linkLanesByLift.set(liftKey, lane + 1);
+                    const liftY = Math.max(SAFE_LINK_TOP, (baseLift - laneOffset(lane, 10)));
+
+                    // Also slightly vary the horizontal "dog-leg" offset so multiple links are traceable.
+                    const dxVar = laneOffset(fromLane, 3);
+                    const outDx = (leftToRight ? 18 : -18) + dxVar;
+                    const inDx = (leftToRight ? -18 : 18) - dxVar;
+                    const outX = startX + outDx;
+                    const inX = endX + inDx;
+
+                    // Routed polyline above the row (avoids crossing siblings)
+                    const d = `M ${startX} ${startY} L ${outX} ${startY} L ${outX} ${liftY} L ${inX} ${liftY} L ${inX} ${endY} L ${endX} ${endY}`;
+                    drawPath(svg, d, 'ft-line ft-line--dashed');
+                }
+            }
+
+            // Partnered connections (solid)
+            const partnerLanesByY = new Map(); // yRounded -> count
+            const drawnPartnerPairs = new Set();
+            for (const pairKey of (model.partnerPairs || [])) {
+                if (drawnPartnerPairs.has(pairKey)) continue;
+                drawnPartnerPairs.add(pairKey);
+
+                const [aId, bId] = pairKey.split('|');
+                const aEl = nodeEls.get(aId);
+                const bEl = nodeEls.get(bId);
+                if (!aEl || !bEl) continue;
+                const a = getCenter(aEl, contentRect);
+                const b = getCenter(bEl, contentRect);
+
+                const leftToRight = b.x >= a.x;
+                const startX = leftToRight ? a.right : a.left;
+                const endX = leftToRight ? b.left : b.right;
+                const yBase = (a.y + b.y) / 2;
+                const yKey = Math.round(yBase);
+                const lane = partnerLanesByY.get(yKey) || 0;
+                partnerLanesByY.set(yKey, lane + 1);
+                const y = yBase + laneOffset(lane, 3);
+
+                // Partners are intended to be adjacent: draw straight, direct line from side to side.
+                const d = `M ${startX} ${y} L ${endX} ${y}`;
+                drawPath(svg, d, 'ft-line ft-line--partner');
+            }
+        }
+
+        function buildModel(engine) {
+            const roster = typeof engine.getPlayersRoster === 'function'
+                ? engine.getPlayersRoster()
+                : Array.from(engine.playersLookup?.values?.() || []);
+
+            const rosterCount = roster.length;
+            const meta = engine.playersSheetMeta || null;
+            const people = roster.map(p => ({
+                id: p.id,
+                displayName: engine.getDisplayName(p.id),
+                dateOfBirth: p.dateOfBirth || '',
+                dobSort: parseDobSortKey(p.dateOfBirth || ''),
+                parents: Array.isArray(p.familyTreeParents) ? p.familyTreeParents : [],
+                hadChildrenWith: Array.isArray(p.familyTreeHadChildrenWith) ? p.familyTreeHadChildrenWith : [],
+                isPartneredWith: Array.isArray(p.familyTreeIsPartneredWith) ? p.familyTreeIsPartneredWith : [],
+                linkedTo: Array.isArray(p.familyTreeLinkedTo) ? p.familyTreeLinkedTo : []
+            }));
+
+            const byId = new Map(people.map(p => [p.id, p]));
+
+            // Founders (special rule)
+            const founders = ['George', 'Doris'].filter(id => byId.has(id));
+            const foundersSet = new Set(founders);
+
+            // Include only relevant nodes: anyone with FT data or referenced by someone else
+            const referenced = new Set();
+            people.forEach(p => {
+                p.parents.forEach(id => referenced.add(id));
+                p.hadChildrenWith.forEach(id => referenced.add(id));
+                p.isPartneredWith.forEach(id => referenced.add(id));
+                p.linkedTo.forEach(id => referenced.add(id));
+            });
+            const relevant = people.filter(p =>
+                p.parents.length || p.hadChildrenWith.length || p.isPartneredWith.length || p.linkedTo.length || referenced.has(p.id)
+            );
+            const relevantCount = relevant.length;
+
+            const missingKeys = new Set();
+            relevant.forEach(p => {
+                [...p.parents, ...p.hadChildrenWith, ...p.isPartneredWith, ...p.linkedTo].forEach(k => {
+                    if (k && !byId.has(k)) missingKeys.add(k);
+                });
+            });
+
+            // Parent set -> children
+            const childrenByParents = new Map();
+            relevant.forEach(child => {
+                const parents = (child.parents || []).filter(Boolean).slice().sort((a, b) => a.localeCompare(b));
+                if (!parents.length) return;
+                const key = parents.join('|');
+                if (!childrenByParents.has(key)) childrenByParents.set(key, []);
+                childrenByParents.get(key).push(child.id);
+            });
+
+            // Sort children within each parent group by DOB asc, then alpha
+            for (const [k, childIds] of childrenByParents.entries()) {
+                childIds.sort((a, b) => {
+                    const pa = byId.get(a);
+                    const pb = byId.get(b);
+                    const da = pa?.dobSort ?? Number.POSITIVE_INFINITY;
+                    const db = pb?.dobSort ?? Number.POSITIVE_INFINITY;
+                    if (da !== db) return da - db;
+                    return alphaCompare(pa?.displayName, pb?.displayName);
+                });
+            }
+
+            // Parent -> children index for layout
+            const childrenOf = new Map();
+            for (const [parentSetKey, childIds] of childrenByParents.entries()) {
+                const parents = parentSetKey.split('|').filter(Boolean);
+                parents.forEach(pid => {
+                    if (!childrenOf.has(pid)) childrenOf.set(pid, new Set());
+                    childIds.forEach(cid => childrenOf.get(pid).add(cid));
+                });
+            }
+
+            const getSortedChildren = (pid) => {
+                const set = childrenOf.get(pid);
+                if (!set) return [];
+                const arr = Array.from(set);
+                arr.sort((a, b) => {
+                    const pa = byId.get(a);
+                    const pb = byId.get(b);
+                    const da = pa?.dobSort ?? Number.POSITIVE_INFINITY;
+                    const db = pb?.dobSort ?? Number.POSITIVE_INFINITY;
+                    if (da !== db) return da - db;
+                    return alphaCompare(pa?.displayName, pb?.displayName);
+                });
+                return arr;
+            };
+
+            // Couples (HadChildrenWith) -> keep adjacent
+            const couples = new Set();
+            relevant.forEach(p => {
+                (p.hadChildrenWith || []).forEach(other => {
+                    if (!other) return;
+                    const a = p.id;
+                    const b = other;
+                    const pair = [a, b].sort((x, y) => x.localeCompare(y)).join('|');
+                    couples.add(pair);
+                });
+            });
+
+            // Partner pairs (IsPartneredWith) -> solid partner line + same-generation adjacency
+            const partnerPairsSet = new Set();
+            relevant.forEach(p => {
+                (p.isPartneredWith || []).forEach(other => {
+                    if (!other) return;
+                    if (!byId.has(other)) return;
+                    const pair = [p.id, other].sort((a, b) => a.localeCompare(b)).join('|');
+                    partnerPairsSet.add(pair);
+                });
+            });
+            const partnerPairs = Array.from(partnerPairsSet);
+
+            // Children per couple (only when BOTH parents are listed for a child)
+            const coupleChildrenByPair = new Map(); // pairKey -> [childIds]
+            for (const [parentSetKey, childIds] of childrenByParents.entries()) {
+                const parents = parentSetKey.split('|').filter(Boolean);
+                if (parents.length !== 2) continue;
+                const pairKey = parents.slice().sort((a, b) => a.localeCompare(b)).join('|');
+                coupleChildrenByPair.set(pairKey, childIds.slice());
+            }
+
+            // Primary branch roots = children of founders couple (if present)
+            const foundersParentKey = founders.slice().sort((a, b) => a.localeCompare(b)).join('|');
+            const rootChildren = childrenByParents.get(foundersParentKey) ? childrenByParents.get(foundersParentKey).slice() : [];
+
+            // Linked edges
+            const linkedEdges = new Map();
+            relevant.forEach(p => {
+                const targets = (p.linkedTo || []).filter(Boolean);
+                if (!targets.length) return;
+                linkedEdges.set(p.id, targets.slice());
+            });
+
+            // Level calc (special rules + linkedTo anchoring)
+            const memo = new Map();
+            const stack = new Set();
+            const levelById = new Map();
+            const model = { relevant, byId, founders, foundersSet };
+            relevant.forEach(p => {
+                levelById.set(p.id, computeLevelWithRules(p.id, model, memo, stack));
+            });
+
+            // Couples must be on the same generation level.
+            // Use union-find, then set each component to the MAX level so we never "pull children up" to parent generations.
+            const ufParent = new Map();
+            const ufFind = (x) => {
+                const px = ufParent.get(x) || x;
+                if (px === x) return x;
+                const root = ufFind(px);
+                ufParent.set(x, root);
+                return root;
+            };
+            const ufUnion = (a, b) => {
+                const ra = ufFind(a);
+                const rb = ufFind(b);
+                if (ra !== rb) ufParent.set(ra, rb);
+            };
+            for (const pair of couples) {
+                const [a, b] = pair.split('|');
+                if (!byId.has(a) || !byId.has(b)) continue;
+                ufUnion(a, b);
+            }
+            for (const pair of partnerPairs) {
+                const [a, b] = pair.split('|');
+                if (!byId.has(a) || !byId.has(b)) continue;
+                ufUnion(a, b);
+            }
+            const compMax = new Map();
+            for (const p of relevant) {
+                const r = ufFind(p.id);
+                const lvl = levelById.get(p.id) ?? 0;
+                compMax.set(r, Math.max(compMax.get(r) ?? Number.NEGATIVE_INFINITY, lvl));
+            }
+            for (const p of relevant) {
+                const r = ufFind(p.id);
+                const maxLvl = compMax.get(r);
+                if (!Number.isFinite(maxLvl)) continue;
+                if (foundersSet.has(p.id)) {
+                    levelById.set(p.id, 0);
+                } else {
+                    levelById.set(p.id, maxLvl);
+                }
+            }
+
+            // Enforce parent->child ordering (levels only ever increase).
+            // This fixes cases where couple-level alignment could otherwise leave children equal to parents.
+            for (let iter = 0; iter < 8; iter++) {
+                let changed = false;
+
+                // Parent constraint
+                for (const child of relevant) {
+                    const parents = Array.isArray(child.parents) ? child.parents.filter(Boolean) : [];
+                    if (!parents.length) continue;
+                    let best = 0;
+                    for (const pid of parents) {
+                        const pl = levelById.get(pid);
+                        if (typeof pl === 'number') best = Math.max(best, pl);
+                    }
+                    const desired = best + 1;
+                    const cur = levelById.get(child.id) || 0;
+                    if (cur < desired) {
+                        levelById.set(child.id, desired);
+                        changed = true;
+                    }
+                }
+
+                // Couple constraint (equalize to max)
+                for (const pair of couples) {
+                    const [a, b] = pair.split('|');
+                    const la = levelById.get(a);
+                    const lb = levelById.get(b);
+                    if (typeof la !== 'number' || typeof lb !== 'number') continue;
+                    const mx = Math.max(la, lb);
+                    if (!foundersSet.has(a) && la !== mx) { levelById.set(a, mx); changed = true; }
+                    if (!foundersSet.has(b) && lb !== mx) { levelById.set(b, mx); changed = true; }
+                }
+                for (const pair of partnerPairs) {
+                    const [a, b] = pair.split('|');
+                    const la = levelById.get(a);
+                    const lb = levelById.get(b);
+                    if (typeof la !== 'number' || typeof lb !== 'number') continue;
+                    const mx = Math.max(la, lb);
+                    if (!foundersSet.has(a) && la !== mx) { levelById.set(a, mx); changed = true; }
+                    if (!foundersSet.has(b) && lb !== mx) { levelById.set(b, mx); changed = true; }
+                }
+
+                if (!changed) break;
+            }
+
+            // --- Attachment resolution precedence (Partnered/ChildrenWith > LinkedTo)
+            // Build a shortest-path tree rooted at "base" bloodline nodes, using:
+            // - Strong edges (couples + partnered) weight 0
+            // - LinkedTo reverse edges weight 1 (so outsiders point inward but we traverse outward)
+            const bloodlineSet = new Set();
+            relevant.forEach(p => {
+                const hasParents = Array.isArray(p.parents) && p.parents.length;
+                const hasChildren = childrenOf && childrenOf.has(p.id);
+                if (hasParents || hasChildren || foundersSet.has(p.id)) {
+                    bloodlineSet.add(p.id);
+                }
+            });
+
+            // Base set = bloodline only.
+            // Partner-only links should be attachments (adjacent), not "new roots" that drift far away.
+            const baseSet = new Set(bloodlineSet);
+
+            const strongAdj = new Map(); // id -> Set<id>
+            const addStrong = (a, b) => {
+                if (!strongAdj.has(a)) strongAdj.set(a, new Set());
+                if (!strongAdj.has(b)) strongAdj.set(b, new Set());
+                strongAdj.get(a).add(b);
+                strongAdj.get(b).add(a);
+            };
+            for (const pair of couples) {
+                const [a, b] = pair.split('|');
+                if (byId.has(a) && byId.has(b)) addStrong(a, b);
+            }
+            for (const pair of partnerPairs) {
+                const [a, b] = pair.split('|');
+                if (byId.has(a) && byId.has(b)) addStrong(a, b);
+            }
+
+            // LinkedTo edges are treated as UNDIRECTED for attachment resolution.
+            // The sheet data isn't guaranteed to be entered in a consistent direction, but
+            // layout should still attach nodes to the nearest bloodline node either way.
+            const linkedAdj = new Map(); // id -> Set<id>
+            const addLinked = (a, b) => {
+                if (!a || !b) return;
+                if (!linkedAdj.has(a)) linkedAdj.set(a, new Set());
+                if (!linkedAdj.has(b)) linkedAdj.set(b, new Set());
+                linkedAdj.get(a).add(b);
+                linkedAdj.get(b).add(a);
+            };
+            relevant.forEach(p => {
+                (p.linkedTo || []).forEach(t => {
+                    if (!t || !byId.has(t)) return;
+                    addLinked(p.id, t);
+                });
+            });
+
+            const dist = new Map();
+            const prev = new Map(); // node -> predecessor toward base
+            const pq = [];
+            const pushPQ = (node, d, from) => {
+                pq.push({ node, d, from });
+            };
+            baseSet.forEach(id => {
+                dist.set(id, 0);
+                pushPQ(id, 0, null);
+            });
+
+            const popMin = () => {
+                let bestIdx = -1;
+                let best = null;
+                for (let i = 0; i < pq.length; i++) {
+                    const it = pq[i];
+                    if (!best || it.d < best.d || (it.d === best.d && alphaCompare(byId.get(it.node)?.displayName, byId.get(best.node)?.displayName) < 0)) {
+                        best = it;
+                        bestIdx = i;
+                    }
+                }
+                if (bestIdx >= 0) pq.splice(bestIdx, 1);
+                return best;
+            };
+
+            while (pq.length) {
+                const cur = popMin();
+                if (!cur) break;
+                const u = cur.node;
+                const du = cur.d;
+                if (du !== dist.get(u)) continue;
+
+                const neighbors = [];
+                const strong = strongAdj.get(u);
+                if (strong) strong.forEach(v => neighbors.push({ v, w: 0 }));
+                const linked = linkedAdj.get(u);
+                if (linked) linked.forEach(v => neighbors.push({ v, w: 1 }));
+
+                neighbors.forEach(({ v, w }) => {
+                    const nd = du + w;
+                    const curD = dist.get(v);
+                    if (typeof curD !== 'number' || nd < curD) {
+                        dist.set(v, nd);
+                        prev.set(v, u);
+                        pushPQ(v, nd, u);
+                    }
+                });
+            }
+
+            const attachmentsByAnchor = new Map(); // anchor -> [{id,type}]
+            const attachEdgeType = (anchor, node) => {
+                const k = [anchor, node].sort((a, b) => a.localeCompare(b)).join('|');
+                if (partnerPairsSet.has(k)) return 'partner';
+                return 'linked';
+            };
+            for (const p of relevant) {
+                if (baseSet.has(p.id)) continue;
+                const anchor = prev.get(p.id);
+                if (!anchor) continue;
+                if (!attachmentsByAnchor.has(anchor)) attachmentsByAnchor.set(anchor, []);
+                attachmentsByAnchor.get(anchor).push({ id: p.id, type: attachEdgeType(anchor, p.id) });
+            }
+
+            for (const [anchor, list] of attachmentsByAnchor.entries()) {
+                list.sort((a, b) => {
+                    // Partnered attachments first, then alpha
+                    if (a.type !== b.type) return a.type === 'partner' ? -1 : 1;
+                    return alphaCompare(byId.get(a.id)?.displayName, byId.get(b.id)?.displayName);
+                });
+            }
+
+            const attachedNodeIds = new Set();
+            const attachmentAnchorForNode = new Map(); // nodeId -> anchorId
+            for (const [anchor, list] of attachmentsByAnchor.entries()) {
+                (list || []).forEach(item => {
+                    attachedNodeIds.add(item.id);
+                    attachmentAnchorForNode.set(item.id, anchor);
+                });
+            }
+
+            // Attachments inherit their anchor's generation level so they sit on the same horizontal axis.
+            // (Prevents cases like Leanne appearing "higher" than her anchor due to missing/indirect LinkedTo data.)
+            const setLevelFromAnchor = () => {
+                let changed = false;
+                for (const [anchor, list] of attachmentsByAnchor.entries()) {
+                    const al = levelById.get(anchor);
+                    if (typeof al !== 'number') continue;
+                    (list || []).forEach(item => {
+                        const id = item.id;
+                        const p = byId.get(id);
+                        if (!p) return;
+                        const hasParents = Array.isArray(p.parents) && p.parents.length;
+                        const hasChildren = childrenOf && childrenOf.has(id);
+                        if (hasParents || hasChildren) return;
+                        const cur = levelById.get(id);
+                        if (cur !== al) {
+                            levelById.set(id, al);
+                            changed = true;
+                        }
+                    });
+                }
+                return changed;
+            };
+            for (let i = 0; i < 6; i++) {
+                if (!setLevelFromAnchor()) break;
+            }
+
+            // Couple consistency warnings (optional)
+            const coupleWarnings = [];
+            for (const parentSetKey of childrenByParents.keys()) {
+                const parents = parentSetKey.split('|').filter(Boolean);
+                if (parents.length < 2) continue;
+                const a = byId.get(parents[0]);
+                const b = byId.get(parents[1]);
+                if (!a || !b) continue;
+                const aHasB = (a.hadChildrenWith || []).includes(b.id);
+                const bHasA = (b.hadChildrenWith || []).includes(a.id);
+                if (!aHasB && !bHasA) {
+                    coupleWarnings.push(`Parents <strong>${escapeHtml(engine.getDisplayName(a.id))}</strong> and <strong>${escapeHtml(engine.getDisplayName(b.id))}</strong> have children listed, but neither lists the other in <code>FamilyTree_HadChildrenWith</code>.`);
+                }
+            }
+
+            return { relevant, byId, childrenByParents, linkedEdges, levelById, missingKeys, coupleWarnings, rosterCount, relevantCount, meta, founders, foundersSet, couples, partnerPairs, coupleChildrenByPair, childrenOf, getSortedChildren, rootChildren, baseSet, attachmentsByAnchor, attachedNodeIds, attachmentAnchorForNode };
+        }
+
+        function layoutFamilyTree(engine, model) {
+            const grid = document.getElementById('family-tree-grid');
+            const content = document.getElementById('family-tree-zoom-content');
+            if (!grid || !content) return;
+
+            const nodeEls = new Map();
+            grid.querySelectorAll('[data-person-key]').forEach(el => {
+                nodeEls.set(el.getAttribute('data-person-key'), el);
+            });
+
+            // Measure node sizes (they're not scaled here; zoom transform is applied to parent)
+            const sizeById = new Map();
+            for (const [id, el] of nodeEls.entries()) {
+                const r = el.getBoundingClientRect();
+                sizeById.set(id, { w: Math.max(1, r.width), h: Math.max(1, r.height) });
+            }
+
+            const levels = Array.from(new Set(model.relevant.map(p => model.levelById.get(p.id) || 0))).sort((a, b) => a - b);
+            const maxLevel = levels.length ? Math.max(...levels) : 0;
+
+            // Vertical spacing between generations
+            // Give extra air at top so routed LinkedTo lines have headroom (prevents top clipping).
+            const TOP_PAD = 70;
+            const LEFT_PAD = 120; // leave space for any future labels
+            const LEVEL_GAP = 150;
+            const yForLevel = (lvl) => TOP_PAD + (lvl * LEVEL_GAP);
+
+            // Leaf spacing = "optimal" final-generation spacing
+            const LEAF_GAP = 46;
+            // Extra spacing between Gen 1 branches (big)
+            const BRANCH_GAP = 360;
+            // Couple spacing (space between the two boxes)
+            const COUPLE_BOX_GAP = 40;
+            // Linked-to spacing (space between boxes)
+            const LINK_BOX_GAP = 28;
+
+            const gapForLevel = (lvl) => {
+                // Big spacing early (to see branch separators), tighter later.
+                // Clamp so final generation feels "normal".
+                const g = 220 - (lvl * 40);
+                return Math.max(48, Math.min(220, g));
+            };
+
+            const xById = new Map();
+            const spanById = new Map(); // [minX, maxX]
+            const coreSpanById = new Map(); // subtree span ignoring linked attachments
+            const visiting = new Set();
+
+            let cursorX = LEFT_PAD;
+
+            const nodeWidth = (id) => (sizeById.get(id)?.w ?? 160);
+
+            const attachmentsByAnchor = model.attachmentsByAnchor || new Map();
+            const attachedNodes = new Set();
+            for (const list of attachmentsByAnchor.values()) {
+                (list || []).forEach(item => attachedNodes.add(item.id));
+            }
+            const anchorForNode = model.attachmentAnchorForNode || new Map();
+
+            const getCouplePartner = (id) => {
+                const p = model.byId.get(id);
+                if (!p) return null;
+                const candidates = Array.isArray(p.hadChildrenWith) ? p.hadChildrenWith : [];
+                for (const other of candidates) {
+                    const pairKey = [id, other].sort((a, b) => a.localeCompare(b)).join('|');
+                    if (model.coupleChildrenByPair && model.coupleChildrenByPair.has(pairKey) && model.byId.has(other)) {
+                        return other;
+                    }
+                }
+                return null;
+            };
+
+            const isPrimaryPartner = (a, b) => a.localeCompare(b) <= 0;
+
+            const attachSideForChildIndex = (idx, count) => {
+                if (count <= 1) return 'right';
+                // Default all LinkedTo attachments to the child's "aisle side"
+                // (left half -> left, right half -> right). This keeps extras expanding outward.
+                return idx < (count / 2) ? 'left' : 'right';
+            };
+
+            const placeAttachments = (anchorId, side, baseLeft, baseRight) => {
+                const list = attachmentsByAnchor.get(anchorId);
+                if (!list || !list.length) return { left: baseLeft, right: baseRight };
+                attachmentsByAnchor.delete(anchorId);
+
+                const items = list.slice();
+                // For placement, we use alphabetical order, but allow left-side placement to preserve left->right reading order.
+                const placeOne = (id, x) => {
+                    const w = nodeWidth(id);
+                    xById.set(id, x);
+                    spanById.set(id, [x - (w / 2), x + (w / 2)]);
+                    coreSpanById.set(id, [x - (w / 2), x + (w / 2)]);
+                    // Resolve this attachment's own attachments first (recursively extend outward)
+                    return { w };
+                };
+
+                if (side === 'left') {
+                    const partner = items.find(it => it.type === 'partner') || null;
+                    const rest = partner ? items.filter(it => it !== partner) : items.slice();
+
+                    let curLeft = baseLeft;
+                    const placeWithGap = (it, gap) => {
+                        const w = nodeWidth(it.id);
+                        const x = curLeft - gap - (w / 2);
+                        placeOne(it.id, x);
+                        // Recurse outward from this attachment on the same side
+                        const innerLeft = x - (w / 2);
+                        const innerRight = x + (w / 2);
+                        const edge = placeAttachments(it.id, 'left', innerLeft, innerRight);
+                        curLeft = Math.min(innerLeft, edge.left);
+                    };
+
+                    // Partner must be immediately adjacent
+                    if (partner) {
+                        placeWithGap(partner, COUPLE_BOX_GAP);
+                    }
+                    // Other attachments outward; reverse so left-to-right reads alphabetical closest-to-anchor last
+                    rest.slice().reverse().forEach(it => placeWithGap(it, LINK_BOX_GAP));
+
+                    return { left: curLeft, right: baseRight };
+                }
+
+                // right
+                let curRight = baseRight;
+                const partner = items.find(it => it.type === 'partner') || null;
+                const rest = partner ? items.filter(it => it !== partner) : items.slice();
+                const placeWithGap = (it, gap) => {
+                    const w = nodeWidth(it.id);
+                    const x = curRight + gap + (w / 2);
+                    placeOne(it.id, x);
+                    const innerLeft = x - (w / 2);
+                    const innerRight = x + (w / 2);
+                    const edge = placeAttachments(it.id, 'right', innerLeft, innerRight);
+                    curRight = Math.max(innerRight, edge.right);
+                };
+                if (partner) placeWithGap(partner, COUPLE_BOX_GAP);
+                rest.forEach(it => placeWithGap(it, LINK_BOX_GAP));
+                return { left: baseLeft, right: curRight };
+            };
+
+            const layoutNode = (id, opts = {}) => {
+                if (!model.byId.has(id)) return [cursorX, cursorX];
+                if (spanById.has(id)) return spanById.get(id);
+                if (attachedNodes.has(id)) {
+                    // Positioned by its anchor (adjacent). Span will be set when placed.
+                    return [cursorX, cursorX];
+                }
+                if (visiting.has(id)) return [cursorX, cursorX];
+                visiting.add(id);
+
+                const partner = getCouplePartner(id);
+                if (partner) {
+                    const primary = isPrimaryPartner(id, partner) ? id : partner;
+                    if (id !== primary) {
+                        const span = layoutNode(primary, opts);
+                        visiting.delete(id);
+                        return spanById.get(id) || span;
+                    }
+
+                    const pairKey = [id, partner].sort((a, b) => a.localeCompare(b)).join('|');
+                    const kids = (model.coupleChildrenByPair.get(pairKey) || []).slice();
+
+                    let center = cursorX;
+                    let minX = cursorX;
+                    let maxX = cursorX;
+                    if (kids.length) {
+                        // Layout children first, then compute a centering span that includes "inside" attachments:
+                        // - Left half children: include right-side attachments, exclude left-side (outside)
+                        // - Right half children: include left-side attachments, exclude right-side (outside)
+                        // - Middle child (odd count): include both
+                        kids.forEach((cid, idx) => {
+                            const side = attachSideForChildIndex(idx, kids.length);
+                            layoutNode(cid, { preferAttachSide: side });
+                        });
+                        const kidsSorted = kids
+                            .slice()
+                            .sort((a, b) => (xById.get(a) || 0) - (xById.get(b) || 0));
+                        const spans = kidsSorted
+                            .map((cid, idx) => {
+                                const core = coreSpanById.get(cid) || spanById.get(cid);
+                                const full = spanById.get(cid) || core;
+                                if (!core || !full) return null;
+                                const isMiddle = (kidsSorted.length % 2 === 1) && idx === Math.floor(kidsSorted.length / 2);
+                                if (isMiddle) return full;
+                                if (idx < (kidsSorted.length / 2)) return [core[0], full[1]]; // include right-side attachments
+                                return [full[0], core[1]]; // include left-side attachments
+                            })
+                            .filter(Boolean);
+                        minX = spans.length ? Math.min(...spans.map(s => s[0])) : cursorX;
+                        maxX = spans.length ? Math.max(...spans.map(s => s[1])) : cursorX;
+                        center = (minX + maxX) / 2;
+                    } else {
+                        // No shared children: treat as a leaf couple group
+                        const wa = nodeWidth(id);
+                        const wb = nodeWidth(partner);
+                        const total = wa + wb + COUPLE_BOX_GAP;
+                        const groupLeft = cursorX;
+                        const groupRight = cursorX + total;
+                        center = (groupLeft + groupRight) / 2;
+                        minX = groupLeft;
+                        maxX = groupRight;
+                    }
+
+                    // Place couple centered above the core width of their descendants (or their leaf group width)
+                    const wa = nodeWidth(id);
+                    const wb = nodeWidth(partner);
+                    const total = wa + wb + COUPLE_BOX_GAP;
+                    const leftStart = center - (total / 2);
+                    const xa = leftStart + (wa / 2);
+                    const xb = leftStart + wa + COUPLE_BOX_GAP + (wb / 2);
+
+                    const leftId = xa <= xb ? id : partner;
+                    const rightId = xa <= xb ? partner : id;
+
+                    xById.set(leftId, Math.min(xa, xb));
+                    xById.set(rightId, Math.max(xa, xb));
+
+                    // Base couple span
+                    let left = Math.min(xById.get(leftId) - wa / 2, xById.get(rightId) - wb / 2);
+                    let right = Math.max(xById.get(leftId) + wa / 2, xById.get(rightId) + wb / 2);
+                    // Core span ignores linked attachments (but includes children core span)
+                    const coreLeft = Math.min(minX, left);
+                    const coreRight = Math.max(maxX, right);
+                    coreSpanById.set(id, [coreLeft, coreRight]);
+                    coreSpanById.set(partner, [coreLeft, coreRight]);
+
+                    // Attach linked-to-only nodes on OUTER sides
+                    const leftEdge = placeAttachments(leftId, 'left', left, right);
+                    left = leftEdge.left;
+                    right = leftEdge.right;
+                    const rightEdge = placeAttachments(rightId, 'right', left, right);
+                    left = rightEdge.left;
+                    right = rightEdge.right;
+
+                    // Store spans for both parents and couple
+                    spanById.set(id, [left, right]);
+                    spanById.set(partner, [left, right]);
+                    // Advance cursor for leaf-couple groups
+                    if (!kids.length) {
+                        cursorX = Math.max(cursorX, right + LEAF_GAP);
+                    }
+                    visiting.delete(id);
+                    return [left, right];
+                }
+
+                const children = model.getSortedChildren ? model.getSortedChildren(id) : [];
+                if (!children.length) {
+                    const w = nodeWidth(id);
+                    const x = cursorX + (w / 2);
+                    xById.set(id, x);
+                    const boxLeft = x - (w / 2);
+                    const boxRight = x + (w / 2);
+                    let left = boxLeft;
+                    let right = boxRight;
+                    coreSpanById.set(id, [boxLeft, boxRight]);
+
+                    // Attach linked-to-only nodes outward based on sibling context
+                    const side = opts.preferAttachSide === 'left' ? 'left' : 'right';
+                    const edge = placeAttachments(id, side, left, right);
+                    left = edge.left;
+                    right = edge.right;
+
+                    spanById.set(id, [left, right]);
+                    cursorX = right + LEAF_GAP;
+                    visiting.delete(id);
+                    return [left, right];
+                }
+
+                // Layout children first, then compute a centering span that includes "inside" attachments:
+                // - Left half children: include right-side attachments, exclude left-side (outside)
+                // - Right half children: include left-side attachments, exclude right-side (outside)
+                // - Middle child (odd count): include both
+                children.forEach((cid, idx) => {
+                    const side = attachSideForChildIndex(idx, children.length);
+                    layoutNode(cid, { preferAttachSide: side });
+                });
+                const childrenSorted = children
+                    .slice()
+                    .sort((a, b) => (xById.get(a) || 0) - (xById.get(b) || 0));
+                const spans = childrenSorted
+                    .map((cid, idx) => {
+                        const core = coreSpanById.get(cid) || spanById.get(cid);
+                        const full = spanById.get(cid) || core;
+                        if (!core || !full) return null;
+                        const isMiddle = (childrenSorted.length % 2 === 1) && idx === Math.floor(childrenSorted.length / 2);
+                        if (isMiddle) return full;
+                        if (idx < (childrenSorted.length / 2)) return [core[0], full[1]]; // include right-side attachments
+                        return [full[0], core[1]]; // include left-side attachments
+                    })
+                    .filter(Boolean);
+                const minX = spans.length ? Math.min(...spans.map(s => s[0])) : cursorX;
+                const maxX = spans.length ? Math.max(...spans.map(s => s[1])) : cursorX;
+                const x = (minX + maxX) / 2;
+                xById.set(id, x);
+
+                const w = nodeWidth(id);
+                let left = Math.min(minX, x - (w / 2));
+                let right = Math.max(maxX, x + (w / 2));
+                coreSpanById.set(id, [left, right]);
+
+                // Attach linked-to-only nodes for this anchor outward (default to the aisle side when available)
+                const edge = placeAttachments(id, opts.preferAttachSide === 'left' ? 'left' : 'right', left, right);
+                left = edge.left;
+                right = edge.right;
+
+                spanById.set(id, [left, right]);
+                visiting.delete(id);
+                return [left, right];
+            };
+
+            // Layout each Gen1 branch rooted at a child of founders, with big gaps between branches.
+            const roots = Array.isArray(model.rootChildren) ? model.rootChildren.slice() : [];
+            roots.forEach((rid, idx) => {
+                if (idx > 0) cursorX += BRANCH_GAP;
+                const span = layoutNode(rid, { preferAttachSide: idx === 0 ? 'left' : 'right' });
+                cursorX = Math.max(cursorX, span[1] + LEAF_GAP);
+            });
+
+            // Layout any remaining people not placed yet (other branches)
+            const remainingRoots = model.relevant
+                .filter(p => !spanById.has(p.id) && !model.foundersSet.has(p.id) && !attachedNodes.has(p.id))
+                .sort((a, b) => {
+                    const la = model.levelById.get(a.id) || 0;
+                    const lb = model.levelById.get(b.id) || 0;
+                    if (la !== lb) return la - lb;
+                    return alphaCompare(a.displayName, b.displayName);
+                })
+                .map(p => p.id);
+
+            remainingRoots.forEach((rid, idx) => {
+                cursorX += BRANCH_GAP;
+                const span = layoutNode(rid);
+                cursorX = Math.max(cursorX, span[1] + LEAF_GAP);
+            });
+
+            // Position founders over the span of their children and keep them adjacent
+            if (model.founders && model.founders.length === 2 && roots.length) {
+                // Center founders over CORE span (ignores LinkedTo attachments of descendants)
+                const childSpans = roots.map(rid => coreSpanById.get(rid) || spanById.get(rid)).filter(Boolean);
+                const minX = Math.min(...childSpans.map(s => s[0]));
+                const maxX = Math.max(...childSpans.map(s => s[1]));
+                const center = (minX + maxX) / 2;
+                const a = model.founders[0];
+                const b = model.founders[1];
+                const wa = nodeWidth(a);
+                const wb = nodeWidth(b);
+                const total = wa + wb + COUPLE_BOX_GAP;
+                const leftStart = center - (total / 2);
+                xById.set(a, leftStart + (wa / 2));
+                xById.set(b, leftStart + wa + COUPLE_BOX_GAP + (wb / 2));
+                spanById.set(a, [leftStart, leftStart + total]);
+                spanById.set(b, [leftStart, leftStart + total]);
+                coreSpanById.set(a, [leftStart, leftStart + total]);
+                coreSpanById.set(b, [leftStart, leftStart + total]);
+
+                // Place founders' attachments so they sit adjacent (prevents "thrown to far left at x=0")
+                const aLeft = leftStart;
+                const aRight = leftStart + wa;
+                const bLeft = leftStart + wa + COUPLE_BOX_GAP;
+                const bRight = leftStart + total;
+                const aEdge = placeAttachments(a, 'left', aLeft, aRight);
+                const bEdge = placeAttachments(b, 'right', bLeft, bRight);
+                const fullLeft = Math.min(aEdge.left, aLeft, bEdge.left, bLeft);
+                const fullRight = Math.max(aEdge.right, aRight, bEdge.right, bRight);
+                spanById.set(a, [fullLeft, fullRight]);
+                spanById.set(b, [fullLeft, fullRight]);
+            }
+
+            // Keep the whole canvas on-screen (no negative-left placement).
+            const minLeft = (() => {
+                let min = Number.POSITIVE_INFINITY;
+                for (const p of model.relevant) {
+                    const x = xById.get(p.id);
+                    if (!Number.isFinite(x)) continue;
+                    const w = nodeWidth(p.id);
+                    min = Math.min(min, x - (w / 2));
+                }
+                return min;
+            })();
+            const SAFE_LEFT = 140; // leave space for routed link lines too
+            if (Number.isFinite(minLeft) && minLeft < SAFE_LEFT) {
+                const delta = SAFE_LEFT - minLeft;
+                for (const [id, x] of xById.entries()) {
+                    if (Number.isFinite(x)) xById.set(id, x + delta);
+                }
+                for (const [id, span] of spanById.entries()) {
+                    spanById.set(id, [span[0] + delta, span[1] + delta]);
+                }
+                for (const [id, span] of coreSpanById.entries()) {
+                    coreSpanById.set(id, [span[0] + delta, span[1] + delta]);
+                }
+            }
+
+            // Resolve any remaining overlaps among attachment nodes (without moving core/bloodline nodes).
+            const resolveAttachedOverlaps = () => {
+                const MIN_GAP = 16;
+                const idsByLevel = new Map();
+                model.relevant.forEach(p => {
+                    const lvl = model.levelById.get(p.id) || 0;
+                    if (!idsByLevel.has(lvl)) idsByLevel.set(lvl, []);
+                    idsByLevel.get(lvl).push(p.id);
+                });
+                for (const lvl of Array.from(idsByLevel.keys()).sort((a, b) => a - b)) {
+                    const ids = idsByLevel.get(lvl) || [];
+                    const nodes = ids
+                        .map(id => {
+                            const x = xById.get(id);
+                            if (!Number.isFinite(x)) return null;
+                            const w = nodeWidth(id);
+                            return {
+                                id,
+                                x,
+                                w,
+                                left: x - (w / 2),
+                                right: x + (w / 2),
+                                isAttached: attachedNodes.has(id)
+                            };
+                        })
+                        .filter(Boolean)
+                        .sort((a, b) => a.left - b.left);
+
+                    let prevRight = -Infinity;
+                    nodes.forEach(n => {
+                        if (n.left < prevRight + MIN_GAP && n.isAttached) {
+                            const delta = (prevRight + MIN_GAP) - n.left;
+                            n.x += delta;
+                            n.left += delta;
+                            n.right += delta;
+                        }
+                        prevRight = Math.max(prevRight, n.right);
+                    });
+                    nodes.forEach(n => {
+                        if (!n.isAttached) return;
+                        xById.set(n.id, n.x);
+                        spanById.set(n.id, [n.left, n.right]);
+                        coreSpanById.set(n.id, [n.left, n.right]);
+                    });
+                }
+            };
+            resolveAttachedOverlaps();
+
+            // Final per-level pack to guarantee NO overlaps (core + attachments).
+            // This will "shunt" nodes sideways to make room rather than allowing any overlap.
+            const resolveAllOverlaps = () => {
+                const MIN_GAP = 22;
+                const idsByLevel = new Map();
+                model.relevant.forEach(p => {
+                    const lvl = model.levelById.get(p.id) || 0;
+                    if (!idsByLevel.has(lvl)) idsByLevel.set(lvl, []);
+                    idsByLevel.get(lvl).push(p.id);
+                });
+                for (const lvl of Array.from(idsByLevel.keys()).sort((a, b) => a - b)) {
+                    const ids = idsByLevel.get(lvl) || [];
+                    const nodes = ids
+                        .map(id => {
+                            const x = xById.get(id);
+                            if (!Number.isFinite(x)) return null;
+                            const w = nodeWidth(id);
+                            return { id, x, w, left: x - w / 2, right: x + w / 2 };
+                        })
+                        .filter(Boolean)
+                        .sort((a, b) => a.left - b.left);
+
+                    let prevRight = -Infinity;
+                    nodes.forEach(n => {
+                        if (n.left < prevRight + MIN_GAP) {
+                            const delta = (prevRight + MIN_GAP) - n.left;
+                            n.x += delta;
+                            n.left += delta;
+                            n.right += delta;
+                        }
+                        prevRight = Math.max(prevRight, n.right);
+                    });
+
+                    nodes.forEach(n => {
+                        xById.set(n.id, n.x);
+                        spanById.set(n.id, [n.left, n.right]);
+                        coreSpanById.set(n.id, [n.left, n.right]);
+                    });
+                }
+            };
+            resolveAllOverlaps();
+
+            // Fallback: if any attached node still has no x, place it adjacent to its anchor.
+            // (Prevents missing nodes like Caroline, and stops far-away placement like Clive.)
+            for (const id of attachedNodes) {
+                if (Number.isFinite(xById.get(id))) continue;
+                const anchor = anchorForNode.get(id);
+                if (!anchor) continue;
+                const ax = xById.get(anchor);
+                if (!Number.isFinite(ax)) continue;
+                const aw = nodeWidth(anchor);
+                const w = nodeWidth(id);
+                // Default to right of anchor
+                const x = ax + (aw / 2) + LINK_BOX_GAP + (w / 2);
+                xById.set(id, x);
+                spanById.set(id, [x - (w / 2), x + (w / 2)]);
+                coreSpanById.set(id, [x - (w / 2), x + (w / 2)]);
+            }
+            // Re-run overlap resolution after fallback placements
+            resolveAllOverlaps();
+
+            // Apply positions
+            // Resolve overlaps for LinkedTo-only nodes (don't move core bloodline nodes).
+            const resolveLinkedOverlaps = () => {
+                const idsByLevel = new Map();
+                model.relevant.forEach(p => {
+                    const lvl = model.levelById.get(p.id) || 0;
+                    if (!idsByLevel.has(lvl)) idsByLevel.set(lvl, []);
+                    idsByLevel.get(lvl).push(p.id);
+                });
+
+                const MIN_GAP = 18;
+                const levelsSorted = Array.from(idsByLevel.keys()).sort((a, b) => a - b);
+
+                levelsSorted.forEach(lvl => {
+                    const ids = idsByLevel.get(lvl) || [];
+                    const nodes = ids
+                        .filter(id => Number.isFinite(xById.get(id)))
+                        .map(id => {
+                            const x = xById.get(id);
+                            const w = nodeWidth(id);
+                            return { id, x, w, left: x - w / 2, right: x + w / 2, isAttached: attachedNodes.has(id) };
+                        })
+                        .sort((a, b) => a.left - b.left);
+
+                    // Pass 1: push attached nodes right
+                    let prevRight = -Infinity;
+                    nodes.forEach(n => {
+                        if (n.left < prevRight + MIN_GAP) {
+                            const delta = (prevRight + MIN_GAP) - n.left;
+                            if (n.isAttached) {
+                                n.x += delta;
+                                n.left += delta;
+                                n.right += delta;
+                            }
+                        }
+                        prevRight = Math.max(prevRight, n.right);
+                    });
+
+                    // Pass 2: push attached nodes left
+                    let nextLeft = Infinity;
+                    for (let i = nodes.length - 1; i >= 0; i--) {
+                        const n = nodes[i];
+                        if (n.right > nextLeft - MIN_GAP) {
+                            const delta = n.right - (nextLeft - MIN_GAP);
+                            if (n.isAttached) {
+                                n.x -= delta;
+                                n.left -= delta;
+                                n.right -= delta;
+                            }
+                        }
+                        nextLeft = Math.min(nextLeft, n.left);
+                    }
+
+                    // Commit updated positions for attached nodes
+                    nodes.forEach(n => {
+                        if (!n.isAttached) return;
+                        xById.set(n.id, n.x);
+                        spanById.set(n.id, [n.left, n.right]);
+                    });
+                });
+            };
+
+            resolveLinkedOverlaps();
+
+            let maxRight = 0;
+            let maxBottom = 0;
+            for (const person of model.relevant) {
+                const id = person.id;
+                const el = nodeEls.get(id);
+                if (!el) continue;
+                const lvl = model.levelById.get(id) || 0;
+                const y = yForLevel(lvl);
+                const x = xById.get(id);
+                const w = nodeWidth(id);
+                const h = sizeById.get(id)?.h ?? 44;
+
+                const left = (Number.isFinite(x) ? (x - w / 2) : 0);
+                el.style.left = `${Math.round(left)}px`;
+                el.style.top = `${Math.round(y)}px`;
+                el.style.opacity = '1';
+
+                maxRight = Math.max(maxRight, left + w);
+                maxBottom = Math.max(maxBottom, y + h);
+            }
+
+            // Expand canvas so it can be bigger than the viewport
+            const PAD = 220;
+            grid.style.width = `${Math.ceil(maxRight + PAD)}px`;
+            grid.style.height = `${Math.ceil(maxBottom + PAD)}px`;
+        }
+
+        function renderTree(engine, model) {
+            const grid = document.getElementById('family-tree-grid');
+            if (!grid) return;
+
+            const highlight = getHighlightedKey();
+            const highlightId = highlight && model.byId.has(highlight) ? highlight : null;
+
+            const html = model.relevant
+                .slice()
+                .sort((a, b) => alphaCompare(a.displayName, b.displayName))
+                .map(p => {
+                    const cls = `person-node ${highlightId === p.id ? 'is-highlighted' : ''}`;
+                    return `
+                        <a class="${cls}" data-person-key="${escapeHtml(p.id)}"
+                           href="../players/profile.html?player=${encodeURIComponent(p.id)}"
+                           title="${escapeHtml(p.displayName)}"
+                           style="left:0; top:0; opacity:0;">
+                            ${escapeHtml(p.displayName)}
+                        </a>
+                    `;
+                }).join('');
+
+            const ftCols = model.meta?.familyTreeColumns;
+            const ftCounts = model.meta?.familyTreeNonEmptyCounts;
+            const colStatus = ftCols
+                ? `cols: parents=${ftCols.parents ? 'yes' : 'no'}, hadChildrenWith=${ftCols.hadChildrenWith ? 'yes' : 'no'}, linkedTo=${ftCols.linkedTo ? 'yes' : 'no'}`
+                : '';
+            const countStatus = ftCounts
+                ? `values: parents=${ftCounts.parents || 0}, hadChildrenWith=${ftCounts.hadChildrenWith || 0}, linkedTo=${ftCounts.linkedTo || 0}`
+                : '';
+
+            grid.innerHTML = html || `
+                <div class="loading-message">
+                    No family tree data found yet.<br>
+                    <span class="muted">Loaded ${model.rosterCount || 0} players from the Players sheet, found ${model.relevantCount || 0} with FamilyTree_* links.</span><br>
+                    <span class="muted">${escapeHtml([colStatus, countStatus].filter(Boolean).join(' • '))}</span>
+                </div>
+            `;
+
+            // Draw lines after layout
+            requestAnimationFrame(() => {
+                layoutFamilyTree(engine, model);
+                updateZoomLayout();
+                redrawConnections(model);
+                if (highlightId) {
+                    const el = document.querySelector(`[data-person-key="${CSS.escape(highlightId)}"]`);
+                    // Wait one more frame so layout + zoom sizer have fully applied before we focus.
+                    requestAnimationFrame(() => {
+                        if (el) focusViewportOnNode(el, { behavior: 'auto' });
+                    });
+                }
+            });
+        }
+
+        async function initFamilies() {
+            const grid = document.getElementById('family-tree-grid');
+            try {
+                updateFamilyTreeStageMetrics();
+                const engine = new TournamentEngine();
+                // Family tree relies on Players sheet metadata that may change.
+                // Bypass local caches so we always pull latest Players roster columns.
+                await engine.loadFromGoogleSheets(sheetId, { bypassCache: true, preferCache: false });
+                const model = buildModel(engine);
+                currentModel = model;
+                // Debug hook (safe in prod): allows inspecting anchoring/layout in DevTools.
+                window.__familyTreeModel = model;
+                renderTree(engine, model);
+                updateFamilyTreeStageMetrics();
+                setupZoomControls();
+                updateZoomLayout();
+                window.addEventListener('resize', () => {
+                    updateFamilyTreeStageMetrics();
+                    updateZoomLayout();
+                    redrawConnections(model);
+                });
+            } catch (e) {
+                console.error(e);
+                if (grid) grid.innerHTML = `<div class="loading-message">Error loading family tree.</div>`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initFamilies);
+    </script>
+
+    <style>
+        .family-tree-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .family-tree-toolbar__left {
+            display: flex;
+            align-items: baseline;
+            gap: 0.6rem;
+            color: var(--text-primary-dark);
+        }
+
+        .family-tree-toolbar__value {
+            color: var(--text-secondary-dark);
+            font-weight: 800;
+        }
+
+        .family-tree-toolbar__right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .family-tree-stage {
+            /* Full-bleed, full-height stage under the sticky header */
+            position: relative;
+            width: 100vw;
+            margin-left: calc(50% - 50vw);
+            margin-right: calc(50% - 50vw);
+            height: calc(100vh - var(--family-tree-header-h, 120px));
+            min-height: 560px;
+            overflow: hidden;
+        }
+
+        .family-tree-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 30;
+            pointer-events: none; /* allow panning/scrolling the tree behind */
+            padding: 1.25rem 0 0.75rem;
+            overflow-y: auto; /* if warnings are long on small screens */
+        }
+
+        .family-tree-overlay__inner {
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+
+        .family-tree-overlay__hero {
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(34, 197, 94, 0.18);
+            border-radius: 18px;
+            box-shadow: 0 18px 36px rgba(0, 0, 0, 0.06);
+            padding: 1rem 1rem;
+            color: var(--text-primary-dark);
+            max-width: 760px;
+        }
+
+        .family-tree-overlay__hero .hero-title {
+            margin-bottom: 0.35rem;
+        }
+
+        .family-tree-overlay__hero .hero-subtitle {
+            margin-bottom: 0;
+            color: var(--text-secondary-dark);
+        }
+
+        .zoom-range {
+            width: 180px;
+            accent-color: var(--primary);
+        }
+
+        .zoom-btn {
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(26, 26, 26, 0.18);
+            border-radius: 10px;
+            padding: 0.35rem 0.65rem;
+            font-weight: 900;
+            cursor: pointer;
+            color: var(--text-primary-dark);
+        }
+
+        .zoom-btn--secondary {
+            font-weight: 800;
+        }
+
+        .family-tree-viewport {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.92);
+            border-top: 1px solid rgba(34, 197, 94, 0.14);
+            border-bottom: 1px solid rgba(34, 197, 94, 0.14);
+            border-radius: 0;
+            box-shadow: none;
+            /* Keep the tree content below the overlay (hero + controls) */
+            padding: calc(1.25rem + var(--family-tree-overlay-h, 0px) + 0.75rem) 1rem 1.25rem;
+            overflow: auto;
+            max-height: none;
+        }
+
+        .family-tree-zoom-sizer {
+            position: relative;
+        }
+
+        .family-tree-zoom-content {
+            position: relative;
+            transform-origin: 0 0;
+            display: inline-block;
+            width: max-content;
+        }
+
+        .family-tree-grid {
+            position: relative;
+            z-index: 2;
+            display: block;
+            width: max-content;
+            min-height: 420px;
+        }
+
+        .family-tree-lines {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .ft-line {
+            stroke: rgba(26, 26, 26, 0.28);
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .ft-line--dashed {
+            stroke-dasharray: 6 6;
+            stroke: rgba(59, 130, 246, 0.35);
+        }
+
+        .ft-line--partner {
+            stroke: rgba(26, 26, 26, 0.34);
+            stroke-width: 3;
+        }
+
+        @media (max-width: 768px) {
+            .family-tree-toolbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .zoom-range {
+                width: 160px;
+            }
+        }
+
+        .person-node {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.55rem 0.85rem;
+            border-radius: 999px;
+            background: #ffffff;
+            border: 2px solid rgba(34, 197, 94, 0.22);
+            color: var(--text-primary-dark);
+            font-weight: 850;
+            text-decoration: none;
+            box-shadow: 0 10px 18px rgba(0, 0, 0, 0.05);
+            transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+            position: absolute;
+            white-space: nowrap;
+            min-width: 160px;
+        }
+
+        .person-node:hover {
+            transform: translateY(-1px);
+            border-color: rgba(212, 175, 55, 0.65);
+            box-shadow: 0 14px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        .person-node.is-highlighted {
+            border-color: rgba(212, 175, 55, 0.95);
+            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.18), 0 16px 26px rgba(0, 0, 0, 0.10);
+        }
+
+        .family-tree-warnings {
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(245, 158, 11, 0.22);
+            border-radius: 16px;
+            padding: 1rem 1rem;
+            margin-bottom: 0;
+            box-shadow: 0 14px 24px rgba(0, 0, 0, 0.05);
+            color: var(--text-primary-dark);
+        }
+
+        .family-tree-warnings__title {
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+        }
+
+        .family-tree-warnings__list {
+            margin: 0;
+            padding-left: 1.2rem;
+        }
+
+        .family-tree-warnings code {
+            font-weight: 800;
+        }
+    </style>
 </body>
 </html>
-
-
