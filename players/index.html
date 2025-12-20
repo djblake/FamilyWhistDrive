@@ -264,6 +264,8 @@
             const playersHTML = players.map(player => {
                 const currentChampionIcon = player.isCurrentChampion ? ' 👑' : '';
                 const initials = player.name.split(' ').map(n => n[0]).join('');
+                const careerTricks = Math.floor(parseFloat(player.total_tricks) || 0).toLocaleString();
+                const profileHref = `profile.html?player=${encodeURIComponent(player.name)}`;
                 
                 return `
                     <tr class="player-row ${player.championships > 0 ? 'champion' : ''}">
@@ -276,7 +278,9 @@
                                     <span class="avatar-initials">${initials}</span>
                                 </div>
                                 <div class="player-details">
-                                    <div class="player-name">${player.name}${currentChampionIcon}</div>
+                                    <a class="player-name player-name-link" href="${profileHref}">
+                                        ${player.name}${currentChampionIcon}
+                                    </a>
                                     ${player.championships > 0 ? 
                                         `<div class="player-title">${player.championships}x Champion</div>` : 
                                         `<div class="player-title">Tournament Player</div>`
@@ -291,7 +295,7 @@
                             <span class="top-three-count">${player.top_three}</span>
                         </td>
                         <td class="tricks-cell">
-                            <span class="tricks-count">${player.total_tricks}</span>
+                            <span class="tricks-count">${careerTricks}</span>
                         </td>
                         <td class="tournaments-cell">
                             <span class="tournaments-count">${player.tournaments_played}</span>
@@ -303,7 +307,7 @@
                             <span class="year-number">${player.first_year}</span>
                         </td>
                         <td class="profile-cell">
-                            <a href="profile.html?player=${encodeURIComponent(player.name)}" class="profile-link">
+                            <a href="${profileHref}" class="profile-link">
                                 View Profile
                             </a>
                         </td>
@@ -665,6 +669,16 @@
             font-weight: 600;
             color: var(--text-primary-dark);
             margin-bottom: 2px;
+        }
+
+        .player-name-link {
+            display: inline-block;
+            text-decoration: none;
+            color: var(--text-primary-dark);
+        }
+
+        .player-name-link:hover {
+            text-decoration: underline;
         }
 
         .player-title {
