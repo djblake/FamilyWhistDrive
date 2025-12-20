@@ -78,6 +78,120 @@
     <script src="../assets/js/tournament-engine.js?v=cache22"></script>
     <script>
         const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+        // Family tree caching:
+        // - Cached roster is keyed by the *rawHash* (the same hash that changes when "Update data" refresh runs).
+        // - This means the cache automatically invalidates when you refresh the data, with no manual version bump.
+        const FAMILY_TREE_CACHE_SCHEMA = 1;
+        const FAMILY_TREE_CACHE_BASE = `whist_family_tree_roster:${sheetId}`;
+        const FAMILY_TREE_CACHE_LATEST_PTR = `${FAMILY_TREE_CACHE_BASE}:latestRawHash`;
+
+        const makeFamilyTreeCacheKey = (rawHash) => {
+            const rh = rawHash ? String(rawHash) : 'unknown';
+            return `${FAMILY_TREE_CACHE_BASE}:rawHash:${rh}:schema${FAMILY_TREE_CACHE_SCHEMA}`;
+        };
+
+        function loadFamilyTreeRosterCacheByKey(cacheKey) {
+            try {
+                if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return null;
+                const raw = localStorage.getItem(cacheKey);
+                if (!raw) return null;
+                const parsed = JSON.parse(raw);
+                if (!parsed || parsed.schema !== FAMILY_TREE_CACHE_SCHEMA) return null;
+                if (!Array.isArray(parsed.roster)) return null;
+                return parsed;
+            } catch (e) {
+                console.warn('Family tree cache read failed:', e);
+                return null;
+            }
+        }
+
+        function loadFamilyTreeRosterCacheLatest() {
+            try {
+                if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return null;
+                const rawHash = localStorage.getItem(FAMILY_TREE_CACHE_LATEST_PTR);
+                if (!rawHash) return null;
+                const key = makeFamilyTreeCacheKey(rawHash);
+                const payload = loadFamilyTreeRosterCacheByKey(key);
+                if (!payload) return null;
+                if (payload.rawHash && String(payload.rawHash) !== String(rawHash)) return null;
+                return { rawHash: String(rawHash), payload, key };
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function saveFamilyTreeRosterCache(engine, rawHash) {
+            try {
+                if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') return;
+                const roster = typeof engine.getPlayersRoster === 'function'
+                    ? engine.getPlayersRoster()
+                    : Array.from(engine.playersLookup?.values?.() || []);
+
+                const rh = rawHash ? String(rawHash) : null;
+                if (!rh) return;
+
+                const minimal = (roster || []).map(p => ({
+                    id: p.id,
+                    displayName: p.displayName || p.id,
+                    dateOfBirth: p.dateOfBirth || '',
+                    familyTreeParents: Array.isArray(p.familyTreeParents) ? p.familyTreeParents : [],
+                    familyTreeHadChildrenWith: Array.isArray(p.familyTreeHadChildrenWith) ? p.familyTreeHadChildrenWith : [],
+                    familyTreeIsPartneredWith: Array.isArray(p.familyTreeIsPartneredWith) ? p.familyTreeIsPartneredWith : [],
+                    familyTreeLinkedTo: Array.isArray(p.familyTreeLinkedTo) ? p.familyTreeLinkedTo : []
+                }));
+
+                const payload = {
+                    schema: FAMILY_TREE_CACHE_SCHEMA,
+                    rawHash: rh,
+                    savedAt: Date.now(),
+                    rosterCount: minimal.length,
+                    roster: minimal
+                };
+
+                const key = makeFamilyTreeCacheKey(rh);
+                localStorage.setItem(key, JSON.stringify(payload));
+                localStorage.setItem(FAMILY_TREE_CACHE_LATEST_PTR, rh);
+            } catch (e) {
+                // If storage is full or blocked, just skip caching.
+                console.warn('Family tree cache write failed:', e);
+            }
+        }
+
+        async function getCurrentRawHashForSheet(sheetId) {
+            // Best-effort: try to fetch current rawHash from the same sources TournamentEngine uses.
+            try {
+                const tmp = new TournamentEngine();
+                tmp.sheetId = sheetId;
+
+                // 1) Cloudflare KV manifest (production)
+                const manifest = await tmp.tryFetchJson(tmp.cacheInfo?.apiManifestUrl, { noStore: true });
+                if (manifest && manifest.rawHash) return String(manifest.rawHash);
+
+                // 2) Static assets cache (deploy-based)
+                const rawCache = await tmp.tryFetchJson(tmp.cacheInfo?.rawUrl, { noStore: true });
+                if (rawCache && rawCache.rawHash) return String(rawCache.rawHash);
+
+                // 3) Local IndexedDB cache (local dev)
+                if (typeof tmp.loadLocalRawCache === 'function') {
+                    const localRaw = await tmp.loadLocalRawCache(sheetId);
+                    if (localRaw && localRaw.rawHash) return String(localRaw.rawHash);
+                }
+
+                return null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function makeEngineFromCachedRoster(cached) {
+            const roster = Array.isArray(cached?.roster) ? cached.roster : [];
+            const byId = new Map(roster.map(p => [p.id, p]));
+            return {
+                playersSheetMeta: null,
+                getPlayersRoster: () => roster,
+                getDisplayName: (id) => byId.get(id)?.displayName || id
+            };
+        }
 
         function getHighlightedKey() {
             const params = new URLSearchParams(window.location.search);
@@ -1608,22 +1722,57 @@
             const grid = document.getElementById('family-tree-grid');
             try {
                 updateFamilyTreeStageMetrics();
-                const engine = new TournamentEngine();
-                // Family tree relies on Players sheet metadata that may change.
-                // Bypass local caches so we always pull latest Players roster columns.
-                await engine.loadFromGoogleSheets(sheetId, { bypassCache: true, preferCache: false });
-                const model = buildModel(engine);
-                currentModel = model;
-                // Debug hook (safe in prod): allows inspecting anchoring/layout in DevTools.
-                window.__familyTreeModel = model;
-                renderTree(engine, model);
+                const cachedLatest = loadFamilyTreeRosterCacheLatest();
+                let engine = null;
+
+                // Fast path: render immediately from cached roster (if available)
+                if (cachedLatest && cachedLatest.payload) {
+                    engine = makeEngineFromCachedRoster(cachedLatest.payload);
+                    const model = buildModel(engine);
+                    currentModel = model;
+                    window.__familyTreeModel = model;
+                    renderTree(engine, model);
+                }
+
+                // Determine whether cached roster is still valid by comparing rawHash (changes on Update Data refresh).
+                const currentRawHash = await getCurrentRawHashForSheet(sheetId);
+                const cachedRawHash = cachedLatest?.rawHash || (cachedLatest?.payload?.rawHash ? String(cachedLatest.payload.rawHash) : null);
+                const cacheIsValid = Boolean(currentRawHash && cachedRawHash && currentRawHash === cachedRawHash);
+
+                if (!engine || (currentRawHash && !cacheIsValid)) {
+                    // Load fresh data (prefer cache layers; falls back to Sheets when needed)
+                    const freshEngine = new TournamentEngine();
+                    await freshEngine.loadFromGoogleSheets(sheetId, { bypassCache: false, preferCache: true });
+
+                    // Cache roster keyed by the current rawHash (prefer manifest/raw cache hash; fall back to engine cache summary; last resort export)
+                    const fallbackHash =
+                        (freshEngine.loadedCacheSummary && freshEngine.loadedCacheSummary.rawHash)
+                            ? String(freshEngine.loadedCacheSummary.rawHash)
+                            : null;
+                    const exportHash = (() => {
+                        try {
+                            return String(freshEngine.exportRawCache()?.rawHash || '');
+                        } catch (e) {
+                            return '';
+                        }
+                    })();
+                    const rh = currentRawHash || fallbackHash || (exportHash || null);
+                    saveFamilyTreeRosterCache(freshEngine, rh);
+
+                    engine = freshEngine;
+                    const model = buildModel(engine);
+                    currentModel = model;
+                    window.__familyTreeModel = model;
+                    renderTree(engine, model);
+                }
+
                 updateFamilyTreeStageMetrics();
                 setupZoomControls();
                 updateZoomLayout();
                 window.addEventListener('resize', () => {
                     updateFamilyTreeStageMetrics();
                     updateZoomLayout();
-                    redrawConnections(model);
+                    if (currentModel) redrawConnections(currentModel);
                 });
             } catch (e) {
                 console.error(e);
@@ -1757,6 +1906,15 @@
             display: block;
             width: max-content;
             min-height: 420px;
+        }
+
+        /* Ensure loading/error text is readable on the white stage */
+        .family-tree-stage .loading-message {
+            color: var(--text-primary-dark);
+        }
+
+        .family-tree-stage .loading-message .muted {
+            color: var(--text-secondary-dark);
         }
 
         .family-tree-lines {
