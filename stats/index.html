@@ -539,17 +539,19 @@
             }
 
             const allowedKeys = new Set(rankings.map(p => p.partnership));
+            const rankingByKey = new Map(rankings.map(p => [p.partnership, p]));
 
-            // Best suit per partnership (avg tricks/round for that suit)
-            const suitIcons = { Hearts: '♥', Diamonds: '♦', Clubs: '♣', Spades: '♠' };
-            const suitAgg = new Map(); // key -> suit -> {tricks, rounds}
+            // Win rate per partnership (wins = 7+ tricks; shared hands excluded)
+            const winAggByKey = new Map(); // key -> {wins, played, games:[{year,round,table,isWin}]}
             for (const t of engine.tournaments.values()) {
                 if (!t || !Array.isArray(t.rounds)) continue;
+                const year = Number.isFinite(t.year) ? t.year : (Number.isFinite(t.Year) ? t.Year : parseInt(t.year || t.Year || '0'));
                 for (const r of t.rounds) {
-                    const suit = r && r.trump_suit ? r.trump_suit : null;
-                    if (!suit || !Array.isArray(r.tables)) continue;
+                    if (!r || !Array.isArray(r.tables)) continue;
+                    const roundNum = Number.isFinite(r.round) ? r.round : (Number.isFinite(r.Round) ? r.Round : parseInt(r.round || r.Round || '0'));
                     for (const table of r.tables) {
                         if (!table || !Array.isArray(table.partnerships)) continue;
+                        const tableNum = Number.isFinite(table.table) ? table.table : parseInt(table.table || table.Table || '0');
                         for (const p of table.partnerships) {
                             const pos1IsShared = p.position1 && p.position1.length > 1;
                             const pos2IsShared = p.position2 && p.position2.length > 1;
@@ -559,35 +561,27 @@
                             if (!a || !b) continue;
                             const key = [a, b].sort().join(' & ');
                             if (!allowedKeys.has(key)) continue;
-                            if (!suitAgg.has(key)) suitAgg.set(key, new Map());
-                            const bySuit = suitAgg.get(key);
-                            if (!bySuit.has(suit)) bySuit.set(suit, { tricks: 0, rounds: 0 });
-                            const rec = bySuit.get(suit);
                             const tricks = Number.isFinite(p.tricks) ? p.tricks : parseFloat(p.tricks);
                             if (!Number.isFinite(tricks)) continue;
-                            rec.tricks += tricks;
-                            rec.rounds += 1;
+                            if (!winAggByKey.has(key)) winAggByKey.set(key, { wins: 0, played: 0, games: [] });
+                            const rec = winAggByKey.get(key);
+                            rec.played += 1;
+                            const isWin = tricks >= 7;
+                            if (isWin) rec.wins += 1;
+                            rec.games.push({
+                                year: Number.isFinite(year) ? year : 0,
+                                round: Number.isFinite(roundNum) ? roundNum : 0,
+                                table: Number.isFinite(tableNum) ? tableNum : 0,
+                                isWin
+                            });
                         }
                     }
                 }
             }
 
-            const bestSuitByKey = new Map(); // key -> {suit, avg}
-            for (const [key, bySuit] of suitAgg.entries()) {
-                let best = null;
-                for (const [suit, rec] of bySuit.entries()) {
-                    if (!rec.rounds) continue;
-                    const avg = rec.tricks / rec.rounds;
-                    if (!Number.isFinite(avg)) continue;
-                    if (!best || avg > best.avg) best = { suit, avg };
-                }
-                if (best) bestSuitByKey.set(key, best);
-            }
-
             const bestAvg = rankings[0];
             const mostRounds = rankings.reduce((best, cur) => (cur.total_rounds > best.total_rounds ? cur : best), rankings[0]);
-            const mostTricks = rankings.reduce((best, cur) => (cur.total_tricks > best.total_tricks ? cur : best), rankings[0]);
-            const mostOften = rankings.reduce((best, cur) => (cur.partnerships_count > best.partnerships_count ? cur : best), rankings[0]);
+            // (Dropped: most tricks together, most frequent pairing)
 
             const fmtPair = (p) => {
                 const p0 = escapeHtml(p.players[0]);
@@ -598,6 +592,87 @@
                     <a href="../players/profile.html?player=${encodeURIComponent(p.players[1])}" class="player-name-link">${p1}</a>
                 `;
             };
+
+            // Streak metrics per partnership (shared hands excluded)
+            const metricsByKey = new Map(); // key -> {wins, played, winPct, longestWinStreak, longestLoseStreak, currentWinStreak, currentLoseStreak}
+            for (const key of allowedKeys.values()) {
+                const rec = winAggByKey.get(key) || { wins: 0, played: 0, games: [] };
+                const played = Number.isFinite(rec.played) ? rec.played : 0;
+                const wins = Number.isFinite(rec.wins) ? rec.wins : 0;
+                const winPct = played > 0 ? (wins / played) : null;
+                const games = Array.isArray(rec.games) ? rec.games.slice() : [];
+                games.sort((a, b) => (a.year - b.year) || (a.round - b.round) || (a.table - b.table));
+
+                let longestWinStreak = 0;
+                let longestLoseStreak = 0;
+                let w = 0;
+                let l = 0;
+                for (const g of games) {
+                    if (g && g.isWin) {
+                        w += 1;
+                        if (w > longestWinStreak) longestWinStreak = w;
+                        l = 0;
+                    } else {
+                        w = 0;
+                        l += 1;
+                        if (l > longestLoseStreak) longestLoseStreak = l;
+                    }
+                }
+
+                let currentWinStreak = 0;
+                let currentLoseStreak = 0;
+                if (games.length) {
+                    const lastIsWin = !!games[games.length - 1].isWin;
+                    for (let i = games.length - 1; i >= 0; i--) {
+                        const isWin = !!games[i].isWin;
+                        if (isWin !== lastIsWin) break;
+                        if (lastIsWin) currentWinStreak += 1;
+                        else currentLoseStreak += 1;
+                    }
+                }
+
+                metricsByKey.set(key, {
+                    wins,
+                    played,
+                    winPct,
+                    longestWinStreak,
+                    longestLoseStreak,
+                    currentWinStreak,
+                    currentLoseStreak
+                });
+            }
+
+            const renderTies = (keys, cap = 6) => {
+                const list = (keys || []).map(k => rankingByKey.get(k)).filter(Boolean);
+                if (!list.length) return '—';
+                const shown = list.slice(0, cap);
+                const more = list.length - shown.length;
+                return `${shown.map(p => fmtPair(p)).join(', ')}${more > 0 ? ` <span class="muted-inline">(+${more} more)</span>` : ''}`;
+            };
+
+            const invinciblesKeys = Array.from(metricsByKey.entries())
+                .filter(([, m]) => (m.played || 0) >= MIN_PAIRINGS && (m.winPct === 1))
+                .sort((a, b) => (b[1].played - a[1].played));
+            const invincibleMax = invinciblesKeys.length ? invinciblesKeys[0][1].played : 0;
+            const invincibleTies = invincibleMax > 0 ? invinciblesKeys.filter(([, m]) => m.played === invincibleMax).map(([k]) => k) : [];
+
+            const bestLongestWin = Math.max(0, ...Array.from(metricsByKey.values()).map(m => (m.played >= MIN_PAIRINGS ? (m.longestWinStreak || 0) : 0)));
+            const bestLongestLose = Math.max(0, ...Array.from(metricsByKey.values()).map(m => (m.played >= MIN_PAIRINGS ? (m.longestLoseStreak || 0) : 0)));
+            const bestCurrentWin = Math.max(0, ...Array.from(metricsByKey.values()).map(m => (m.played >= MIN_PAIRINGS ? (m.currentWinStreak || 0) : 0)));
+            const bestCurrentLose = Math.max(0, ...Array.from(metricsByKey.values()).map(m => (m.played >= MIN_PAIRINGS ? (m.currentLoseStreak || 0) : 0)));
+
+            const longestWinKeys = bestLongestWin > 0
+                ? Array.from(metricsByKey.entries()).filter(([k, m]) => m.played >= MIN_PAIRINGS && (m.longestWinStreak || 0) === bestLongestWin).map(([k]) => k)
+                : [];
+            const longestLoseKeys = bestLongestLose > 0
+                ? Array.from(metricsByKey.entries()).filter(([k, m]) => m.played >= MIN_PAIRINGS && (m.longestLoseStreak || 0) === bestLongestLose).map(([k]) => k)
+                : [];
+            const currentWinKeys = bestCurrentWin > 0
+                ? Array.from(metricsByKey.entries()).filter(([k, m]) => m.played >= MIN_PAIRINGS && (m.currentWinStreak || 0) === bestCurrentWin).map(([k]) => k)
+                : [];
+            const currentLoseKeys = bestCurrentLose > 0
+                ? Array.from(metricsByKey.entries()).filter(([k, m]) => m.played >= MIN_PAIRINGS && (m.currentLoseStreak || 0) === bestCurrentLose).map(([k]) => k)
+                : [];
 
             insights.innerHTML = `
                 <div class="insight-card">
@@ -611,29 +686,46 @@
                     <div class="insight-detail">${fmtPair(mostRounds)}</div>
                 </div>
                 <div class="insight-card">
-                    <div class="insight-kicker">Most tricks together</div>
-                    <div class="insight-value">${mostTricks.total_tricks.toLocaleString()}</div>
-                    <div class="insight-detail">${fmtPair(mostTricks)} • ${mostTricks.total_rounds} rounds</div>
+                    <div class="insight-kicker">The Invincibles</div>
+                    <div class="insight-value">${invincibleMax ? invincibleMax.toLocaleString() : '—'} <span class="insight-unit">wins</span></div>
+                    <div class="insight-detail">${invincibleMax ? `${renderTies(invincibleTies)} • 100% win record` : `No partnerships with 100% win record (min ${MIN_PAIRINGS})`}</div>
                 </div>
                 <div class="insight-card">
-                    <div class="insight-kicker">Most frequent pairing</div>
-                    <div class="insight-value">${mostOften.partnerships_count.toLocaleString()}</div>
-                    <div class="insight-detail">${fmtPair(mostOften)}</div>
+                    <div class="insight-kicker">Longest win streak</div>
+                    <div class="insight-value">${bestLongestWin ? bestLongestWin : '—'}</div>
+                    <div class="insight-detail">${bestLongestWin ? renderTies(longestWinKeys) : `—`}</div>
+                </div>
+                <div class="insight-card">
+                    <div class="insight-kicker">Longest losing streak</div>
+                    <div class="insight-value">${bestLongestLose ? bestLongestLose : '—'}</div>
+                    <div class="insight-detail">${bestLongestLose ? renderTies(longestLoseKeys) : `—`}</div>
+                </div>
+                <div class="insight-card">
+                    <div class="insight-kicker">Current longest win streak</div>
+                    <div class="insight-value">${bestCurrentWin ? bestCurrentWin : '—'}</div>
+                    <div class="insight-detail">${bestCurrentWin ? renderTies(currentWinKeys) : `—`}</div>
+                </div>
+                <div class="insight-card">
+                    <div class="insight-kicker">Current longest losing streak</div>
+                    <div class="insight-value">${bestCurrentLose ? bestCurrentLose : '—'}</div>
+                    <div class="insight-detail">${bestCurrentLose ? renderTies(currentLoseKeys) : `—`}</div>
                 </div>
             `;
 
             const rows = rankings.slice(0, 10).map((p, idx) => {
-                const bestSuit = bestSuitByKey.get(p.partnership);
-                const suitIcon = bestSuit ? (suitIcons[bestSuit.suit] || bestSuit.suit) : '—';
-                const suitClass = bestSuit && (bestSuit.suit === 'Hearts' || bestSuit.suit === 'Diamonds') ? 'suit--red' : 'suit--dark';
-                const suitText = bestSuit ? `${suitIcon} ${bestSuit.avg.toFixed(2)}` : '—';
+                const winAgg = winAggByKey.get(p.partnership) || { wins: 0, played: Number(p.partnerships_count) || 0 };
+                const played = Number.isFinite(winAgg.played) ? winAgg.played : 0;
+                const wins = Number.isFinite(winAgg.wins) ? winAgg.wins : 0;
+                const winRateText = played > 0 ? `${Math.round((wins / played) * 100)}%` : '—';
+                const gamesHref = `../players/partnership-games.html?player=${encodeURIComponent(p.players[0])}&partner=${encodeURIComponent(p.players[1])}`;
                 return `
                     <tr>
                         <td class="rank-column">${idx + 1}</td>
                         <td class="partnership-column"><div class="partnership-names">${fmtPair(p)}</div></td>
                         <td class="avg-tricks-column">${p.average_tricks.toFixed(2)}</td>
-                        <td class="best-suit-column"><span class="suit-pill ${suitClass}">${suitText}</span></td>
+                        <td class="win-rate-column">${winRateText} <span class="muted-inline">(${wins}/${played})</span></td>
                         <td class="count-column">${p.partnerships_count.toLocaleString()}</td>
+                        <td class="cta-column"><a class="cta-link" href="${gamesHref}">See all games</a></td>
                     </tr>
                 `;
             }).join('');
@@ -646,8 +738,9 @@
                                 <th class="rank-column">Rank</th>
                                 <th class="partnership-column">Partnership</th>
                                 <th class="avg-tricks-column">Avg tricks/round</th>
-                                <th class="best-suit-column">Best suit</th>
+                                <th class="win-rate-column">Win rate</th>
                                 <th class="count-column">Times paired</th>
+                                <th class="cta-column"></th>
                             </tr>
                         </thead>
                         <tbody>${rows}</tbody>
@@ -1403,8 +1496,8 @@
             background: white;
             border-radius: var(--border-radius-lg);
             overflow: hidden;
-            box-shadow: var(--shadow-lg);
-            border: 2px solid var(--border-light);
+            box-shadow: var(--shadow-card);
+            border: 1px solid rgba(15, 23, 42, 0.08);
         }
 
         .partnership-table {
@@ -1412,25 +1505,33 @@
             border-collapse: collapse;
         }
 
+        .partnership-table th,
+        .partnership-table td {
+            padding: 0.85rem 0.95rem;
+        }
+
         .partnership-table th {
-            background: var(--primary);
-            color: white;
-            padding: var(--spacing-lg);
+            background: linear-gradient(135deg, #f8f9fa 0%, #eef2f7 100%);
+            color: var(--text-primary-dark);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.10);
             text-align: left;
-            font-weight: 600;
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: none;
+            letter-spacing: normal;
         }
 
         .partnership-table td {
-            padding: var(--spacing-lg);
-            border-bottom: 1px solid var(--border-light);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
             color: var(--text-primary-dark);
         }
 
+        .partnership-table tbody tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
         .partnership-table tbody tr:hover {
-            background: var(--bg-secondary);
+            background: rgba(34, 197, 94, 0.08);
         }
 
         .partnership-names {
@@ -1445,9 +1546,9 @@
         }
 
         .player-name-link {
-            color: var(--primary);
+            color: var(--primary-dark);
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 800;
             transition: all 0.2s ease;
         }
 
@@ -1458,8 +1559,8 @@
 
         .rank-column {
             text-align: center;
-            font-weight: 600;
-            color: var(--primary);
+            font-weight: 800;
+            color: var(--text-primary-dark);
             width: 60px;
         }
 
@@ -1468,30 +1569,33 @@
             font-weight: 500;
         }
 
-        .best-suit-column {
+        .win-rate-column {
             text-align: center;
-            font-weight: 600;
-            width: 120px;
+            font-weight: 700;
+            width: 140px;
         }
 
-        .suit-pill {
+        .cta-column {
+            text-align: right;
+            width: 160px;
+        }
+
+        .cta-link {
             display: inline-flex;
             align-items: center;
-            gap: 0.35rem;
-            padding: 0.25rem 0.6rem;
-            border-radius: var(--border-radius-full);
-            border: 1px solid var(--border-light);
-            background: rgba(0, 0, 0, 0.02);
+            justify-content: center;
+            padding: 0.45rem 0.85rem;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.14);
+            background: rgba(15, 23, 42, 0.04);
+            color: var(--primary-dark);
             font-weight: 800;
-            font-size: 0.9rem;
+            text-decoration: none;
+            white-space: nowrap;
         }
 
-        .suit--red {
-            color: #dc2626;
-        }
-
-        .suit--dark {
-            color: var(--text-primary-dark);
+        .cta-link:hover {
+            text-decoration: underline;
         }
 
         /* Family Statistics Styles */
