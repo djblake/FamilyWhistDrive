@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partnerships | Ruston Family Whist Drive</title>
+    <meta name="description" content="All partnerships for a Whist player, ranked by average tricks per round.">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
+                    <h1 class="site-title">Ruston Family Whist Drive</h1>
+                    <p class="site-subtitle">Est. 1984 • The World's Most Elite Family Tournament</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="../" class="nav-link">Home</a>
+                    <a href="../tournaments/" class="nav-link">Tournaments</a>
+                    <a href="./" class="nav-link active">Players</a>
+                    <a href="../leaderboard/" class="nav-link">Hall of Fame</a>
+                    <a href="../stats/" class="nav-link">Statistics</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="players-table-section">
+            <div class="container">
+                <div class="page-nav">
+                    <a class="back-link" id="back-to-profile" href="./">← Back to profile</a>
+                </div>
+
+                <div class="page-head">
+                    <h2 class="section-title light">
+                        <span class="title-icon">🤝</span>
+                        Partnerships
+                    </h2>
+
+                    <div class="page-head-row">
+                        <div class="player-title-big" id="player-title-big">Loading…</div>
+                    </div>
+
+                    <div class="page-subtitle-row">
+                        <p class="page-subtitle" id="page-subtitle">Loading…</p>
+                        <div class="page-tools">
+                            <label class="sample-filter-toggle sample-filter-toggle--dark" for="filter-min-4">
+                                <input type="checkbox" id="filter-min-4">
+                                <span class="sample-filter-toggle__text">Exclude partners with low sample size</span>
+                                <span class="sample-filter-toggle__hint">(4+ non-shared pairings)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="players-table" id="partnerships-table">
+                        <colgroup>
+                            <col style="width: 18rem">
+                            <col style="width: 8.5rem">
+                            <col style="width: 9rem">
+                            <col style="width: 13rem">
+                            <col style="width: 9rem">
+                            <col style="width: 11.5rem">
+                            <col style="width: 11.5rem">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-column="partner">
+                                    <span class="header-content">
+                                        <span class="header-text">Partner</span>
+                                        <span class="sort-arrow">↕️</span>
+                                    </span>
+                                </th>
+                                <th class="sortable" data-column="avg">
+                                    <span class="header-content">
+                                        <span class="header-text">Avg / round</span>
+                                        <span class="sort-arrow">↕️</span>
+                                    </span>
+                                </th>
+                                <th class="sortable" data-column="timesPaired">
+                                    <span class="header-content">
+                                        <span class="header-text">Times paired</span>
+                                        <span class="sort-arrow">↕️</span>
+                                    </span>
+                                </th>
+                                <th class="sortable" data-column="timesPairedAll">
+                                    <span class="header-content">
+                                        <span class="header-text">Times paired (incl shared)</span>
+                                        <span class="sort-arrow">↕️</span>
+                                    </span>
+                                </th>
+                                <th class="sortable" data-column="winPct">
+                                    <span class="header-content">
+                                        <span class="header-text">Win %</span>
+                                        <span class="sort-arrow">↕️</span>
+                                    </span>
+                                </th>
+                                <th class="sortable" data-column="currentWinStreak">
+                                    <span class="header-content">
+                                        <span class="header-text">Current win streak</span>
+                                        <span class="sort-arrow">↕️</span>
+                                    </span>
+                                </th>
+                                <th>
+                                    <span class="header-content">
+                                        <span class="header-text"></span>
+                                    </span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="partnerships-tbody">
+                            <tr>
+                                <td colspan="7" style="text-align:center; padding: 2rem; color: #666;">
+                                    Loading partnerships…
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Player Stats</h4>
+                    <p><a href="./">All Players</a></p>
+                    <p><a href="../leaderboard/">Rankings</a></p>
+                </div>
+                <div class="footer-section">
+                    <h4>Navigation</h4>
+                    <p><a href="../tournaments/">Tournament Archive</a></p>
+                    <p><a href="../families/">Family Tree</a></p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../assets/js/tournament-engine.js?v=cache1"></script>
+    <script>
+        function getParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        function computePartnershipSummaries(engine, playerId) {
+            const byPartner = new Map(); // partnerId -> { gamesTogether, timesPaired, tricksPaired, normalWins, pairedGames }
+
+            const add = (partnerId, tricks, isNormalPairing, isWin, meta) => {
+                if (!partnerId) return;
+                if (!byPartner.has(partnerId)) {
+                    byPartner.set(partnerId, {
+                        partnerId,
+                        gamesTogether: 0,
+                        timesPaired: 0, // non-shared pairings only
+                        tricksPaired: 0, // non-shared pairings only
+                        normalWins: 0, // non-shared pairings only
+                        pairedGames: [] // non-shared only: {year, round, table, isWin}
+                    });
+                }
+                const rec = byPartner.get(partnerId);
+                rec.gamesTogether += 1;
+                if (isNormalPairing) {
+                    rec.timesPaired += 1;
+                    rec.tricksPaired += tricks;
+                    if (isWin) rec.normalWins += 1;
+                    if (meta && Number.isFinite(meta.year)) {
+                        rec.pairedGames.push({
+                            year: meta.year,
+                            round: Number.isFinite(meta.round) ? meta.round : 0,
+                            table: Number.isFinite(meta.table) ? meta.table : 0,
+                            isWin: !!isWin
+                        });
+                    }
+                }
+            };
+
+            for (const t of engine.tournaments.values()) {
+                if (!t || !Array.isArray(t.rounds)) continue;
+                const year = Number.isFinite(t.year)
+                    ? t.year
+                    : (Number.isFinite(t.Year) ? t.Year : parseInt(t.year || t.Year || '0'));
+                for (const r of t.rounds) {
+                    if (!r || !Array.isArray(r.tables)) continue;
+                    const roundNum = Number.isFinite(r.round)
+                        ? r.round
+                        : (Number.isFinite(r.Round) ? r.Round : parseInt(r.round || r.Round || '0'));
+                    for (const table of r.tables) {
+                        const tableNum = Number.isFinite(table.table)
+                            ? table.table
+                            : parseInt(table.table || table.Table || '0');
+                        const partnerships = table && Array.isArray(table.partnerships) ? table.partnerships : [];
+                        for (const p of partnerships) {
+                            if (!p || !Array.isArray(p.position1) || !Array.isArray(p.position2)) continue;
+                            const sidePlayers = Array.from(new Set([...(p.position1 || []), ...(p.position2 || [])])).filter(Boolean);
+                            if (!sidePlayers.includes(playerId)) continue;
+                            const tricks = Number.isFinite(p.tricks) ? p.tricks : parseFloat(p.tricks);
+                            if (!Number.isFinite(tricks)) continue;
+                            const isNormalPairing = (p.position1.length === 1 && p.position2.length === 1 && sidePlayers.length === 2);
+                            const isWin = tricks >= 7;
+                            sidePlayers.forEach(otherId => {
+                                if (otherId === playerId) return;
+                                add(otherId, tricks, isNormalPairing, isWin, { year, round: roundNum, table: tableNum });
+                            });
+                        }
+                    }
+                }
+            }
+
+            const results = Array.from(byPartner.values()).map(rec => {
+                const avg = rec.timesPaired > 0 ? (rec.tricksPaired / rec.timesPaired) : null;
+                const winPct = rec.timesPaired > 0 ? (rec.normalWins / rec.timesPaired) : null;
+                const sortedGames = (rec.pairedGames || []).slice().sort((a, b) =>
+                    (a.year - b.year) || (a.round - b.round) || (a.table - b.table)
+                );
+                let currentWinStreak = null;
+                if (rec.timesPaired > 0) {
+                    currentWinStreak = 0;
+                    for (let i = sortedGames.length - 1; i >= 0; i--) {
+                        const g = sortedGames[i];
+                        if (g && g.isWin) currentWinStreak += 1;
+                        else break;
+                    }
+                }
+                return {
+                    partnerId: rec.partnerId,
+                    avg,
+                    timesPaired: rec.timesPaired,
+                    timesPairedAll: rec.gamesTogether,
+                    wins: rec.normalWins,
+                    winPct,
+                    currentWinStreak
+                };
+            });
+
+            return results;
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            const playerId = getParam('player');
+            if (!playerId) {
+                window.location.href = './';
+                return;
+            }
+
+            const engine = new TournamentEngine();
+            window.tournamentEngine = engine;
+            const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+
+            try {
+                await engine.loadFromGoogleSheets(sheetId);
+
+                const fullName = (engine && typeof engine.getPlayerFullName === 'function')
+                    ? engine.getPlayerFullName(playerId)
+                    : playerId;
+
+                document.title = `${fullName} – Partnerships | Ruston Family Whist Drive`;
+                const subtitle = document.getElementById('page-subtitle');
+                if (subtitle) subtitle.textContent = `All partners for ${fullName}, ranked by avg tricks/round.`;
+                const big = document.getElementById('player-title-big');
+                if (big) big.textContent = fullName;
+                const back = document.getElementById('back-to-profile');
+                if (back) back.href = `profile.html?player=${encodeURIComponent(playerId)}`;
+
+                let data = computePartnershipSummaries(engine, playerId);
+
+                // Default sort: avg desc
+                let currentSort = { column: 'avg', direction: 'desc' };
+
+                const displayName = (id) => (engine && typeof engine.getDisplayName === 'function') ? engine.getDisplayName(id) : id;
+
+                const filterMin4El = document.getElementById('filter-min-4');
+                const getView = () => {
+                    const min4 = !!(filterMin4El && filterMin4El.checked);
+                    return min4 ? data.filter(d => (d.timesPaired || 0) >= 4) : data.slice();
+                };
+
+                const sortData = (view) => {
+                    const dir = currentSort.direction === 'asc' ? 1 : -1;
+                    view.sort((a, b) => {
+                        if (currentSort.column === 'partner') {
+                            return dir * displayName(a.partnerId).localeCompare(displayName(b.partnerId));
+                        }
+                        if (currentSort.column === 'timesPaired') {
+                            const aAvg = Number.isFinite(a.avg) ? a.avg : -1;
+                            const bAvg = Number.isFinite(b.avg) ? b.avg : -1;
+                            return dir * ((a.timesPaired || 0) - (b.timesPaired || 0)) || (-1 * (aAvg - bAvg));
+                        }
+                        if (currentSort.column === 'timesPairedAll') {
+                            const aAvg = Number.isFinite(a.avg) ? a.avg : -1;
+                            const bAvg = Number.isFinite(b.avg) ? b.avg : -1;
+                            return dir * ((a.timesPairedAll || 0) - (b.timesPairedAll || 0)) || (-1 * (aAvg - bAvg));
+                        }
+                        if (currentSort.column === 'winPct') {
+                            const aV = Number.isFinite(a.winPct) ? a.winPct : -1;
+                            const bV = Number.isFinite(b.winPct) ? b.winPct : -1;
+                            const aAvg = Number.isFinite(a.avg) ? a.avg : -1;
+                            const bAvg = Number.isFinite(b.avg) ? b.avg : -1;
+                            return dir * (aV - bV) || (-1 * (aAvg - bAvg));
+                        }
+                        if (currentSort.column === 'currentWinStreak') {
+                            const aV = Number.isFinite(a.currentWinStreak) ? a.currentWinStreak : -1;
+                            const bV = Number.isFinite(b.currentWinStreak) ? b.currentWinStreak : -1;
+                            const aAvg = Number.isFinite(a.avg) ? a.avg : -1;
+                            const bAvg = Number.isFinite(b.avg) ? b.avg : -1;
+                            return dir * (aV - bV) || (-1 * (aAvg - bAvg));
+                        }
+                        // avg
+                        const aAvg = Number.isFinite(a.avg) ? a.avg : -1;
+                        const bAvg = Number.isFinite(b.avg) ? b.avg : -1;
+                        return dir * (aAvg - bAvg) || (-1 * ((a.timesPaired || 0) - (b.timesPaired || 0)));
+                    });
+                };
+
+                const render = () => {
+                    const tbody = document.getElementById('partnerships-tbody');
+                    if (!tbody) return;
+                    const view = getView();
+                    if (!view.length) {
+                        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 2rem; color:#666;">No partnership games found yet.</td></tr>`;
+                        return;
+                    }
+
+                    sortData(view);
+
+                    tbody.innerHTML = view.map(row => {
+                        const partnerName = escapeHtml(displayName(row.partnerId));
+                        const partnerHref = `profile.html?player=${encodeURIComponent(row.partnerId)}`;
+                        const gamesHref = `partnership-games.html?player=${encodeURIComponent(playerId)}&partner=${encodeURIComponent(row.partnerId)}`;
+                        const hasWin = Number.isFinite(row.winPct) && (row.timesPaired || 0) > 0;
+                        const winPctText = hasWin ? `${Math.round(row.winPct * 100)}%` : '—';
+                        const winDetail = hasWin ? `<span class="muted-cell">(${row.wins}/${row.timesPaired})</span>` : '';
+                        const avgText = Number.isFinite(row.avg) ? row.avg.toFixed(2) : '—';
+                        const streakText = Number.isFinite(row.currentWinStreak) ? String(row.currentWinStreak) : '—';
+                        return `
+                            <tr>
+                                <td>
+                                    <a class="player-name-link" href="${partnerHref}">${partnerName}</a>
+                                </td>
+                                <td class="num">${avgText}</td>
+                                <td class="num">${row.timesPaired}</td>
+                                <td class="num">${row.timesPairedAll}</td>
+                                <td class="num win-cell">${winPctText} ${winDetail}</td>
+                                <td class="num">${streakText}</td>
+                                <td class="cta">
+                                    <a class="profile-link" href="${gamesHref}">See all games</a>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                };
+
+                render();
+
+                document.querySelectorAll('.sortable').forEach(header => {
+                    header.addEventListener('click', function() {
+                        const col = this.dataset.column;
+                        if (!col) return;
+                        if (currentSort.column === col) {
+                            currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                        } else {
+                            currentSort.column = col;
+                            currentSort.direction = (col === 'partner') ? 'asc' : 'desc';
+                        }
+                        render();
+                    });
+                });
+
+                if (filterMin4El) {
+                    filterMin4El.addEventListener('change', render);
+                }
+            } catch (e) {
+                console.error(e);
+                const tbody = document.getElementById('partnerships-tbody');
+                if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 2rem; color:#666;">Error loading partnerships.</td></tr>`;
+            }
+        });
+    </script>
+
+    <style>
+        .players-table-section {
+            padding: var(--spacing-3xl) 0;
+            background: var(--bg-secondary);
+        }
+
+        .section-title.light {
+            color: var(--text-primary);
+        }
+
+        .page-nav {
+            display: flex;
+            justify-content: flex-start;
+            margin-bottom: 0.85rem;
+        }
+
+        .page-head {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .page-head-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 0.45rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .page-subtitle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 0.65rem;
+        }
+
+        .page-tools {
+            display: flex;
+            justify-content: flex-end;
+            flex: 0 0 auto;
+        }
+
+        .player-title-big {
+            font-family: var(--font-primary);
+            font-weight: 900;
+            font-size: 2.4rem;
+            line-height: 1.05;
+            color: var(--text-primary);
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+
+        .page-subtitle {
+            margin: 0;
+            color: var(--text-secondary);
+            font-weight: 700;
+            max-width: 60rem;
+            flex: 1 1 auto;
+        }
+
+        /* Hall-of-fame style toggle */
+        .sample-filter-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary-dark);
+            user-select: none;
+        }
+
+        .sample-filter-toggle input {
+            accent-color: var(--primary);
+        }
+
+        .sample-filter-toggle__text {
+            font-weight: 600;
+            color: var(--text-primary-dark);
+        }
+
+        .sample-filter-toggle__hint {
+            color: var(--text-secondary-dark);
+            opacity: 0.85;
+            font-weight: 500;
+        }
+
+        .sample-filter-toggle--dark {
+            color: var(--text-secondary);
+        }
+
+        .sample-filter-toggle--dark .sample-filter-toggle__text {
+            color: var(--text-primary);
+        }
+
+        .sample-filter-toggle--dark .sample-filter-toggle__hint {
+            color: var(--text-secondary);
+            opacity: 0.9;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-weight: 800;
+            padding: 0.75rem 1.1rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            background: rgba(255, 255, 255, 0.10);
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Table readability */
+        .table-container {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-card);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        .players-table {
+            font-size: 0.95rem;
+            background: white;
+            width: 100%;
+            table-layout: auto;
+        }
+
+        .players-table th,
+        .players-table td {
+            padding: 1rem 1.05rem;
+        }
+
+        .players-table th {
+            background: linear-gradient(135deg, #f8f9fa 0%, #eef2f7 100%);
+            color: var(--text-primary-dark);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.10);
+        }
+
+        .players-table td {
+            color: var(--text-primary-dark);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+        }
+
+        .players-table tbody tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        .players-table tbody tr:hover {
+            background: rgba(34, 197, 94, 0.08);
+        }
+
+        .muted-cell {
+            color: var(--text-secondary-dark);
+            font-weight: 700;
+        }
+
+        .win-cell .muted-cell {
+            margin-left: 0.25rem;
+            font-weight: 700;
+        }
+
+        .suit {
+            font-weight: 900;
+        }
+
+        .suit--red {
+            color: #dc2626;
+        }
+
+        .suit--dark {
+            color: var(--text-primary-dark);
+        }
+
+        .player-name-link {
+            color: var(--primary-dark);
+            font-weight: 900;
+            display: inline-block;
+            max-width: 18rem;
+            white-space: normal;
+        }
+
+        .profile-link {
+            color: var(--primary-dark);
+            font-weight: 900;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 0.9rem;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.14);
+            background: rgba(15, 23, 42, 0.04);
+        }
+
+        .profile-link:hover {
+            color: var(--primary-dark);
+        }
+
+        .num {
+            text-align: center;
+            font-weight: 800;
+        }
+
+        .cta {
+            text-align: right;
+        }
+
+        .players-table td.cta,
+        .players-table th.cta {
+            min-width: 160px;
+        }
+
+        @media (max-width: 720px) {
+            .player-name-link {
+                max-width: 12.5rem;
+            }
+        }
+    </style>
+</body>
+</html>

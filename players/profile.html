@@ -132,6 +132,19 @@
 
                     <div class="stats-section">
                         <h3 class="section-title">
+                            <span class="title-icon">🤝</span>
+                            Partnerships
+                        </h3>
+                        <div class="meta-grid" id="partnership-stats">
+                            <div class="loading-message">Loading partnership statistics...</div>
+                        </div>
+                        <a class="partnership-cta" id="see-all-partnerships" href="#">
+                            See all partnerships
+                        </a>
+                    </div>
+
+                    <div class="stats-section">
+                        <h3 class="section-title">
                             <span class="title-icon">🃏</span>
                             Trump Suit Performance
                         </h3>
@@ -411,12 +424,19 @@
                 document.getElementById('current-ranking').textContent = seedRankText;
                 
                 document.getElementById('tournament-victories').textContent = championships;
-                document.getElementById('total-tricks').textContent = player.total_tricks.toLocaleString();
+                const totalTricksNum = Number.isFinite(player.total_tricks)
+                    ? player.total_tricks
+                    : parseFloat(player.total_tricks);
+                const totalTricksText = Number.isFinite(totalTricksNum)
+                    ? Math.floor(totalTricksNum).toLocaleString()
+                    : '0';
+                document.getElementById('total-tricks').textContent = totalTricksText;
                 document.getElementById('avg-tricks').textContent = avgTricks;
                 document.getElementById('top-finishes').textContent = topThreeFinishes;
                 
                 updatePerformanceStats(player.name, performanceStats);
                 renderSeedRankMeta(player.name, performanceStats);
+                renderPartnershipStats(player.name);
                 generateTrumpSuitStats(player.name);
                 generateTrophyCabinet(player.name, playerTournaments);
                 renderSeedRankHistoryChart(player.name);
@@ -442,6 +462,35 @@
             
             const topPercentile = typeof performanceStats.top_percentile === 'number' ? `${performanceStats.top_percentile.toFixed(1)}%` : '—';
             const topThreeRate = `${(performanceStats.top_three_rate ?? 0).toFixed(1)}%`;
+
+            // Overall win rate: % of games with tricks >= 7 (includes shared hands).
+            let wins = 0;
+            let played = 0;
+            const playerLower = String(playerName || '').toLowerCase();
+            if (engine && engine.tournaments) {
+                for (const t of engine.tournaments.values()) {
+                    if (!t || !Array.isArray(t.rounds)) continue;
+                    for (const r of t.rounds) {
+                        if (!r || !Array.isArray(r.tables)) continue;
+                        for (const table of r.tables) {
+                            const partnerships = table && Array.isArray(table.partnerships) ? table.partnerships : [];
+                            for (const p of partnerships) {
+                                if (!p || !Array.isArray(p.position1) || !Array.isArray(p.position2)) continue;
+                                const sidePlayers = Array.from(new Set([...(p.position1 || []), ...(p.position2 || [])]))
+                                    .filter(Boolean);
+                                const hasPlayer = sidePlayers.some(x => String(x || '').toLowerCase() === playerLower);
+                                if (!hasPlayer) continue;
+
+                                const tricks = Number.isFinite(p.tricks) ? p.tricks : parseFloat(p.tricks);
+                                if (!Number.isFinite(tricks)) continue;
+                                played += 1;
+                                if (tricks >= 7) wins += 1;
+                            }
+                        }
+                    }
+                }
+            }
+            const winRateText = played > 0 ? `${Math.round((wins / played) * 100)}%` : '—';
             
             performanceContainer.innerHTML = `
                 <div class="meta-item">
@@ -452,7 +501,336 @@
                     <span class="meta-label">Top 3 Rate</span>
                     <span class="meta-value">${topThreeRate}</span>
                 </div>
+                <div class="meta-item">
+                    <span class="meta-label">Win rate</span>
+                    <span class="meta-value">
+                        ${winRateText}
+                        <span class="meta-subvalue">${played > 0 ? `(${wins}/${played})` : ''}</span>
+                    </span>
+                </div>
             `;
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        function renderPartnershipStats(playerId) {
+            const engine = window.tournamentEngine;
+            const statsEl = document.getElementById('partnership-stats');
+            if (!statsEl) return;
+
+            if (!engine || !engine.tournaments) {
+                statsEl.innerHTML = `<div class="muted">Partnership stats unavailable.</div>`;
+                return;
+            }
+
+            const byPartner = new Map(); // partnerId -> { gamesTogether, tricksTogether, timesPaired, tricksPaired, winsPaired, pairedGames }
+            const add = (partnerId, tricks, isNormalPairing, isWin, meta) => {
+                if (!partnerId) return;
+                if (!byPartner.has(partnerId)) {
+                    byPartner.set(partnerId, {
+                        partnerId,
+                        gamesTogether: 0,
+                        tricksTogether: 0,
+                        timesPaired: 0, // non-shared only
+                        tricksPaired: 0, // non-shared only
+                        winsPaired: 0, // non-shared only
+                        pairedGames: [] // non-shared only: {year, round, table, isWin}
+                    });
+                }
+                const rec = byPartner.get(partnerId);
+                rec.gamesTogether += 1;
+                rec.tricksTogether += tricks;
+                if (isNormalPairing) {
+                    rec.timesPaired += 1;
+                    rec.tricksPaired += tricks;
+                    if (isWin) rec.winsPaired += 1;
+                    if (meta && Number.isFinite(meta.year)) {
+                        rec.pairedGames.push({
+                            year: meta.year,
+                            round: Number.isFinite(meta.round) ? meta.round : 0,
+                            table: Number.isFinite(meta.table) ? meta.table : 0,
+                            isWin: !!isWin
+                        });
+                    }
+                }
+            };
+
+            for (const t of engine.tournaments.values()) {
+                if (!t || !Array.isArray(t.rounds)) continue;
+                const year = Number.isFinite(t.year)
+                    ? t.year
+                    : (Number.isFinite(t.Year) ? t.Year : parseInt(t.year || t.Year || '0'));
+                for (const r of t.rounds) {
+                    if (!r || !Array.isArray(r.tables)) continue;
+                    const roundNum = Number.isFinite(r.round)
+                        ? r.round
+                        : (Number.isFinite(r.Round) ? r.Round : parseInt(r.round || r.Round || '0'));
+                    for (const table of r.tables) {
+                        const tableNum = Number.isFinite(table.table)
+                            ? table.table
+                            : parseInt(table.table || table.Table || '0');
+                        const partnerships = table && Array.isArray(table.partnerships) ? table.partnerships : [];
+                        for (const p of partnerships) {
+                            if (!p || !Array.isArray(p.position1) || !Array.isArray(p.position2)) continue;
+                            const sidePlayers = Array.from(new Set([...(p.position1 || []), ...(p.position2 || [])])).filter(Boolean);
+                            if (!sidePlayers.includes(playerId)) continue;
+                            const tricks = Number.isFinite(p.tricks) ? p.tricks : parseFloat(p.tricks);
+                            if (!Number.isFinite(tricks)) continue;
+                            const isNormalPairing = (p.position1.length === 1 && p.position2.length === 1 && sidePlayers.length === 2);
+                            const isWin = tricks >= 7;
+                            sidePlayers.forEach(otherId => {
+                                if (otherId === playerId) return;
+                                add(otherId, tricks, isNormalPairing, isWin, { year, round: roundNum, table: tableNum });
+                            });
+                        }
+                    }
+                }
+            }
+
+            const partners = Array.from(byPartner.values()).map(rec => {
+                const avgTogether = rec.gamesTogether > 0 ? (rec.tricksTogether / rec.gamesTogether) : 0;
+                const avgPaired = rec.timesPaired > 0 ? (rec.tricksPaired / rec.timesPaired) : null;
+                const winPct = rec.timesPaired > 0 ? (rec.winsPaired / rec.timesPaired) : null;
+                const sortedGames = (rec.pairedGames || []).slice().sort((a, b) =>
+                    (a.year - b.year) || (a.round - b.round) || (a.table - b.table)
+                );
+                let streak = 0;
+                let bestStreak = 0;
+                let loseStreak = 0;
+                let bestLoseStreak = 0;
+                for (const g of sortedGames) {
+                    if (g.isWin) {
+                        streak += 1;
+                        if (streak > bestStreak) bestStreak = streak;
+                        loseStreak = 0;
+                    } else {
+                        streak = 0;
+                        loseStreak += 1;
+                        if (loseStreak > bestLoseStreak) bestLoseStreak = loseStreak;
+                    }
+                }
+
+                // Current (active) streak is based on the most recent non-shared games only.
+                let currentWinStreak = 0;
+                let currentLoseStreak = 0;
+                if (sortedGames.length) {
+                    const lastIsWin = !!sortedGames[sortedGames.length - 1].isWin;
+                    for (let i = sortedGames.length - 1; i >= 0; i--) {
+                        const isWin = !!sortedGames[i].isWin;
+                        if (isWin === lastIsWin) {
+                            if (lastIsWin) currentWinStreak += 1;
+                            else currentLoseStreak += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                return {
+                    partnerId: rec.partnerId,
+                    gamesTogether: rec.gamesTogether,
+                    avgTogether,
+                    timesPaired: rec.timesPaired,
+                    avgPaired,
+                    winsPaired: rec.winsPaired,
+                    winPct,
+                    longestWinStreak: bestStreak,
+                    longestLoseStreak: bestLoseStreak,
+                    currentWinStreak,
+                    currentLoseStreak
+                };
+            });
+
+            if (!partners.length) {
+                statsEl.innerHTML = `<div class="muted">No partnership data found yet.</div>`;
+                return;
+            }
+
+            const MIN_FOR_RECORDS = 4;
+            const distinctPartners = partners.length;
+
+            const displayName = (id) => (engine && typeof engine.getDisplayName === 'function') ? engine.getDisplayName(id) : id;
+            const partnerLink = (id) => `profile.html?player=${encodeURIComponent(id)}`;
+
+            const mostFreq = (() => {
+                const paired = partners.filter(p => (p.timesPaired || 0) > 0);
+                const pool = paired.length ? paired : partners.slice();
+                return pool.reduce((best, cur) => {
+                    const bestN = paired.length ? (best.timesPaired || 0) : (best.gamesTogether || 0);
+                    const curN = paired.length ? (cur.timesPaired || 0) : (cur.gamesTogether || 0);
+                    return curN > bestN ? cur : best;
+                }, pool[0]);
+            })();
+
+            const bestWorstPool = (() => {
+                const eligible = partners.filter(p => (p.timesPaired || 0) >= MIN_FOR_RECORDS && Number.isFinite(p.avgPaired));
+                const any = partners.filter(p => (p.timesPaired || 0) > 0 && Number.isFinite(p.avgPaired));
+                return eligible.length ? eligible : any;
+            })();
+
+            const bestAvg = bestWorstPool.length
+                ? bestWorstPool.slice().sort((a, b) => (b.avgPaired - a.avgPaired) || (b.timesPaired - a.timesPaired))[0]
+                : null;
+
+            const worstAvg = bestWorstPool.length
+                ? bestWorstPool.slice().sort((a, b) => (a.avgPaired - b.avgPaired) || (b.timesPaired - a.timesPaired))[0]
+                : null;
+
+            const winPool = partners.filter(p => (p.timesPaired || 0) >= MIN_FOR_RECORDS && Number.isFinite(p.winPct));
+            const highestWin = winPool.length
+                ? winPool.slice().sort((a, b) => (b.winPct - a.winPct) || (b.timesPaired - a.timesPaired))[0]
+                : null;
+            const lowestWin = winPool.length
+                ? winPool.slice().sort((a, b) => (a.winPct - b.winPct) || (b.timesPaired - a.timesPaired))[0]
+                : null;
+
+            const winStreakPool = partners.filter(p => (p.timesPaired || 0) >= MIN_FOR_RECORDS && (p.longestWinStreak || 0) > 0);
+            const bestWinStreak = winStreakPool.length
+                ? winStreakPool.slice().sort((a, b) => (b.longestWinStreak - a.longestWinStreak) || (b.timesPaired - a.timesPaired))[0]
+                : null;
+
+            const loseStreakPool = partners.filter(p => (p.timesPaired || 0) >= MIN_FOR_RECORDS && (p.longestLoseStreak || 0) > 0);
+            const bestLoseStreak = loseStreakPool.length
+                ? loseStreakPool.slice().sort((a, b) => (b.longestLoseStreak - a.longestLoseStreak) || (b.timesPaired - a.timesPaired))[0]
+                : null;
+
+            const currentWinPool = partners.filter(p => (p.timesPaired || 0) >= MIN_FOR_RECORDS && (p.currentWinStreak || 0) > 0);
+            const currentWinMax = currentWinPool.length ? Math.max(...currentWinPool.map(p => p.currentWinStreak || 0)) : 0;
+            const currentWinLeaders = currentWinMax > 0
+                ? currentWinPool.filter(p => (p.currentWinStreak || 0) === currentWinMax)
+                : [];
+
+            const currentLosePool = partners.filter(p => (p.timesPaired || 0) >= MIN_FOR_RECORDS && (p.currentLoseStreak || 0) > 0);
+            const currentLoseMax = currentLosePool.length ? Math.max(...currentLosePool.map(p => p.currentLoseStreak || 0)) : 0;
+            const currentLoseLeaders = currentLoseMax > 0
+                ? currentLosePool.filter(p => (p.currentLoseStreak || 0) === currentLoseMax)
+                : [];
+
+            const renderTiedPartners = (list) => {
+                if (!list || !list.length) return '—';
+                return list.map(p => `<a class="inline-link" href="${partnerLink(p.partnerId)}">${escapeHtml(displayName(p.partnerId))}</a>`).join(', ');
+            };
+
+            statsEl.innerHTML = `
+                <div class="meta-item">
+                    <span class="meta-label">Distinct partners</span>
+                    <span class="meta-value">${distinctPartners}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Most frequent partner</span>
+                    <span class="meta-value">
+                        <a class="inline-link" href="${partnerLink(mostFreq.partnerId)}">${escapeHtml(displayName(mostFreq.partnerId))}</a>
+                        <span class="meta-subvalue">(${(mostFreq.timesPaired || 0) > 0 ? `${mostFreq.timesPaired} non-shared` : `${mostFreq.gamesTogether} games`})</span>
+                    </span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Best partnership</span>
+                    <span class="meta-value">
+                        ${bestAvg ? `
+                            <a class="inline-link" href="${partnerLink(bestAvg.partnerId)}">${escapeHtml(displayName(bestAvg.partnerId))}</a>
+                            <span class="meta-subvalue">(${bestAvg.avgPaired.toFixed(2)} avg/round • ${bestAvg.timesPaired} games)</span>
+                        ` : `
+                            —
+                            <span class="meta-subvalue">(need non-shared games)</span>
+                        `}
+                    </span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Worst partnership</span>
+                    <span class="meta-value">
+                        ${worstAvg ? `
+                            <a class="inline-link" href="${partnerLink(worstAvg.partnerId)}">${escapeHtml(displayName(worstAvg.partnerId))}</a>
+                            <span class="meta-subvalue">(${worstAvg.avgPaired.toFixed(2)} avg/round • ${worstAvg.timesPaired} games)</span>
+                        ` : `
+                            —
+                            <span class="meta-subvalue">(need non-shared games)</span>
+                        `}
+                    </span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Longest win streak</span>
+                    <span class="meta-value">
+                        ${bestWinStreak ? `
+                            <a class="inline-link" href="${partnerLink(bestWinStreak.partnerId)}">${escapeHtml(displayName(bestWinStreak.partnerId))}</a>
+                            <span class="meta-subvalue">(${bestWinStreak.longestWinStreak} wins)</span>
+                        ` : `
+                            —
+                            <span class="meta-subvalue">(need 4+ non-shared games)</span>
+                        `}
+                    </span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Longest losing streak</span>
+                    <span class="meta-value">
+                        ${bestLoseStreak ? `
+                            <a class="inline-link" href="${partnerLink(bestLoseStreak.partnerId)}">${escapeHtml(displayName(bestLoseStreak.partnerId))}</a>
+                            <span class="meta-subvalue">(${bestLoseStreak.longestLoseStreak} losses)</span>
+                        ` : `
+                            —
+                            <span class="meta-subvalue">(need 4+ non-shared games)</span>
+                        `}
+                    </span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Highest win record</span>
+                    <span class="meta-value">
+                        ${highestWin ? `
+                            <a class="inline-link" href="${partnerLink(highestWin.partnerId)}">${escapeHtml(displayName(highestWin.partnerId))}</a>
+                            <span class="meta-subvalue">(${Math.round(highestWin.winPct * 100)}% • ${highestWin.winsPaired}/${highestWin.timesPaired})</span>
+                        ` : `
+                            —
+                            <span class="meta-subvalue">(need 4+ non-shared games)</span>
+                        `}
+                    </span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Lowest win record</span>
+                    <span class="meta-value">
+                        ${lowestWin ? `
+                            <a class="inline-link" href="${partnerLink(lowestWin.partnerId)}">${escapeHtml(displayName(lowestWin.partnerId))}</a>
+                            <span class="meta-subvalue">(${Math.round(lowestWin.winPct * 100)}% • ${lowestWin.winsPaired}/${lowestWin.timesPaired})</span>
+                        ` : `
+                            —
+                            <span class="meta-subvalue">(need 4+ non-shared games)</span>
+                        `}
+                    </span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Current longest win streak</span>
+                    <span class="meta-value">
+                        ${currentWinLeaders.length ? `
+                            ${renderTiedPartners(currentWinLeaders)}
+                            <span class="meta-subvalue">(${currentWinMax} wins${bestWinStreak ? ` • record ${bestWinStreak.longestWinStreak}` : ''})</span>
+                        ` : `
+                            —
+                            <span class="meta-subvalue">(need 4+ non-shared games)</span>
+                        `}
+                    </span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Current longest losing streak</span>
+                    <span class="meta-value">
+                        ${currentLoseLeaders.length ? `
+                            ${renderTiedPartners(currentLoseLeaders)}
+                            <span class="meta-subvalue">(${currentLoseMax} losses${bestLoseStreak ? ` • record ${bestLoseStreak.longestLoseStreak}` : ''})</span>
+                        ` : `
+                            —
+                            <span class="meta-subvalue">(need 4+ non-shared games)</span>
+                        `}
+                    </span>
+                </div>
+            `;
+
+            const cta = document.getElementById('see-all-partnerships');
+            if (cta) {
+                cta.href = `partnerships.html?player=${encodeURIComponent(playerId)}`;
+            }
         }
 
         function renderSeedRankMeta(playerName, performanceStats) {
@@ -776,6 +1154,37 @@
             }
 
             const trumpStats = engine.getPlayerTrumpSuitStats(playerName);
+
+            // Compute win counts per suit (wins = 7+ tricks). Includes shared hands.
+            const winsBySuit = { Hearts: 0, Clubs: 0, Diamonds: 0, Spades: 0 };
+            const playedBySuit = { Hearts: 0, Clubs: 0, Diamonds: 0, Spades: 0 };
+            const playerLower = String(playerName || '').toLowerCase();
+            if (engine && engine.tournaments) {
+                for (const t of engine.tournaments.values()) {
+                    if (!t || !Array.isArray(t.rounds)) continue;
+                    for (const r of t.rounds) {
+                        if (!r || !Array.isArray(r.tables)) continue;
+                        for (const table of r.tables) {
+                            const partnerships = table && Array.isArray(table.partnerships) ? table.partnerships : [];
+                            for (const p of partnerships) {
+                                if (!p || !Array.isArray(p.position1) || !Array.isArray(p.position2)) continue;
+                                const sidePlayers = Array.from(new Set([...(p.position1 || []), ...(p.position2 || [])]))
+                                    .filter(Boolean);
+                                const hasPlayer = sidePlayers.some(x => String(x || '').toLowerCase() === playerLower);
+                                if (!hasPlayer) continue;
+
+                                const tricks = Number.isFinite(p.tricks) ? p.tricks : parseFloat(p.tricks);
+                                if (!Number.isFinite(tricks)) continue;
+
+                                const suit = p.trump_suit || r.trump_suit || 'Unknown';
+                                if (!(suit in playedBySuit)) continue;
+                                playedBySuit[suit] += 1;
+                                if (tricks >= 7) winsBySuit[suit] += 1;
+                            }
+                        }
+                    }
+                }
+            }
             
             const suitIcons = {
                 'Hearts': '♥',
@@ -792,11 +1201,17 @@
                 const icon = suitIcons[suit];
                 const suitClass = String(suit || '').toLowerCase();
                 const average = stats.rounds_played > 0 ? stats.average.toFixed(2) : '0.00';
+                const played = playedBySuit[suit] || stats.rounds_played || 0;
+                const wins = winsBySuit[suit] || 0;
+                const winRateText = played > 0 ? `${Math.round((wins / played) * 100)}%` : '—';
                 
                 return `
                     <div class="meta-item">
                         <span class="meta-label"><span class="suit-icon suit-icon--${suitClass}">${icon}</span> ${suit}</span>
-                        <span class="meta-value">${average} <span class="meta-subvalue">avg/round</span></span>
+                        <span class="meta-value">
+                            ${average} <span class="meta-subvalue">avg/round</span><br>
+                            <span class="meta-subvalue">Win rate: ${winRateText}${played > 0 ? ` (${wins}/${played})` : ''}</span>
+                        </span>
                     </div>
                 `;
             }).join('');
@@ -1337,6 +1752,37 @@
             color: var(--text-primary-dark);
             font-weight: 800;
             font-size: 1.15rem;
+        }
+
+        .inline-link {
+            color: var(--text-primary-dark);
+            text-decoration: none;
+            font-weight: 900;
+        }
+
+        .inline-link:hover {
+            text-decoration: underline;
+        }
+
+        .partnership-cta {
+            margin-top: var(--spacing-lg);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border-radius: 999px;
+            border: 1px solid rgba(34, 197, 94, 0.28);
+            background: rgba(34, 197, 94, 0.12);
+            color: var(--text-primary-dark);
+            font-weight: 900;
+            text-decoration: none;
+        }
+
+        .partnership-cta:hover {
+            background: rgba(34, 197, 94, 0.18);
+            text-decoration: underline;
         }
 
         .stats-table {

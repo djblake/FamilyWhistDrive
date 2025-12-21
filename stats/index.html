@@ -41,51 +41,18 @@
             </div>
         </section>
 
-        <section class="tournament-summary-section">
-            <div class="container">
-                <h2 class="section-title">
-                    <span class="title-icon">🏆</span>
-                    Tournament Data Overview
-                </h2>
-                
-                <div class="overview-stats-grid" id="overview-stats-grid">
-                    <!-- Overview statistics will be loaded dynamically -->
-                </div>
-            </div>
-        </section>
-
-        <section class="analytics-grid-section">
-            <div class="container">
-                <h2 class="section-title">
-                    <span class="title-icon">📈</span>
-                    Performance Analytics
-                </h2>
-                
-                <div class="analytics-grid" id="analytics-grid">
-                    <!-- Analytics cards will be loaded dynamically -->
-                </div>
-            </div>
-        </section>
-
-        <section class="advanced-metrics-section">
-            <div class="container">
-                <h2 class="section-title">
-                    <span class="title-icon">🔬</span>
-                    Advanced Performance Metrics
-                </h2>
-                
-                <div class="metrics-grid" id="metrics-grid">
-                    <!-- Metrics will be loaded dynamically -->
-                </div>
-            </div>
-        </section>
-
         <section class="partnership-performance-section">
             <div class="container">
                 <h2 class="section-title">
                     <span class="title-icon">🤝</span>
                     Partnership Performance Rankings
                 </h2>
+
+                <p class="section-subtitle">Strongest two-player partnerships across all rounds (shared hands excluded). Minimum 4 times paired.</p>
+
+                <div class="insight-grid" id="partnership-insights">
+                    <div class="loading-message">Loading partnership insights...</div>
+                </div>
                 
                 <div class="partnership-rankings" id="partnership-rankings">
                     <!-- Partnership rankings will be loaded dynamically -->
@@ -99,22 +66,15 @@
                     <span class="title-icon">👨‍👩‍👧‍👦</span>
                     Family Statistics
                 </h2>
+
+                <p class="section-subtitle">Families are discovered from George &amp; Doris’ descendant line (surname-based). Partners / co-parents count as members; LinkedTo connections count as honorary members (honorary members are not included in the stats).</p>
+
+                <div class="insight-grid" id="family-insights">
+                    <div class="loading-message">Loading family insights...</div>
+                </div>
                 
                 <div class="family-stats" id="family-stats">
                     <!-- Family statistics will be loaded dynamically -->
-                </div>
-            </div>
-        </section>
-
-        <section class="statistical-records-section">
-            <div class="container">
-                <h2 class="section-title">
-                    <span class="title-icon">🎯</span>
-                    Statistical Records & Achievements
-                </h2>
-                
-                <div class="records-showcase" id="records-showcase">
-                    <!-- Records will be loaded dynamically -->
                 </div>
             </div>
         </section>
@@ -155,10 +115,27 @@
         document.addEventListener('DOMContentLoaded', async function() {
             const tournamentEngine = new TournamentEngine();
             const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+            window.tournamentEngine = tournamentEngine;
             
             try {
-                console.log('📊 Loading tournament statistics...');
+                console.log('📊 Loading focused statistics...');
                 await tournamentEngine.loadFromGoogleSheets(sheetId);
+
+                // Focused: Partnerships + Families only
+                loadPartnershipRankings();
+                loadFamilyStatistics();
+
+                // Footer: keep it simple and useful
+                const tournamentsList = Array.from(tournamentEngine.tournaments.values());
+                const totalRoundsCount = tournamentsList.reduce((sum, t) => sum + (Number.isFinite(t.total_rounds) ? t.total_rounds : 0), 0);
+                const yearsList = tournamentsList.map(t => t.year).filter(y => Number.isFinite(y)).sort((a, b) => a - b);
+                const firstYearValue = yearsList.length ? yearsList[0] : null;
+                const lastYearValue = yearsList.length ? yearsList[yearsList.length - 1] : null;
+                document.getElementById('total-scorecards').textContent = `${totalRoundsCount.toLocaleString()} Rounds Analyzed`;
+                document.getElementById('data-timespan').textContent = (firstYearValue && lastYearValue) ? `${firstYearValue}–${lastYearValue}` : '—';
+
+                console.log('✅ Focused statistics loaded successfully!');
+                return;
                 
                 const players = tournamentEngine.getAllPlayers('total_tricks');
                 const tournaments = Array.from(tournamentEngine.tournaments.values());
@@ -477,8 +454,11 @@
                 
             } catch (error) {
                 console.error('❌ Error loading statistics:', error);
-                document.getElementById('overview-stats-grid').innerHTML = 
-                    '<p style="text-align: center; color: #666; padding: 2rem;">Error loading statistics. Please try refreshing the page.</p>';
+                const fallback = '<p style="text-align: center; color: #666; padding: 2rem;">Error loading statistics. Please try refreshing the page.</p>';
+                const p = document.getElementById('partnership-rankings');
+                const f = document.getElementById('family-stats');
+                if (p) p.innerHTML = fallback;
+                if (f) f.innerHTML = fallback;
             }
         });
         
@@ -534,93 +514,512 @@
                 .sort((a, b) => b.championships - a.championships);
         }
 
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
         function loadPartnershipRankings() {
-            const partnershipRankings = window.tournamentEngine.getPartnershipPerformanceRankings();
-            
-            const partnershipHTML = `
+            const engine = window.tournamentEngine;
+            const container = document.getElementById('partnership-rankings');
+            const insights = document.getElementById('partnership-insights');
+            if (!engine || !container || !insights) return;
+
+            const MIN_PAIRINGS = 4;
+            const allRankings = (engine.getPartnershipPerformanceRankings() || []).slice();
+            const rankings = allRankings.filter(p => (Number(p.partnerships_count) || 0) >= MIN_PAIRINGS);
+            if (!rankings.length) {
+                insights.innerHTML = `<div class="loading-message">No partnership data available.</div>`;
+                container.innerHTML = `<div class="loading-message">No partnerships found with ${MIN_PAIRINGS}+ rounds together.</div>`;
+                return;
+            }
+
+            const allowedKeys = new Set(rankings.map(p => p.partnership));
+
+            // Best suit per partnership (avg tricks/round for that suit)
+            const suitIcons = { Hearts: '♥', Diamonds: '♦', Clubs: '♣', Spades: '♠' };
+            const suitAgg = new Map(); // key -> suit -> {tricks, rounds}
+            for (const t of engine.tournaments.values()) {
+                if (!t || !Array.isArray(t.rounds)) continue;
+                for (const r of t.rounds) {
+                    const suit = r && r.trump_suit ? r.trump_suit : null;
+                    if (!suit || !Array.isArray(r.tables)) continue;
+                    for (const table of r.tables) {
+                        if (!table || !Array.isArray(table.partnerships)) continue;
+                        for (const p of table.partnerships) {
+                            const pos1IsShared = p.position1 && p.position1.length > 1;
+                            const pos2IsShared = p.position2 && p.position2.length > 1;
+                            if (pos1IsShared || pos2IsShared) continue;
+                            const a = p.position1 && p.position1[0];
+                            const b = p.position2 && p.position2[0];
+                            if (!a || !b) continue;
+                            const key = [a, b].sort().join(' & ');
+                            if (!allowedKeys.has(key)) continue;
+                            if (!suitAgg.has(key)) suitAgg.set(key, new Map());
+                            const bySuit = suitAgg.get(key);
+                            if (!bySuit.has(suit)) bySuit.set(suit, { tricks: 0, rounds: 0 });
+                            const rec = bySuit.get(suit);
+                            const tricks = Number.isFinite(p.tricks) ? p.tricks : parseFloat(p.tricks);
+                            if (!Number.isFinite(tricks)) continue;
+                            rec.tricks += tricks;
+                            rec.rounds += 1;
+                        }
+                    }
+                }
+            }
+
+            const bestSuitByKey = new Map(); // key -> {suit, avg}
+            for (const [key, bySuit] of suitAgg.entries()) {
+                let best = null;
+                for (const [suit, rec] of bySuit.entries()) {
+                    if (!rec.rounds) continue;
+                    const avg = rec.tricks / rec.rounds;
+                    if (!Number.isFinite(avg)) continue;
+                    if (!best || avg > best.avg) best = { suit, avg };
+                }
+                if (best) bestSuitByKey.set(key, best);
+            }
+
+            const bestAvg = rankings[0];
+            const mostRounds = rankings.reduce((best, cur) => (cur.total_rounds > best.total_rounds ? cur : best), rankings[0]);
+            const mostTricks = rankings.reduce((best, cur) => (cur.total_tricks > best.total_tricks ? cur : best), rankings[0]);
+            const mostOften = rankings.reduce((best, cur) => (cur.partnerships_count > best.partnerships_count ? cur : best), rankings[0]);
+
+            const fmtPair = (p) => {
+                const p0 = escapeHtml(p.players[0]);
+                const p1 = escapeHtml(p.players[1]);
+                return `
+                    <a href="../players/profile.html?player=${encodeURIComponent(p.players[0])}" class="player-name-link">${p0}</a>
+                    <span class="partnership-separator">&</span>
+                    <a href="../players/profile.html?player=${encodeURIComponent(p.players[1])}" class="player-name-link">${p1}</a>
+                `;
+            };
+
+            insights.innerHTML = `
+                <div class="insight-card">
+                    <div class="insight-kicker">Best partnership</div>
+                    <div class="insight-value">${bestAvg.average_tricks.toFixed(2)} <span class="insight-unit">avg/round</span></div>
+                    <div class="insight-detail">${fmtPair(bestAvg)} • ${bestAvg.total_rounds} rounds</div>
+                </div>
+                <div class="insight-card">
+                    <div class="insight-kicker">Most rounds together</div>
+                    <div class="insight-value">${mostRounds.total_rounds.toLocaleString()}</div>
+                    <div class="insight-detail">${fmtPair(mostRounds)}</div>
+                </div>
+                <div class="insight-card">
+                    <div class="insight-kicker">Most tricks together</div>
+                    <div class="insight-value">${mostTricks.total_tricks.toLocaleString()}</div>
+                    <div class="insight-detail">${fmtPair(mostTricks)} • ${mostTricks.total_rounds} rounds</div>
+                </div>
+                <div class="insight-card">
+                    <div class="insight-kicker">Most frequent pairing</div>
+                    <div class="insight-value">${mostOften.partnerships_count.toLocaleString()}</div>
+                    <div class="insight-detail">${fmtPair(mostOften)}</div>
+                </div>
+            `;
+
+            const rows = rankings.slice(0, 10).map((p, idx) => {
+                const bestSuit = bestSuitByKey.get(p.partnership);
+                const suitIcon = bestSuit ? (suitIcons[bestSuit.suit] || bestSuit.suit) : '—';
+                const suitClass = bestSuit && (bestSuit.suit === 'Hearts' || bestSuit.suit === 'Diamonds') ? 'suit--red' : 'suit--dark';
+                const suitText = bestSuit ? `${suitIcon} ${bestSuit.avg.toFixed(2)}` : '—';
+                return `
+                    <tr>
+                        <td class="rank-column">${idx + 1}</td>
+                        <td class="partnership-column"><div class="partnership-names">${fmtPair(p)}</div></td>
+                        <td class="avg-tricks-column">${p.average_tricks.toFixed(2)}</td>
+                        <td class="best-suit-column"><span class="suit-pill ${suitClass}">${suitText}</span></td>
+                        <td class="count-column">${p.partnerships_count.toLocaleString()}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            container.innerHTML = `
                 <div class="partnership-table-container">
                     <table class="partnership-table">
                         <thead>
                             <tr>
                                 <th class="rank-column">Rank</th>
                                 <th class="partnership-column">Partnership</th>
-                                <th class="avg-tricks-column">Avg Tricks</th>
-                                <th class="total-tricks-column">Total Tricks</th>
-                                <th class="rounds-column">Rounds</th>
-                                <th class="count-column">Partnerships</th>
+                                <th class="avg-tricks-column">Avg tricks/round</th>
+                                <th class="best-suit-column">Best suit</th>
+                                <th class="count-column">Times paired</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            ${partnershipRankings.slice(0, 20).map((partnership, index) => `
-                                <tr>
-                                    <td class="rank-column">${index + 1}</td>
-                                    <td class="partnership-column">
-                                        <div class="partnership-names">
-                                            <a href="../players/profile.html?player=${encodeURIComponent(partnership.players[0])}" class="player-name-link">${partnership.players[0]}</a>
-                                            <span class="partnership-separator">&</span>
-                                            <a href="../players/profile.html?player=${encodeURIComponent(partnership.players[1])}" class="player-name-link">${partnership.players[1]}</a>
-                                        </div>
-                                    </td>
-                                    <td class="avg-tricks-column">${partnership.average_tricks.toFixed(2)}</td>
-                                    <td class="total-tricks-column">${partnership.total_tricks}</td>
-                                    <td class="rounds-column">${partnership.total_rounds}</td>
-                                    <td class="count-column">${partnership.partnerships_count}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
+                        <tbody>${rows}</tbody>
                     </table>
                 </div>
             `;
-            
-            document.getElementById('partnership-rankings').innerHTML = partnershipHTML;
         }
 
         function loadFamilyStatistics() {
-            const familyStats = window.tournamentEngine.getFamilyStatistics();
-            
-            const familyHTML = `
-                <div class="family-stats-grid">
-                    ${familyStats.slice(0, 10).map((family, index) => `
-                        <div class="family-stat-card">
-                            <div class="family-rank">#${index + 1}</div>
-                            <div class="family-header">
-                                <h3 class="family-name">${family.family_name} Family</h3>
-                                <div class="family-average">${family.average_tricks_per_player.toFixed(2)} avg tricks</div>
+            const engine = window.tournamentEngine;
+            const container = document.getElementById('family-stats');
+            const insights = document.getElementById('family-insights');
+            if (!engine || !container || !insights) return;
+
+            // Hide the old summary strip; the family panels include the stats
+            insights.innerHTML = '';
+
+            const INCLUDE_HONORARY_IN_STATS = false;
+
+            const roster = (engine.getPlayersRoster && typeof engine.getPlayersRoster === 'function')
+                ? engine.getPlayersRoster()
+                : [];
+            const byId = new Map(roster.map(p => [p.id, p]));
+
+            const findRoot = (firstNameLower, lastNameLower) => {
+                const f = String(firstNameLower || '').toLowerCase();
+                const l = String(lastNameLower || '').toLowerCase();
+                const exact = roster.find(p =>
+                    String(p.firstName || '').toLowerCase() === f &&
+                    String(p.lastName || '').toLowerCase() === l
+                );
+                if (exact) return exact.id;
+                const loose = roster.find(p =>
+                    String(p.lastName || '').toLowerCase() === l &&
+                    (String(p.displayName || '').toLowerCase().includes(f) || String(p.fullName || '').toLowerCase().includes(f))
+                );
+                if (loose) return loose.id;
+                return null;
+            };
+
+            const georgeId = findRoot('george', 'ruston') || (byId.has('George') ? 'George' : null) || (byId.has('GeorgeRuston') ? 'GeorgeRuston' : null);
+            const dorisId = findRoot('doris', 'ruston') || (byId.has('Doris') ? 'Doris' : null) || (byId.has('DorisRuston') ? 'DorisRuston' : null);
+
+            // Build parent -> children edges from Players sheet
+            const childrenByParent = new Map(); // id -> Set<childId>
+            roster.forEach(p => {
+                const childId = p.id;
+                const parents = Array.isArray(p.familyTreeParents) ? p.familyTreeParents : [];
+                parents.forEach(parentId => {
+                    if (!childrenByParent.has(parentId)) childrenByParent.set(parentId, new Set());
+                    childrenByParent.get(parentId).add(childId);
+                });
+            });
+
+            // Descendants (including roots)
+            const descendants = new Set();
+            const queue = [];
+            [georgeId, dorisId].filter(Boolean).forEach(rootId => {
+                descendants.add(rootId);
+                queue.push(rootId);
+            });
+            while (queue.length) {
+                const cur = queue.shift();
+                const kids = childrenByParent.get(cur);
+                if (!kids) continue;
+                for (const kid of kids.values()) {
+                    if (descendants.has(kid)) continue;
+                    descendants.add(kid);
+                    queue.push(kid);
+                }
+            }
+
+            // Strong adjacency (partners / had children with): treat as membership, not honorary
+            const strongAdj = new Map(); // id -> Set<id>
+            const addStrongEdge = (a, b) => {
+                if (!a || !b) return;
+                if (!strongAdj.has(a)) strongAdj.set(a, new Set());
+                if (!strongAdj.has(b)) strongAdj.set(b, new Set());
+                strongAdj.get(a).add(b);
+                strongAdj.get(b).add(a);
+            };
+            roster.forEach(p => {
+                const fromId = p.id;
+                const hadKids = Array.isArray(p.familyTreeHadChildrenWith) ? p.familyTreeHadChildrenWith : [];
+                const partnered = Array.isArray(p.familyTreeIsPartneredWith) ? p.familyTreeIsPartneredWith : [];
+                hadKids.forEach(toId => addStrongEdge(fromId, toId));
+                partnered.forEach(toId => addStrongEdge(fromId, toId));
+            });
+
+            // LinkedTo adjacency (undirected) for honorary membership
+            const linkedAdj = new Map(); // id -> Set<id>
+            roster.forEach(p => {
+                const fromId = p.id;
+                const links = Array.isArray(p.familyTreeLinkedTo) ? p.familyTreeLinkedTo : [];
+                links.forEach(toId => {
+                    if (!toId) return;
+                    if (!linkedAdj.has(fromId)) linkedAdj.set(fromId, new Set());
+                    if (!linkedAdj.has(toId)) linkedAdj.set(toId, new Set());
+                    linkedAdj.get(fromId).add(toId);
+                    linkedAdj.get(toId).add(fromId);
+                });
+            });
+
+            // Stats map for family members (from tournament data)
+            const individuals = (engine.getAllIndividualPlayers && typeof engine.getAllIndividualPlayers === 'function')
+                ? engine.getAllIndividualPlayers('total_tricks')
+                : [];
+            const statsById = new Map(individuals.map(p => [p.name, p]));
+
+            const getDisplay = (id) => {
+                if (engine && typeof engine.getDisplayName === 'function') return engine.getDisplayName(id);
+                const r = byId.get(id);
+                return r?.displayName || id;
+            };
+
+            const getLastName = (id) => {
+                const rosterRow = byId.get(id);
+                if (rosterRow && rosterRow.lastName) return rosterRow.lastName;
+                if (engine && typeof engine.getPlayerNameParts === 'function') {
+                    const parts = engine.getPlayerNameParts(id);
+                    if (parts && parts.lastName) return parts.lastName;
+                }
+                return '';
+            };
+
+            // Legitimate families are discovered dynamically:
+            // traverse the direct descendant line from George & Doris, then collect surnames.
+            const descendantSurnames = new Set();
+            roster.forEach(p => {
+                if (!descendants.has(p.id)) return;
+                const ln = String(p.lastName || '').trim();
+                if (!ln) return;
+                descendantSurnames.add(ln);
+            });
+            const legitFamilies = Array.from(descendantSurnames).sort((a, b) => a.localeCompare(b));
+
+            const families = legitFamilies.map(famName => {
+                // Core members = descendants with this surname
+                const baseMembers = roster
+                    .filter(p =>
+                        descendants.has(p.id) &&
+                        String(p.lastName || '').trim().toLowerCase() === String(famName).trim().toLowerCase()
+                    )
+                    .map(p => p.id);
+
+                // Include partners / co-parents of any member as MEMBERS (even if their surname differs)
+                const membersSet = new Set(baseMembers);
+                baseMembers.forEach(id => {
+                    const neigh = strongAdj.get(id);
+                    if (!neigh) return;
+                    neigh.forEach(otherId => membersSet.add(otherId));
+                });
+
+                const members = Array.from(membersSet).sort((a, b) => getDisplay(a).localeCompare(getDisplay(b)));
+
+                // Honorary members: transitive closure over LinkedTo + strong links
+                // Example: Caroline (partner of Clive) -> Clive (LinkedTo Steve) -> Steve (family member)
+                const honorary = new Set();
+                const seen = new Set();
+                const q = [];
+                members.forEach(id => {
+                    seen.add(id);
+                    q.push(id);
+                });
+
+                const combinedNeighbors = (id) => {
+                    const out = new Set();
+                    const a = linkedAdj.get(id);
+                    const b = strongAdj.get(id);
+                    if (a) a.forEach(x => out.add(x));
+                    if (b) b.forEach(x => out.add(x));
+                    return out;
+                };
+
+                while (q.length) {
+                    const cur = q.shift();
+                    const neigh = combinedNeighbors(cur);
+                    neigh.forEach(n => {
+                        if (!n || seen.has(n)) return;
+                        seen.add(n);
+                        q.push(n);
+                        if (!membersSet.has(n)) {
+                            honorary.add(n);
+                        }
+                    });
+                }
+
+                const honoraryList = Array.from(honorary)
+                    .sort((a, b) => getDisplay(a).localeCompare(getDisplay(b)));
+
+                // Aggregate tournament stats (optionally include honorary)
+                const statIds = INCLUDE_HONORARY_IN_STATS
+                    ? Array.from(new Set([...members, ...honoraryList]))
+                    : members;
+                let totalTournaments = 0;
+                let totalTricks = 0;
+                let totalRounds = 0;
+                let champsTotal = 0;
+                let medals = 0;
+                const championPeople = new Set();
+
+                statIds.forEach(id => {
+                    const s = statsById.get(id);
+                    if (!s) return;
+                    totalTournaments += (Number.isFinite(s.tournaments_played) ? s.tournaments_played : 0);
+                    totalTricks += (Number.isFinite(s.total_tricks) ? s.total_tricks : 0);
+                    totalRounds += (Number.isFinite(s.total_rounds) ? s.total_rounds : 0);
+                    const wins = (Number.isFinite(s.tournament_wins) ? s.tournament_wins : 0);
+                    champsTotal += wins;
+                    if (wins > 0) championPeople.add(id);
+                    medals += (Number.isFinite(s.top_three_finishes) ? s.top_three_finishes : 0);
+                });
+
+                const avg = totalRounds > 0 ? (totalTricks / totalRounds) : 0;
+                const champs = championPeople.size;
+
+                return {
+                    family_name: famName,
+                    members,
+                    honorary: honoraryList,
+                    stats: {
+                        membersCount: members.length,
+                        honoraryCount: honoraryList.length,
+                        champs,
+                        medals,
+                        totalTournaments,
+                        avgTricksPerRound: avg,
+                        champsTotal
+                    }
+                };
+            });
+
+            // Sanity: if we failed to identify roots, descendants may be empty; fall back to include all roster members for these families.
+            const descendantsEmpty = descendants.size === 0;
+            if (descendantsEmpty) {
+                console.warn('⚠️ Could not identify George/Doris roots; falling back to last-name grouping only for legitimate families.');
+                const fallbackSurnames = new Set();
+                roster.forEach(p => {
+                    const ln = String(p.lastName || '').trim();
+                    if (ln) fallbackSurnames.add(ln);
+                });
+                const fallbackFamilies = Array.from(fallbackSurnames).sort((a, b) => a.localeCompare(b));
+                // Rebuild families in fallback mode (surname grouping + partners + honorary)
+                const rebuilt = fallbackFamilies.map(famName => {
+                    const baseMembers = roster
+                        .filter(p => String(p.lastName || '').trim().toLowerCase() === String(famName).trim().toLowerCase())
+                        .map(p => p.id);
+                    const membersSet = new Set(baseMembers);
+                    baseMembers.forEach(id => {
+                        const neigh = strongAdj.get(id);
+                        if (!neigh) return;
+                        neigh.forEach(otherId => membersSet.add(otherId));
+                    });
+                    const members = Array.from(membersSet).sort((a, b) => getDisplay(a).localeCompare(getDisplay(b)));
+                    // Honorary members: transitive closure over LinkedTo + strong links
+                    const honorary = new Set();
+                    const seen = new Set();
+                    const q = [];
+                    members.forEach(id => {
+                        seen.add(id);
+                        q.push(id);
+                    });
+                    while (q.length) {
+                        const cur = q.shift();
+                        const neigh = new Set();
+                        const a = linkedAdj.get(cur);
+                        const b = strongAdj.get(cur);
+                        if (a) a.forEach(x => neigh.add(x));
+                        if (b) b.forEach(x => neigh.add(x));
+                        neigh.forEach(n => {
+                            if (!n || seen.has(n)) return;
+                            seen.add(n);
+                            q.push(n);
+                            if (!membersSet.has(n)) honorary.add(n);
+                        });
+                    }
+                    const honoraryList = Array.from(honorary).sort((a, b) => getDisplay(a).localeCompare(getDisplay(b)));
+
+                    const statIds = INCLUDE_HONORARY_IN_STATS
+                        ? Array.from(new Set([...members, ...honoraryList]))
+                        : members;
+                    let totalTournaments = 0;
+                    let totalTricks = 0;
+                    let totalRounds = 0;
+                    let champsTotal = 0;
+                    let medals = 0;
+                    const championPeople = new Set();
+                    statIds.forEach(id => {
+                        const s = statsById.get(id);
+                        if (!s) return;
+                        totalTournaments += (Number.isFinite(s.tournaments_played) ? s.tournaments_played : 0);
+                        totalTricks += (Number.isFinite(s.total_tricks) ? s.total_tricks : 0);
+                        totalRounds += (Number.isFinite(s.total_rounds) ? s.total_rounds : 0);
+                        const wins = (Number.isFinite(s.tournament_wins) ? s.tournament_wins : 0);
+                        champsTotal += wins;
+                        if (wins > 0) championPeople.add(id);
+                        medals += (Number.isFinite(s.top_three_finishes) ? s.top_three_finishes : 0);
+                    });
+                    const avg = totalRounds > 0 ? (totalTricks / totalRounds) : 0;
+                    const champs = championPeople.size;
+
+                    return {
+                        family_name: famName,
+                        members,
+                        honorary: honoraryList,
+                        stats: {
+                            membersCount: members.length,
+                            honoraryCount: honoraryList.length,
+                            champs,
+                            medals,
+                            totalTournaments,
+                            avgTricksPerRound: avg,
+                            champsTotal
+                        }
+                    };
+                });
+                // Replace
+                families.splice(0, families.length, ...rebuilt);
+            }
+
+            const chipList = (ids) => {
+                if (!ids || !ids.length) return `<div class="muted-inline">None</div>`;
+                return ids.map(id => `
+                    <a class="member-chip" href="../players/profile.html?player=${encodeURIComponent(id)}">${escapeHtml(getDisplay(id))}</a>
+                `).join('');
+            };
+
+            const familyCards = families.map(f => {
+                const s = f.stats;
+                return `
+                    <div class="family-panel">
+                        <div class="family-panel-header">
+                            <div class="family-panel-title">${escapeHtml(f.family_name)} Family</div>
+                            <div class="family-panel-subtitle">${s.membersCount} members • ${s.honoraryCount} honorary</div>
+                        </div>
+                        <div class="family-panel-stats">
+                            <div class="family-panel-stat">
+                                <div class="k">Avg tricks/round</div>
+                                <div class="v">${s.avgTricksPerRound.toFixed(2)}</div>
                             </div>
-                            <div class="family-members">
-                                <div class="member-count">${family.total_players} ${family.total_players === 1 ? 'member' : 'members'}</div>
-                                <div class="member-list">
-                                    ${family.members.map(member => `
-                                        <a href="../players/profile.html?player=${encodeURIComponent(member.name)}" class="member-link">
-                                            ${member.name}
-                                        </a>
-                                    `).join('')}
-                                </div>
+                            <div class="family-panel-stat">
+                                <div class="k">Champs</div>
+                                <div class="v">${s.champs}</div>
                             </div>
-                            <div class="family-stats-grid-details">
-                                <div class="family-stat-item">
-                                    <span class="stat-label">Total Tricks</span>
-                                    <span class="stat-value">${family.total_tricks.toLocaleString()}</span>
-                                </div>
-                                <div class="family-stat-item">
-                                    <span class="stat-label">Championships</span>
-                                    <span class="stat-value">${family.tournament_wins}</span>
-                                </div>
-                                <div class="family-stat-item">
-                                    <span class="stat-label">Tournaments</span>
-                                    <span class="stat-value">${family.total_tournaments}</span>
-                                </div>
-                                <div class="family-stat-item">
-                                    <span class="stat-label">Win Rate</span>
-                                    <span class="stat-value">${family.win_rate.toFixed(1)}%</span>
-                                </div>
+                            <div class="family-panel-stat">
+                                <div class="k">Tournaments</div>
+                                <div class="v">${s.totalTournaments.toLocaleString()}</div>
+                            </div>
+                            <div class="family-panel-stat">
+                                <div class="k">Medals</div>
+                                <div class="v">${s.medals.toLocaleString()}</div>
                             </div>
                         </div>
-                    `).join('')}
+
+                        <div class="family-panel-list">
+                            <div class="family-panel-list-title">Members</div>
+                            <div class="family-chip-row">${chipList(f.members)}</div>
+                        </div>
+
+                        <div class="family-panel-list">
+                            <div class="family-panel-list-title">Honorary members</div>
+                            <div class="family-chip-row">${chipList(f.honorary)}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="family-panels-grid">
+                    ${familyCards}
                 </div>
             `;
-            
-            document.getElementById('family-stats').innerHTML = familyHTML;
         }
     </script>
     
@@ -675,6 +1074,78 @@
             opacity: 0.9;
             max-width: 600px;
             margin: 0 auto;
+        }
+
+        .section-subtitle {
+            margin-top: -0.75rem;
+            margin-bottom: var(--spacing-xl);
+            color: var(--text-secondary-dark);
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .partnership-performance-section .section-subtitle {
+            color: var(--text-secondary);
+        }
+
+        .family-statistics-section .section-title {
+            color: var(--text-primary-dark);
+        }
+
+        .insight-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: var(--spacing-xl);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .insight-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-lg);
+            border: 2px solid var(--border-light);
+        }
+
+        .insight-kicker {
+            font-size: 0.8rem;
+            color: var(--text-secondary-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .insight-value {
+            font-size: 2rem;
+            font-weight: 900;
+            font-family: var(--font-primary);
+            color: var(--primary);
+            line-height: 1.05;
+            margin-bottom: 0.35rem;
+        }
+
+        .insight-unit {
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: var(--text-secondary-dark);
+            font-family: var(--font-secondary);
+        }
+
+        .insight-detail {
+            color: var(--text-secondary-dark);
+            font-size: 0.95rem;
+        }
+
+        .loading-message {
+            text-align: center;
+            color: var(--text-secondary-dark);
+            padding: var(--spacing-xl);
+            font-style: italic;
+        }
+
+        .partnership-performance-section .loading-message {
+            color: var(--text-secondary);
         }
 
         .tournament-summary-section {
@@ -955,7 +1426,7 @@
         .partnership-table td {
             padding: var(--spacing-lg);
             border-bottom: 1px solid var(--border-light);
-            color: var(--text-primary);
+            color: var(--text-primary-dark);
         }
 
         .partnership-table tbody tr:hover {
@@ -969,7 +1440,7 @@
         }
 
         .partnership-separator {
-            color: var(--text-secondary);
+            color: var(--text-secondary-dark);
             font-weight: 600;
         }
 
@@ -997,10 +1468,207 @@
             font-weight: 500;
         }
 
+        .best-suit-column {
+            text-align: center;
+            font-weight: 600;
+            width: 120px;
+        }
+
+        .suit-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: var(--border-radius-full);
+            border: 1px solid var(--border-light);
+            background: rgba(0, 0, 0, 0.02);
+            font-weight: 800;
+            font-size: 0.9rem;
+        }
+
+        .suit--red {
+            color: #dc2626;
+        }
+
+        .suit--dark {
+            color: var(--text-primary-dark);
+        }
+
         /* Family Statistics Styles */
         .family-statistics-section {
             padding: var(--spacing-3xl) 0;
             background: white;
+        }
+
+        /* Hide empty insight strip for families (we render per-family panels instead) */
+        #family-insights:empty {
+            display: none;
+        }
+
+        .family-panels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: var(--spacing-xl);
+        }
+
+        .family-panel {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-lg);
+            border: 2px solid var(--border-light);
+        }
+
+        .family-panel-title {
+            font-size: 1.35rem;
+            font-weight: 900;
+            color: var(--text-primary);
+            margin-bottom: 0.15rem;
+        }
+
+        .family-panel-subtitle {
+            color: var(--text-secondary);
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .family-panel-stats {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: var(--spacing-md);
+            padding-bottom: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .family-panel-stat .k {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-secondary);
+            font-weight: 800;
+            margin-bottom: 0.25rem;
+        }
+
+        .family-panel-stat .v {
+            font-size: 1.25rem;
+            font-weight: 900;
+            color: var(--text-primary);
+        }
+
+        .family-panel-list {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .family-panel-list:last-child {
+            margin-bottom: 0;
+        }
+
+        .family-panel-list-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 900;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .family-chip-row .member-chip {
+            background: rgba(255, 255, 255, 0.10);
+            border-color: rgba(255, 255, 255, 0.18);
+            color: var(--text-primary);
+        }
+
+        .family-chip-row .member-chip:hover {
+            background: rgba(255, 255, 255, 0.16);
+            text-decoration: underline;
+        }
+
+        .muted-inline {
+            color: var(--text-secondary);
+            font-style: italic;
+            padding: 0.25rem 0;
+        }
+
+        .family-table-container {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            border: 2px solid var(--border-light);
+        }
+
+        .family-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .family-table th {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: var(--spacing-lg);
+            text-align: left;
+            font-weight: 700;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-primary-dark);
+            border-bottom: 2px solid var(--border-light);
+        }
+
+        .family-table td {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-light);
+            color: var(--text-primary-dark);
+            vertical-align: top;
+        }
+
+        .family-table tbody tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        .family-column {
+            min-width: 160px;
+        }
+
+        .num-column {
+            text-align: center;
+            font-weight: 600;
+            min-width: 90px;
+        }
+
+        .members-column {
+            min-width: 260px;
+        }
+
+        .member-chip {
+            display: inline-flex;
+            padding: 0.25rem 0.55rem;
+            border-radius: var(--border-radius-full);
+            background: rgba(34, 197, 94, 0.10);
+            border: 1px solid rgba(34, 197, 94, 0.18);
+            color: var(--primary-dark);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin: 0 0.35rem 0.35rem 0;
+        }
+
+        .member-chip:hover {
+            background: rgba(34, 197, 94, 0.16);
+            text-decoration: underline;
+        }
+
+        .member-chip--more {
+            background: rgba(0,0,0,0.04);
+            border-color: rgba(0,0,0,0.08);
+            color: var(--text-secondary-dark);
+            cursor: default;
+            text-decoration: none;
+        }
+
+        .member-chip--more:hover {
+            text-decoration: none;
         }
 
         .family-stats-grid {
@@ -1139,7 +1807,19 @@
             }
             
             .partnership-table {
-                min-width: 600px;
+                min-width: 560px;
+            }
+
+            .family-table-container {
+                overflow-x: auto;
+            }
+
+            .family-table {
+                min-width: 900px;
+            }
+
+            .family-panels-grid {
+                grid-template-columns: 1fr;
             }
             
             .metrics-grid {
