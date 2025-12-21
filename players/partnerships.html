@@ -243,6 +243,15 @@
                         else break;
                     }
                 }
+
+                // If either player is deceased, this streak can no longer be extended.
+                if (engine && typeof engine.isPlayerDeceased === 'function') {
+                    const selfDeceased = engine.isPlayerDeceased(playerId);
+                    const partnerDeceased = engine.isPlayerDeceased(rec.partnerId);
+                    if (selfDeceased || partnerDeceased) {
+                        currentWinStreak = null;
+                    }
+                }
                 return {
                     partnerId: rec.partnerId,
                     avg,

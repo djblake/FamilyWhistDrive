@@ -46,6 +46,21 @@
                                 <span class="tree-icon">🌳</span>
                                 Family Tree
                             </a>
+                            <div class="memorial-link" id="memorial-link" style="display:none;">
+                                <a class="memorial-link__a" id="memorial-link-a" href="../memorial/">
+                                    <div class="memorial-wreath" aria-hidden="true">
+                                        <svg viewBox="0 0 64 64" width="46" height="46" focusable="false" aria-hidden="true">
+                                            <path d="M22 50c-7-6-12-15-12-24C10 16 17 9 26 9" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                                            <path d="M42 50c7-6 12-15 12-24C54 16 47 9 38 9" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                                            <path d="M26 12c-4 2-7 7-7 14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.55"/>
+                                            <path d="M38 12c4 2 7 7 7 14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.55"/>
+                                            <circle cx="32" cy="50" r="3" fill="currentColor" opacity="0.8"/>
+                                        </svg>
+                                    </div>
+                                    <div class="memorial-label">In memoriam</div>
+                                    <div class="memorial-year" id="memorial-year">—</div>
+                                </a>
+                            </div>
                         </div>
                     </div>
                     
@@ -348,6 +363,22 @@
                     familyTreeBtn.href = `../families/?player=${encodeURIComponent(player.name)}`;
                     familyTreeBtn.setAttribute('aria-label', `View ${fullName} in Family Tree`);
                     familyTreeBtn.title = `View ${fullName} in Family Tree`;
+                }
+
+                // Memorial link for deceased players
+                const memorialWrap = document.getElementById('memorial-link');
+                const memorialA = document.getElementById('memorial-link-a');
+                const memorialYear = document.getElementById('memorial-year');
+                if (memorialWrap && memorialA && memorialYear && typeof tournamentEngine.getPlayerDeathInfo === 'function') {
+                    const death = tournamentEngine.getPlayerDeathInfo(player.name);
+                    if (death && death.raw) {
+                        memorialWrap.style.display = 'block';
+                        memorialA.href = `../memorial/?player=${encodeURIComponent(player.name)}`;
+                        const yearLabel = death && death.year ? String(death.year) : (death.isYearOnly ? death.raw : death.raw);
+                        memorialYear.textContent = yearLabel;
+                        memorialA.setAttribute('aria-label', `View memorial page for ${fullName}`);
+                        memorialA.title = `View memorial page`;
+                    }
                 }
                 
                 // Update page title and meta
@@ -700,13 +731,26 @@
                 ? loseStreakPool.slice().sort((a, b) => (b.longestLoseStreak - a.longestLoseStreak) || (b.timesPaired - a.timesPaired))[0]
                 : null;
 
-            const currentWinPool = partners.filter(p => (p.timesPaired || 0) >= MIN_FOR_RECORDS && (p.currentWinStreak || 0) > 0);
+            const isDeceased = (id) => (engine && typeof engine.isPlayerDeceased === 'function') ? engine.isPlayerDeceased(id) : false;
+            const selfDeceased = isDeceased(playerId);
+
+            const currentWinPool = partners.filter(p =>
+                !selfDeceased &&
+                !isDeceased(p.partnerId) &&
+                (p.timesPaired || 0) >= MIN_FOR_RECORDS &&
+                (p.currentWinStreak || 0) > 0
+            );
             const currentWinMax = currentWinPool.length ? Math.max(...currentWinPool.map(p => p.currentWinStreak || 0)) : 0;
             const currentWinLeaders = currentWinMax > 0
                 ? currentWinPool.filter(p => (p.currentWinStreak || 0) === currentWinMax)
                 : [];
 
-            const currentLosePool = partners.filter(p => (p.timesPaired || 0) >= MIN_FOR_RECORDS && (p.currentLoseStreak || 0) > 0);
+            const currentLosePool = partners.filter(p =>
+                !selfDeceased &&
+                !isDeceased(p.partnerId) &&
+                (p.timesPaired || 0) >= MIN_FOR_RECORDS &&
+                (p.currentLoseStreak || 0) > 0
+            );
             const currentLoseMax = currentLosePool.length ? Math.max(...currentLosePool.map(p => p.currentLoseStreak || 0)) : 0;
             const currentLoseLeaders = currentLoseMax > 0
                 ? currentLosePool.filter(p => (p.currentLoseStreak || 0) === currentLoseMax)
@@ -809,7 +853,7 @@
                             <span class="meta-subvalue">(${currentWinMax} wins${bestWinStreak ? ` • record ${bestWinStreak.longestWinStreak}` : ''})</span>
                         ` : `
                             —
-                            <span class="meta-subvalue">(need 4+ non-shared games)</span>
+                            <span class="meta-subvalue">${selfDeceased ? 'N/A' : '(need 4+ non-shared games, living partners)'}</span>
                         `}
                     </span>
                 </div>
@@ -821,7 +865,7 @@
                             <span class="meta-subvalue">(${currentLoseMax} losses${bestLoseStreak ? ` • record ${bestLoseStreak.longestLoseStreak}` : ''})</span>
                         ` : `
                             —
-                            <span class="meta-subvalue">(need 4+ non-shared games)</span>
+                            <span class="meta-subvalue">${selfDeceased ? 'N/A' : '(need 4+ non-shared games, living partners)'}</span>
                         `}
                     </span>
                 </div>
@@ -1560,6 +1604,53 @@
             font-weight: 700;
         }
 
+        .memorial-link {
+            margin-top: 0.55rem;
+        }
+
+        .memorial-link__a {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.15rem;
+            padding: 0.45rem 0.25rem;
+            color: rgba(255, 255, 255, 0.92);
+            text-decoration: none;
+            font-weight: 900;
+            line-height: 1.1;
+        }
+
+        .memorial-link__a:hover {
+            text-decoration: underline;
+            opacity: 0.95;
+        }
+
+        .memorial-wreath {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255, 255, 255, 0.92);
+            margin-bottom: 0.1rem;
+        }
+
+        .memorial-label {
+            font-family: var(--font-primary);
+            letter-spacing: 0.02em;
+            color: rgba(255, 255, 255, 0.92);
+            font-weight: 900;
+            font-size: 1.05rem;
+            text-align: center;
+        }
+
+        .memorial-year {
+            color: rgba(255, 255, 255, 0.78);
+            font-weight: 900;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+
         .career-highlights {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -2171,4 +2262,4 @@
         }
     </style>
 </body>
-</html> 
+</html>

@@ -131,8 +131,10 @@
                 const yearsList = tournamentsList.map(t => t.year).filter(y => Number.isFinite(y)).sort((a, b) => a - b);
                 const firstYearValue = yearsList.length ? yearsList[0] : null;
                 const lastYearValue = yearsList.length ? yearsList[yearsList.length - 1] : null;
-                document.getElementById('total-scorecards').textContent = `${totalRoundsCount.toLocaleString()} Rounds Analyzed`;
-                document.getElementById('data-timespan').textContent = (firstYearValue && lastYearValue) ? `${firstYearValue}–${lastYearValue}` : '—';
+                const totalEl = document.getElementById('total-scorecards');
+                if (totalEl) totalEl.textContent = `${totalRoundsCount.toLocaleString()} Rounds Analyzed`;
+                const spanEl = document.getElementById('data-timespan');
+                if (spanEl) spanEl.textContent = (firstYearValue && lastYearValue) ? `${firstYearValue}–${lastYearValue}` : '—';
 
                 console.log('✅ Focused statistics loaded successfully!');
                 return;
@@ -658,8 +660,17 @@
 
             const bestLongestWin = Math.max(0, ...Array.from(metricsByKey.values()).map(m => (m.played >= MIN_PAIRINGS ? (m.longestWinStreak || 0) : 0)));
             const bestLongestLose = Math.max(0, ...Array.from(metricsByKey.values()).map(m => (m.played >= MIN_PAIRINGS ? (m.longestLoseStreak || 0) : 0)));
-            const bestCurrentWin = Math.max(0, ...Array.from(metricsByKey.values()).map(m => (m.played >= MIN_PAIRINGS ? (m.currentWinStreak || 0) : 0)));
-            const bestCurrentLose = Math.max(0, ...Array.from(metricsByKey.values()).map(m => (m.played >= MIN_PAIRINGS ? (m.currentLoseStreak || 0) : 0)));
+
+            // Current streaks: exclude partnerships where either player is deceased (they can no longer extend the streak).
+            const isDeceased = (id) => (engine && typeof engine.isPlayerDeceased === 'function') ? engine.isPlayerDeceased(id) : false;
+            const eligibleCurrent = Array.from(metricsByKey.entries()).filter(([key, m]) => {
+                if (!m || (m.played || 0) < MIN_PAIRINGS) return false;
+                const r = rankingByKey.get(key);
+                if (!r || !Array.isArray(r.players) || r.players.length < 2) return false;
+                return !isDeceased(r.players[0]) && !isDeceased(r.players[1]);
+            });
+            const bestCurrentWin = Math.max(0, ...eligibleCurrent.map(([, m]) => (m.currentWinStreak || 0)));
+            const bestCurrentLose = Math.max(0, ...eligibleCurrent.map(([, m]) => (m.currentLoseStreak || 0)));
 
             const longestWinKeys = bestLongestWin > 0
                 ? Array.from(metricsByKey.entries()).filter(([k, m]) => m.played >= MIN_PAIRINGS && (m.longestWinStreak || 0) === bestLongestWin).map(([k]) => k)
@@ -668,10 +679,10 @@
                 ? Array.from(metricsByKey.entries()).filter(([k, m]) => m.played >= MIN_PAIRINGS && (m.longestLoseStreak || 0) === bestLongestLose).map(([k]) => k)
                 : [];
             const currentWinKeys = bestCurrentWin > 0
-                ? Array.from(metricsByKey.entries()).filter(([k, m]) => m.played >= MIN_PAIRINGS && (m.currentWinStreak || 0) === bestCurrentWin).map(([k]) => k)
+                ? eligibleCurrent.filter(([, m]) => (m.currentWinStreak || 0) === bestCurrentWin).map(([k]) => k)
                 : [];
             const currentLoseKeys = bestCurrentLose > 0
-                ? Array.from(metricsByKey.entries()).filter(([k, m]) => m.played >= MIN_PAIRINGS && (m.currentLoseStreak || 0) === bestCurrentLose).map(([k]) => k)
+                ? eligibleCurrent.filter(([, m]) => (m.currentLoseStreak || 0) === bestCurrentLose).map(([k]) => k)
                 : [];
 
             insights.innerHTML = `

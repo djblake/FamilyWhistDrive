@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memorial | Ruston Family Whist Drive</title>
+    <meta name="description" content="In memoriam. A memorial of deceased players and their whist careers.">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
+                    <h1 class="site-title">Ruston Family Whist Drive</h1>
+                    <p class="site-subtitle">Est. 1984 • The World's Most Elite Family Tournament</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="../" class="nav-link">Home</a>
+                    <a href="../tournaments/" class="nav-link">Tournaments</a>
+                    <a href="../players/" class="nav-link">Players</a>
+                    <a href="../leaderboard/" class="nav-link">Hall of Fame</a>
+                    <a href="../stats/" class="nav-link">Statistics</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="memorial-hero">
+            <div class="container">
+                <div class="hero-content">
+                    <div class="analytics-badge">🕊️ IN MEMORIAM</div>
+                    <h1 class="hero-title">Memorial</h1>
+                    <p class="hero-subtitle">Remembering our players — and celebrating their whist careers.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="memorial-section">
+            <div class="container">
+                <div class="memorial-list" id="memorial-list">
+                    <div class="loading-message">Loading memorial…</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Player Stats</h4>
+                    <p><a href="../players/">All Players</a></p>
+                    <p><a href="../leaderboard/">Rankings</a></p>
+                </div>
+                <div class="footer-section">
+                    <h4>Navigation</h4>
+                    <p><a href="../tournaments/">Tournament Archive</a></p>
+                    <p><a href="../families/">Family Tree</a></p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../assets/js/tournament-engine.js?v=cache1"></script>
+    <script>
+        function getParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        function initialsFromName(fullName) {
+            const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+            if (!parts.length) return '—';
+            return parts.slice(0, 2).map(p => p[0]).join('').toUpperCase();
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            const engine = new TournamentEngine();
+            window.tournamentEngine = engine;
+            const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+            const highlightId = getParam('player');
+
+            try {
+                await engine.loadFromGoogleSheets(sheetId);
+
+                const roster = (engine.getPlayersRoster && typeof engine.getPlayersRoster === 'function')
+                    ? engine.getPlayersRoster()
+                    : [];
+
+                const deceased = roster
+                    .filter(p => p && typeof p.dateOfDeath === 'string' && p.dateOfDeath.trim())
+                    .map(p => {
+                        const death = (engine.getPlayerDeathInfo && typeof engine.getPlayerDeathInfo === 'function')
+                            ? engine.getPlayerDeathInfo(p.id)
+                            : null;
+                        const deathYear = death && death.year ? death.year : null;
+                        const deathLabel = death && death.raw ? (death.isYearOnly && death.year ? String(death.year) : death.raw) : p.dateOfDeath.trim();
+
+                        const stats = (engine.getPlayer && typeof engine.getPlayer === 'function') ? engine.getPlayer(p.id) : null;
+                        const tournamentsPlayed = stats && Number.isFinite(stats.tournaments_played) ? stats.tournaments_played : (stats ? parseInt(stats.tournaments_played || '0', 10) : 0);
+                        const totalTricksNum = stats && Number.isFinite(stats.total_tricks) ? stats.total_tricks : (stats ? parseFloat(stats.total_tricks || '0') : 0);
+                        const totalRoundsNum = stats && Number.isFinite(stats.total_rounds) ? stats.total_rounds : (stats ? parseInt(stats.total_rounds || '0', 10) : 0);
+                        const avgTricks = totalRoundsNum > 0 ? (totalTricksNum / totalRoundsNum) : null;
+
+                        const champs = (engine.getPlayerVictoryCount && typeof engine.getPlayerVictoryCount === 'function')
+                            ? engine.getPlayerVictoryCount(p.id)
+                            : 0;
+                        const top3 = (engine.getPlayerTop3Count && typeof engine.getPlayerTop3Count === 'function')
+                            ? engine.getPlayerTop3Count(p.id)
+                            : 0;
+
+                        return {
+                            id: p.id,
+                            name: (engine.getPlayerFullName && typeof engine.getPlayerFullName === 'function') ? engine.getPlayerFullName(p.id) : (p.displayName || p.fullName || p.id),
+                            deathYear,
+                            deathLabel,
+                            tournamentsPlayed: Number.isFinite(tournamentsPlayed) ? tournamentsPlayed : 0,
+                            totalTricks: Number.isFinite(totalTricksNum) ? Math.floor(totalTricksNum) : 0,
+                            avgTricks: Number.isFinite(avgTricks) ? avgTricks : null,
+                            champs: Number.isFinite(champs) ? champs : 0,
+                            top3: Number.isFinite(top3) ? top3 : 0
+                        };
+                    })
+                    .sort((a, b) => {
+                        const ay = a.deathYear || 9999;
+                        const by = b.deathYear || 9999;
+                        return ay - by || a.name.localeCompare(b.name);
+                    });
+
+                const root = document.getElementById('memorial-list');
+                if (!root) return;
+
+                if (!deceased.length) {
+                    root.innerHTML = `<div class="loading-message">No memorial entries yet.</div>`;
+                    return;
+                }
+
+                root.innerHTML = deceased.map(d => {
+                    const profileHref = `../players/profile.html?player=${encodeURIComponent(d.id)}`;
+                    const initials = initialsFromName(d.name);
+                    const highlight = (highlightId && String(highlightId).toLowerCase() === String(d.id).toLowerCase()) ? 'memorial-card--highlight' : '';
+                    return `
+                        <article class="memorial-card ${highlight}" id="memorial-${escapeHtml(d.id)}">
+                            <div class="memorial-card__avatar" aria-hidden="true">${escapeHtml(initials)}</div>
+                            <div class="memorial-card__body">
+                                <div class="memorial-card__head">
+                                    <a class="memorial-card__name" href="${profileHref}">${escapeHtml(d.name)}</a>
+                                    <div class="memorial-card__death">† ${escapeHtml(d.deathLabel)}</div>
+                                </div>
+                                <div class="memorial-stats">
+                                    <div class="memorial-stat">
+                                        <div class="memorial-stat__label">Tournaments</div>
+                                        <div class="memorial-stat__value">${d.tournamentsPlayed.toLocaleString()}</div>
+                                    </div>
+                                    <div class="memorial-stat">
+                                        <div class="memorial-stat__label">Champs</div>
+                                        <div class="memorial-stat__value">${d.champs.toLocaleString()}</div>
+                                    </div>
+                                    <div class="memorial-stat">
+                                        <div class="memorial-stat__label">Top 3</div>
+                                        <div class="memorial-stat__value">${d.top3.toLocaleString()}</div>
+                                    </div>
+                                    <div class="memorial-stat">
+                                        <div class="memorial-stat__label">Total tricks</div>
+                                        <div class="memorial-stat__value">${d.totalTricks.toLocaleString()}</div>
+                                    </div>
+                                    <div class="memorial-stat memorial-stat--wide">
+                                        <div class="memorial-stat__label">Avg tricks/round</div>
+                                        <div class="memorial-stat__value">${Number.isFinite(d.avgTricks) ? d.avgTricks.toFixed(2) : '—'}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    `;
+                }).join('');
+
+                if (highlightId) {
+                    const el = document.getElementById(`memorial-${highlightId}`);
+                    if (el && typeof el.scrollIntoView === 'function') {
+                        el.scrollIntoView({ block: 'center' });
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                const root = document.getElementById('memorial-list');
+                if (root) root.innerHTML = `<div class="loading-message">Error loading memorial.</div>`;
+            }
+        });
+    </script>
+
+    <style>
+        .memorial-section {
+            padding: var(--spacing-3xl) 0;
+            background: var(--bg-secondary);
+        }
+
+        .memorial-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+        }
+
+        .memorial-card {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            background: white;
+            border-radius: var(--border-radius-lg);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: var(--shadow-card);
+            padding: 1rem 1.05rem;
+        }
+
+        .memorial-card--highlight {
+            outline: 3px solid rgba(34, 197, 94, 0.22);
+            box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.08), var(--shadow-card);
+        }
+
+        .memorial-card__avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            background: rgba(15, 23, 42, 0.06);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            color: var(--text-primary-dark);
+            flex: 0 0 auto;
+        }
+
+        .memorial-card__body {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .memorial-card__head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .memorial-card__name {
+            font-family: var(--font-primary);
+            font-weight: 900;
+            color: var(--text-primary-dark);
+            text-decoration: none;
+            font-size: 1.25rem;
+        }
+
+        .memorial-card__name:hover {
+            text-decoration: underline;
+        }
+
+        .memorial-card__death {
+            color: var(--text-secondary-dark);
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .memorial-stats {
+            margin-top: 0.75rem;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+
+        .memorial-stat {
+            background: rgba(15, 23, 42, 0.03);
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            border-radius: 12px;
+            padding: 0.7rem 0.75rem;
+        }
+
+        .memorial-stat--wide {
+            grid-column: span 2;
+        }
+
+        .memorial-stat__label {
+            color: var(--text-secondary-dark);
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .memorial-stat__value {
+            margin-top: 0.15rem;
+            color: var(--text-primary-dark);
+            font-weight: 900;
+            font-size: 1.05rem;
+        }
+
+        @media (max-width: 900px) {
+            .memorial-stats {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .memorial-stat--wide {
+                grid-column: span 2;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .memorial-card {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .memorial-card__avatar {
+                width: 52px;
+                height: 52px;
+            }
+            .memorial-stats {
+                grid-template-columns: 1fr;
+            }
+            .memorial-stat--wide {
+                grid-column: span 1;
+            }
+        }
+    </style>
+</body>
+</html>

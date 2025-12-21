@@ -211,6 +211,15 @@
             return json;
         }
 
+        function isLocalStaticDev() {
+            try {
+                const host = window.location && window.location.hostname ? window.location.hostname : '';
+                return host === 'localhost' || host === '127.0.0.1';
+            } catch (_) {
+                return false;
+            }
+        }
+
         async function getJson(url) {
             const response = await fetch(url, { cache: 'no-store' });
             if (!response.ok) {
@@ -275,16 +284,64 @@
             setHtml('raw-report', '', false);
 
             try {
-                const token = (document.getElementById('admin-token').value || '').trim();
-                if (!token) {
-                    throw new Error('Enter the admin token first.');
-                }
-
                 const engine = new TournamentEngine();
                 await engine.loadFromGoogleSheets(SHEET_ID, { bypassCache: true });
 
                 const rawCache = engine.exportRawCache();
                 state.latestRawCache = rawCache;
+
+                // Local static server (python/http-server) cannot POST to Pages Functions.
+                if (isLocalStaticDev()) {
+                    setHtml('raw-download',
+                        `<p class="warn">Local mode: Cloudflare KV endpoints are not available.</p>
+                         <p class="muted">Downloaded files can be copied into <code>assets/cache/</code> for deployment.</p>
+                         <p class="muted">rawHash: <code>${rawCache.rawHash}</code></p>
+                         <p><a href="#" id="dl-raw">Download raw-data.json</a></p>`,
+                        true
+                    );
+                    document.getElementById('dl-raw').addEventListener('click', (e) => {
+                        e.preventDefault();
+                        downloadJson('raw-data.json', rawCache);
+                    }, { once: true });
+
+                    const issuesSummary = engine.getDataIssues();
+                    const reportHtml = `
+                        <h4>Validation summary</h4>
+                        ${renderIssuesSummary(issuesSummary)}
+                        ${renderTrickMismatch(engine)}
+                    `;
+                    setHtml('raw-report', reportHtml, true);
+
+                    // Also compute stats.json locally so you can download both.
+                    setBusy('stats', true, 'Computing stats…');
+                    setHtml('stats-download', '', false);
+                    setHtml('stats-report', '', false);
+                    const statsCache = engine.exportStatsCache(rawCache.rawHash);
+                    setHtml('stats-download',
+                        `<p class="warn">Local mode: stats computed but not uploaded.</p>
+                         <p class="muted">rawHash: <code>${rawCache.rawHash}</code> • statsAlgorithmVersion: <code>${statsCache.statsAlgorithmVersion}</code></p>
+                         <p><a href="#" id="dl-stats">Download stats.json</a></p>`,
+                        true
+                    );
+                    document.getElementById('dl-stats').addEventListener('click', (e) => {
+                        e.preventDefault();
+                        downloadJson('stats.json', statsCache);
+                    }, { once: true });
+
+                    const tournaments = engine.getAllTournaments();
+                    const players = engine.getAllPlayers('total_tricks');
+                    setHtml('stats-report',
+                        `<h4>Stats summary</h4>
+                         <p><span class="pill">tournaments: ${tournaments.length}</span> <span class="pill">players: ${players.length}</span> <span class="pill">rawScorecards: ${engine.rawScorecards.length}</span></p>`,
+                        true
+                    );
+                    return;
+                }
+
+                const token = (document.getElementById('admin-token').value || '').trim();
+                if (!token) {
+                    throw new Error('Enter the admin token first.');
+                }
 
                 setBusy('raw', true, 'Storing raw cache to Cloudflare KV…');
                 const storeResult = await postJson('/api/admin/cache/raw', token, rawCache);
@@ -352,11 +409,6 @@
             setHtml('stats-report', '', false);
 
             try {
-                const token = (document.getElementById('admin-token').value || '').trim();
-                if (!token) {
-                    throw new Error('Enter the admin token first.');
-                }
-
                 let rawCache = state.latestRawCache;
                 if (!rawCache) {
                     // Prefer KV-served raw cache
@@ -387,20 +439,37 @@
 
                 const statsCache = engine.exportStatsCache(rawCache.rawHash);
 
-                setBusy('stats', true, 'Storing stats cache to Cloudflare KV…');
-                const storeResult = await postJson('/api/admin/cache/stats', token, statsCache);
+                if (isLocalStaticDev()) {
+                    setHtml('stats-download',
+                        `<p class="warn">Local mode: stats computed but not uploaded.</p>
+                         <p class="muted">rawHash: <code>${rawCache.rawHash}</code> • statsAlgorithmVersion: <code>${statsCache.statsAlgorithmVersion}</code></p>
+                         <p><a href="#" id="dl-stats">Download stats.json</a></p>`,
+                        true
+                    );
+                    document.getElementById('dl-stats').addEventListener('click', (e) => {
+                        e.preventDefault();
+                        downloadJson('stats.json', statsCache);
+                    }, { once: true });
+                } else {
+                    const token = (document.getElementById('admin-token').value || '').trim();
+                    if (!token) {
+                        throw new Error('Enter the admin token first.');
+                    }
+                    setBusy('stats', true, 'Storing stats cache to Cloudflare KV…');
+                    const storeResult = await postJson('/api/admin/cache/stats', token, statsCache);
 
-                setHtml('stats-download',
-                    `<p class="ok">Stats cache stored site-wide.</p>
-                     <p class="muted">rawHash: <code>${rawCache.rawHash}</code> • statsAlgorithmVersion: <code>${statsCache.statsAlgorithmVersion}</code></p>
-                     <p><a href="#" id="dl-stats">Download stats.json (backup)</a></p>
-                     <p class="muted">KV manifest updated at: <code>${storeResult?.manifest?.updatedAt || ''}</code></p>`,
-                    true
-                );
-                document.getElementById('dl-stats').addEventListener('click', (e) => {
-                    e.preventDefault();
-                    downloadJson('stats.json', statsCache);
-                }, { once: true });
+                    setHtml('stats-download',
+                        `<p class="ok">Stats cache stored site-wide.</p>
+                         <p class="muted">rawHash: <code>${rawCache.rawHash}</code> • statsAlgorithmVersion: <code>${statsCache.statsAlgorithmVersion}</code></p>
+                         <p><a href="#" id="dl-stats">Download stats.json (backup)</a></p>
+                         <p class="muted">KV manifest updated at: <code>${storeResult?.manifest?.updatedAt || ''}</code></p>`,
+                        true
+                    );
+                    document.getElementById('dl-stats').addEventListener('click', (e) => {
+                        e.preventDefault();
+                        downloadJson('stats.json', statsCache);
+                    }, { once: true });
+                }
 
                 const tournaments = engine.getAllTournaments();
                 const players = engine.getAllPlayers('total_tricks');
@@ -511,5 +580,3 @@
     </script>
 </body>
 </html>
-
-

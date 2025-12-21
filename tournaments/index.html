@@ -134,11 +134,22 @@
                 const totalPlayers = new Set();
                 tournaments.forEach(t => t.final_standings.forEach(s => totalPlayers.add(s.player)));
                 
-                // Update footer stats
-                document.getElementById('recent-tournament').textContent = 
-                    tournaments.length > 0 ? `${tournaments[0].name} (${tournaments[0].year})` : 'No tournaments';
-                document.getElementById('total-players').textContent = `${totalPlayers.size} Family Players`;
-                document.getElementById('total-rounds').textContent = `${totalRounds} Total Rounds`;
+                // Update footer stats (null-safe: footer content may be normalized globally)
+                const recentEl = document.getElementById('recent-tournament');
+                if (recentEl) {
+                    recentEl.textContent =
+                        tournaments.length > 0 ? `${tournaments[0].name} (${tournaments[0].year})` : 'No tournaments';
+                }
+
+                const totalPlayersEl = document.getElementById('total-players');
+                if (totalPlayersEl) {
+                    totalPlayersEl.textContent = `${totalPlayers.size} Family Players`;
+                }
+
+                const totalRoundsEl = document.getElementById('total-rounds');
+                if (totalRoundsEl) {
+                    totalRoundsEl.textContent = `${totalRounds} Total Rounds`;
+                }
                 
                 // Sort tournaments by year descending
                 const sortedTournaments = tournaments.sort((a, b) => b.year - a.year);
@@ -245,7 +256,7 @@
                 
                 // Create rank progression chart for the most recent tournament
                 if (tournaments.length > 0) {
-                    createTournamentRankChart(tournaments[0]);
+                    createTournamentRankChart(tournaments[0], tournamentEngine);
                 }
                 
                 console.log('✅ Tournament archive loaded successfully!');
@@ -265,7 +276,7 @@
         });
 
         // Function to create rank progression chart for tournament overview
-        function createTournamentRankChart(tournament) {
+        function createTournamentRankChart(tournament, tournamentEngine) {
             const canvas = document.getElementById('tournament-rank-chart');
             if (!canvas) {
                 console.warn('⚠️ Tournament rank chart canvas not found');
@@ -277,13 +288,13 @@
             // Check if Chart.js and our charts library are loaded
             if (typeof Chart === 'undefined') {
                 console.warn('⚠️ Chart.js not loaded yet');
-                setTimeout(() => createTournamentRankChart(tournament), 100);
+                setTimeout(() => createTournamentRankChart(tournament, tournamentEngine), 100);
                 return;
             }
             
             if (typeof TournamentCharts === 'undefined') {
                 console.warn('⚠️ TournamentCharts not loaded yet');
-                setTimeout(() => createTournamentRankChart(tournament), 100);
+                setTimeout(() => createTournamentRankChart(tournament, tournamentEngine), 100);
                 return;
             }
 

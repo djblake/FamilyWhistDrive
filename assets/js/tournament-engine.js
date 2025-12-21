@@ -61,8 +61,8 @@ class TournamentEngine {
         }
     }
 
-    static get RAW_CACHE_SCHEMA_VERSION() { return 1; }
-    static get STATS_CACHE_SCHEMA_VERSION() { return 1; }
+    static get RAW_CACHE_SCHEMA_VERSION() { return 2; }
+    static get STATS_CACHE_SCHEMA_VERSION() { return 2; }
     static get STATS_ALGORITHM_VERSION() { return 1; }
 
     resetState() {
@@ -461,20 +461,36 @@ class TournamentEngine {
     }
 
     injectUpdateDataFooterLink() {
-        // Adds an "Update data" link into the footer on any page that has a footer.
+        // Normalizes footer links + adds an "Update data" link.
         try {
             if (typeof document === 'undefined') {
                 return;
             }
+            const footerContent = document.querySelector('.footer .footer-content');
+            const rootUrl = this.cacheInfo && this.cacheInfo.rootUrl ? this.cacheInfo.rootUrl : '';
+            if (!rootUrl) {
+                return;
+            }
+
+            // 1) Normalize footer navigation links (avoid duplicating header nav).
+            // Keep only: Memorial + History placeholder.
+            if (footerContent && !footerContent.querySelector('[data-footer-nav="true"]')) {
+                footerContent.innerHTML = `
+                    <div class="footer-section" data-footer-nav="true">
+                        <h4>More</h4>
+                        <p><a href="${rootUrl}memorial/">Memorial</a></p>
+                        <p><a href="${rootUrl}families/">Family Tree</a></p>
+                        <p><a href="#" aria-disabled="true" style="pointer-events:none; opacity:0.7; text-decoration:none;">History (coming soon)</a></p>
+                    </div>
+                `;
+            }
+
+            // 2) Add "Update data" link into footer bottom.
             const footerBottom = document.querySelector('.footer-bottom');
             if (!footerBottom) {
                 return;
             }
             if (footerBottom.querySelector('[data-update-data-link]')) {
-                return;
-            }
-            const rootUrl = this.cacheInfo && this.cacheInfo.rootUrl ? this.cacheInfo.rootUrl : '';
-            if (!rootUrl) {
                 return;
             }
             const link = document.createElement('a');
@@ -1311,6 +1327,7 @@ class TournamentEngine {
             const lastIdx = findHeaderIdx('LastName') ?? 3;
             const nickIdx = findHeaderIdx('NickName') ?? 4;
             const dobIdx = findHeaderIdx('DateOfBirth');
+            const dodIdx = findHeaderIdx('DateOfDeath');
             const parentsIdx = findHeaderIdx('FamilyTree_Parents');
             const hadChildrenWithIdx = findHeaderIdx('FamilyTree_HadChildrenWith');
             const isPartneredWithIdx = findHeaderIdx('FamilyTree_IsPartneredWith');
@@ -1406,6 +1423,7 @@ class TournamentEngine {
                     nickname: values[nickIdx] || '',
                     fullName: `${values[firstIdx] || ''} ${values[lastIdx] || ''}`.trim(),
                     dateOfBirth: Number.isInteger(dobIdx) ? (values[dobIdx] || '').trim() : '',
+                    dateOfDeath: Number.isInteger(dodIdx) ? (values[dodIdx] || '').trim() : '',
                     familyTreeParents: Number.isInteger(parentsIdx) ? parseKeyList(values[parentsIdx]) : [],
                     familyTreeHadChildrenWith: Number.isInteger(hadChildrenWithIdx) ? parseKeyList(values[hadChildrenWithIdx]) : [],
                     familyTreeIsPartneredWith: Number.isInteger(isPartneredWithIdx) ? parseKeyList(values[isPartneredWithIdx]) : [],
@@ -1431,6 +1449,72 @@ class TournamentEngine {
      */
     getPlayersRoster() {
         return Array.from(this.playersLookup?.values?.() || []);
+    }
+
+    /**
+     * Parse a roster date field that may be "DD/MM/YYYY" or "YYYY".
+     * @param {string} raw
+     * @returns {{raw:string, year:number|null, date:Date|null, isYearOnly:boolean}}
+     */
+    parseRosterDate(raw) {
+        const s = String(raw ?? '').trim();
+        if (!s) {
+            return { raw: '', year: null, date: null, isYearOnly: false };
+        }
+        if (/^\d{4}$/.test(s)) {
+            const y = parseInt(s, 10);
+            return { raw: s, year: Number.isFinite(y) ? y : null, date: null, isYearOnly: true };
+        }
+        const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (m) {
+            const dd = parseInt(m[1], 10);
+            const mm = parseInt(m[2], 10);
+            const yyyy = parseInt(m[3], 10);
+            const isValid = Number.isFinite(dd) && Number.isFinite(mm) && Number.isFinite(yyyy) && dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12;
+            if (isValid) {
+                // Use UTC to avoid timezone day shifts
+                const dt = new Date(Date.UTC(yyyy, mm - 1, dd));
+                return { raw: s, year: yyyy, date: dt, isYearOnly: false };
+            }
+        }
+        // Fallback: try to grab a trailing year
+        const yMatch = s.match(/(\d{4})$/);
+        const y = yMatch ? parseInt(yMatch[1], 10) : null;
+        return { raw: s, year: Number.isFinite(y) ? y : null, date: null, isYearOnly: false };
+    }
+
+    /**
+     * Get roster entry by player ID.
+     * @param {string} playerId
+     * @returns {object|null}
+     */
+    getRosterPlayer(playerId) {
+        if (!playerId) return null;
+        return (this.playersLookup && this.playersLookup.get) ? (this.playersLookup.get(playerId) || null) : null;
+    }
+
+    /**
+     * Returns true if player has a non-empty DateOfDeath.
+     * @param {string} playerId
+     * @returns {boolean}
+     */
+    isPlayerDeceased(playerId) {
+        const p = this.getRosterPlayer(playerId);
+        const dod = p && typeof p.dateOfDeath === 'string' ? p.dateOfDeath.trim() : '';
+        return !!dod;
+    }
+
+    /**
+     * Death info for a player (parsed).
+     * @param {string} playerId
+     * @returns {{raw:string, year:number|null, date:Date|null, isYearOnly:boolean}|null}
+     */
+    getPlayerDeathInfo(playerId) {
+        const p = this.getRosterPlayer(playerId);
+        if (!p) return null;
+        const dod = p && typeof p.dateOfDeath === 'string' ? p.dateOfDeath.trim() : '';
+        if (!dod) return null;
+        return this.parseRosterDate(dod);
     }
 
     /**
