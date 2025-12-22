@@ -102,9 +102,12 @@
                     <div class="latest-top-grid">
                         <div class="latest-story">
                             <div class="latest-story-title">The story</div>
-                            <div class="latest-story-text" id="latest-tournament-blurb">Loading…</div>
+                            <ul class="latest-story-list" id="latest-tournament-story">
+                                <li>Loading…</li>
+                            </ul>
                         </div>
                         <div class="latest-podium-side" aria-label="Podium">
+                            <div class="latest-podium-meta" id="latest-podium-meta">—</div>
                             <div class="mini-card mini-card--silver" aria-label="Second place">
                                 <div class="mini-kicker">🥈 Second</div>
                                 <div class="mini-value" id="latest-mini-second-name">—</div>
@@ -114,6 +117,24 @@
                                 <div class="mini-kicker">🥉 Third</div>
                                 <div class="mini-value" id="latest-mini-third-name">—</div>
                                 <div class="mini-subvalue" id="latest-mini-third-stats">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="latest-extra-card latest-seed-card">
+                        <div class="latest-extra-title">Seed watch</div>
+                        <div class="seed-mini-table" role="table" aria-label="Seed watch">
+                            <div class="seed-mini-row" role="row">
+                                <div class="seed-mini-rank" id="latest-seed-row-1-rank">#1</div>
+                                <div class="seed-mini-name" id="latest-seed-row-1-name">—</div>
+                                <div class="seed-mini-points" id="latest-seed-row-1-points">—</div>
+                                <div class="seed-mini-trend" id="latest-seed-row-1-trend" aria-label="Trend graph"></div>
+                            </div>
+                            <div class="seed-mini-row seed-mini-row--highlight" role="row">
+                                <div class="seed-mini-rank" id="latest-seed-row-winner-rank">—</div>
+                                <div class="seed-mini-name" id="latest-seed-row-winner-name">—</div>
+                                <div class="seed-mini-points" id="latest-seed-row-winner-points">—</div>
+                                <div class="seed-mini-trend" id="latest-seed-row-winner-trend" aria-label="Trend graph"></div>
                             </div>
                         </div>
                     </div>
@@ -173,7 +194,7 @@
                     </div>
                     <div class="feature-panel">
                         <div class="feature-panel-title">At a glance</div>
-                        <div class="feature-metrics">
+                        <div class="feature-metrics feature-metrics--stack">
                             <div class="feature-metric">
                                 <div class="feature-metric-number" id="home-metric-players">—</div>
                                 <div class="feature-metric-label">Players tracked</div>
@@ -203,8 +224,19 @@
                         </div>
                     </div>
                     <div class="feature-panel">
-                        <div class="feature-panel-title">Why it matters</div>
-                        <p class="feature-panel-text">One good tournament is a moment. A Hall-of-Fame career is a story told over decades.</p>
+                        <div class="feature-panel-title">Standout stats</div>
+                        <div class="feature-panel-metrics">
+                            <div class="feature-panel-metric">
+                                <div class="feature-panel-kicker">Current #1 seed</div>
+                                <div class="feature-panel-value" id="hof-current-seed-1">—</div>
+                                <div class="feature-panel-subvalue" id="hof-current-seed-1-sub">—</div>
+                            </div>
+                            <div class="feature-panel-metric">
+                                <div class="feature-panel-kicker">All-time champion</div>
+                                <div class="feature-panel-value" id="hof-alltime-champ">—</div>
+                                <div class="feature-panel-subvalue" id="hof-alltime-champ-sub">—</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -221,8 +253,19 @@
                         </div>
                     </div>
                     <div class="feature-panel">
-                        <div class="feature-panel-title">On this page</div>
-                        <p class="feature-panel-text">Find the strongest partnerships, the invincibles, and the streaks that define eras.</p>
+                        <div class="feature-panel-title">Standout stats</div>
+                        <div class="feature-panel-metrics">
+                            <div class="feature-panel-metric">
+                                <div class="feature-panel-kicker">Best partnership</div>
+                                <div class="feature-panel-value" id="stats-best-partnership">—</div>
+                                <div class="feature-panel-subvalue" id="stats-best-partnership-sub">—</div>
+                            </div>
+                            <div class="feature-panel-metric">
+                                <div class="feature-panel-kicker">Longest win streak</div>
+                                <div class="feature-panel-value" id="stats-longest-win-streak">—</div>
+                                <div class="feature-panel-subvalue" id="stats-longest-win-streak-sub">—</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -338,13 +381,22 @@
                     return sum;
                 }, 0);
                 
-                const totalPlayers = new Set();
-                tournaments.forEach(t => t.final_standings.forEach(s => totalPlayers.add(s.player)));
+                // Player counts:
+                // - rosterCount: rows on the Players sheet (may include people who've never played)
+                // - competedCount: distinct individuals who've actually appeared in tournaments (splits shared hands)
+                const rosterCount = (tournamentEngine.getPlayersRoster && typeof tournamentEngine.getPlayersRoster === 'function')
+                    ? (tournamentEngine.getPlayersRoster().length || 0)
+                    : 0;
+                const competedPlayers = (tournamentEngine.getAllIndividualPlayers && typeof tournamentEngine.getAllIndividualPlayers === 'function')
+                    ? (tournamentEngine.getAllIndividualPlayers('total_tricks') || [])
+                    : [];
+                const competedCount = Array.isArray(competedPlayers) ? competedPlayers.length : 0;
                 
                 document.getElementById('tournaments-count').textContent = tournaments.length;
                 document.getElementById('rounds-count').textContent = totalRounds;
                 document.getElementById('tricks-count').textContent = totalTricks.toLocaleString();
-                document.getElementById('players-count').textContent = totalPlayers.size;
+                // Home should match the Players page: count individuals who have competed (not shared-hand combos).
+                document.getElementById('players-count').textContent = competedCount || rosterCount || 0;
                 
                 // Winner spotlight + tournament highlights
                 const uniqueDesc = (tournamentEngine.getAllTournamentsUnique && typeof tournamentEngine.getAllTournamentsUnique === 'function')
@@ -445,6 +497,103 @@
                     const winnerSeedEl = document.getElementById('winner-seed-rank');
                     if (winnerSeedEl) winnerSeedEl.textContent = champSeedText;
 
+                    // Hall of Fame: seed watch mini table (top seed + latest champion)
+                    const sparklineSvg = (values, opts = {}) => {
+                        const w = Number(opts.width) || 92;
+                        const h = Number(opts.height) || 26;
+                        const pad = Number(opts.pad) || 3;
+                        const stroke = opts.stroke || 'rgba(15, 23, 42, 0.72)';
+                        const fill = opts.fill || 'rgba(217, 175, 61, 0.20)';
+                        const dot = opts.dot || 'rgba(15, 23, 42, 0.85)';
+                        const pts = Array.isArray(values) ? values.filter(v => Number.isFinite(Number(v))).map(v => Number(v)) : [];
+                        if (pts.length === 0) {
+                            return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="${w}" height="${h}" rx="6" fill="rgba(15, 23, 42, 0.03)"/></svg>`;
+                        }
+                        if (pts.length === 1) {
+                            const cx = (w / 2).toFixed(1);
+                            const cy = (h / 2).toFixed(1);
+                            return `
+                                <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Trend">
+                                    <line x1="${pad}" y1="${cy}" x2="${w - pad}" y2="${cy}" stroke="rgba(15, 23, 42, 0.18)" stroke-width="2" stroke-linecap="round" />
+                                    <circle cx="${cx}" cy="${cy}" r="2.8" fill="${dot}" />
+                                </svg>
+                            `.trim();
+                        }
+                        const min = Math.min(...pts);
+                        const max = Math.max(...pts);
+                        const range = (max - min) || 1;
+                        const usableW = w - pad * 2;
+                        const usableH = h - pad * 2;
+                        const xy = pts.map((v, i) => {
+                            const x = pad + (i * (usableW / (pts.length - 1)));
+                            const y = pad + ((v - min) / range) * usableH;
+                            return { x, y };
+                        });
+                        const line = xy.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+                        const last = xy[xy.length - 1];
+                        const area = `${pad},${h - pad} ${line} ${w - pad},${h - pad}`;
+                        return `
+                            <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Trend">
+                                <path d="M ${area}" fill="${fill}" stroke="none" />
+                                <polyline points="${line}" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="2.6" fill="${dot}" />
+                            </svg>
+                        `.trim();
+                    };
+
+                    const seedRankSeries = (playerId) => {
+                        const id = String(playerId || '').trim();
+                        if (!id) return [];
+                        const series = [];
+                        for (let i = 0; i < allForSeed.length; i++) {
+                            const slice = allForSeed.slice(0, i + 1);
+                            const snap = (typeof tournamentEngine.computeOfficialSeedRankingsForTournaments === 'function')
+                                ? tournamentEngine.computeOfficialSeedRankingsForTournaments(slice, true)
+                                : [];
+                            const rec = snap.find(r => r && r.name === id);
+                            if (rec && Number.isFinite(Number(rec.seed_rank))) {
+                                series.push(Number(rec.seed_rank));
+                            }
+                        }
+                        const keep = 10;
+                        return series.length > keep ? series.slice(series.length - keep) : series;
+                    };
+
+                    const fillSeedRow = (prefix, rankText, playerId, pointsText) => {
+                        const rankEl = document.getElementById(`${prefix}-rank`);
+                        const nameEl = document.getElementById(`${prefix}-name`);
+                        const ptsEl = document.getElementById(`${prefix}-points`);
+                        const trendEl = document.getElementById(`${prefix}-trend`);
+                        if (rankEl) rankEl.textContent = rankText || '—';
+                        if (nameEl) nameEl.textContent = playerId ? safeName(playerId) : '—';
+                        if (ptsEl) ptsEl.textContent = pointsText || '—';
+                        if (trendEl) {
+                            const series = seedRankSeries(playerId);
+                            trendEl.innerHTML = sparklineSvg(series);
+                        }
+                    };
+
+                    const topSeed = seedCurrent && seedCurrent.length ? seedCurrent[0] : null;
+                    fillSeedRow('latest-seed-row-1', '#1', topSeed?.name, topSeed ? `${topSeed.seed_points} pts` : '—');
+                    fillSeedRow(
+                        'latest-seed-row-winner',
+                        champSeed ? `#${champSeed.seed_rank}` : '—',
+                        champ?.player || null,
+                        champSeed ? `${champSeed.seed_points} pts` : '—'
+                    );
+
+                    // Hall of Fame panel: current #1 seed (simple standout stats)
+                    const hofSeedEl = document.getElementById('hof-current-seed-1');
+                    const hofSeedSubEl = document.getElementById('hof-current-seed-1-sub');
+                    if (hofSeedEl && seedCurrent && seedCurrent.length > 0) {
+                        const top = seedCurrent[0];
+                        hofSeedEl.textContent = safeName(top.name);
+                        if (hofSeedSubEl) hofSeedSubEl.textContent = `Seed #1 • ${top.seed_points} pts`;
+                    } else {
+                        if (hofSeedEl) hofSeedEl.textContent = '—';
+                        if (hofSeedSubEl) hofSeedSubEl.textContent = '';
+                    }
+
                     // Podium mini panels (2nd / 3rd)
                     const playedOn = latest?.date ? `${latest.date}` : null;
                     const entrantsNum = standings.length ? standings.length : (latest?.total_players ? Number(latest.total_players) : null);
@@ -466,6 +615,15 @@
                     };
                     setPodiumMini('second', second);
                     setPodiumMini('third', third);
+
+                    // Podium meta (date/entrants/rounds) above the 2nd/3rd cards (not in the story)
+                    const podiumMetaEl = document.getElementById('latest-podium-meta');
+                    if (podiumMetaEl) {
+                        const bits = [];
+                        if (entrantsNum) bits.push(`${entrantsNum} entrants`);
+                        if (roundsNum) bits.push(`${roundsNum} rounds`);
+                        podiumMetaEl.textContent = bits.length ? bits.join(' • ') : '';
+                    }
 
                     // Returnees (gap >= 3 years)
                     const participantsLatest = extractParticipantIds(latest);
@@ -589,34 +747,38 @@
                         }
                     }
 
-                    // Tournament blurb (narrative text)
-                    const blurbEl = document.getElementById('latest-tournament-blurb');
-                    if (blurbEl) {
-                        const parts = [];
-                        if (playedOn || entrantsNum || roundsNum) {
-                            const bits = [];
-                            if (playedOn) bits.push(`Played on ${playedOn}`);
-                            if (entrantsNum) bits.push(`${entrantsNum} entrants`);
-                            if (roundsNum) bits.push(`${roundsNum} rounds`);
-                            parts.push(bits.join(' • ') + '.');
-                        }
+                    // Tournament story (bulleted)
+                    const storyEl = document.getElementById('latest-tournament-story');
+                    if (storyEl) {
+                        storyEl.innerHTML = '';
+                        const add = (txt) => {
+                            if (!txt) return;
+                            const li = document.createElement('li');
+                            li.textContent = txt;
+                            storyEl.appendChild(li);
+                        };
+
                         if (champTricks !== null && champAvg !== null) {
-                            parts.push(`${champName} won ${latest.year} with ${champTricks} tricks (${champAvg.toFixed(2)} avg/round).`);
+                            add(`${champName} won ${latest.year} with ${champTricks} tricks (${champAvg.toFixed(2)} avg/round).`);
                         } else if (champTricks !== null) {
-                            parts.push(`${champName} won ${latest.year} with ${champTricks} tricks.`);
+                            add(`${champName} won ${latest.year} with ${champTricks} tricks.`);
                         } else {
-                            parts.push(`${champName} took the title in ${latest.year}.`);
+                            add(`${champName} took the title in ${latest.year}.`);
                         }
+
                         if (champSeed) {
-                            parts.push(`${champName} is now Seed #${champSeed.seed_rank} with ${champSeed.seed_points} points.`);
+                            add(`${champName} is now Seed #${champSeed.seed_rank} with ${champSeed.seed_points} points.`);
                         }
-                        if (seedLeadText) parts.push(seedLeadText);
-                        if (careerSentence) parts.push(careerSentence);
-                        if (comebackSentence) parts.push(comebackSentence);
+                        if (seedLeadText) add(seedLeadText);
+                        if (careerSentence) add(careerSentence);
+                        if (comebackSentence) add(comebackSentence);
                         if (booby && booby.player) {
-                            parts.push(`At the other end of the table, the booby prize went to ${safeName(booby.player)}.`);
+                            add(`Booby prize: ${safeName(booby.player)}.`);
                         }
-                        blurbEl.textContent = parts.join(' ');
+
+                        if (!storyEl.children.length) {
+                            add('Story coming soon.');
+                        }
                     }
 
                     // Extra highlights list (returnees, 12/13, booby if you want it repeated, etc.)
@@ -647,6 +809,140 @@
                             add('No extra highlights found for this tournament.');
                         }
                     }
+                }
+
+                // Hall of Fame: all-time champion (most tournament wins)
+                const hofChampEl = document.getElementById('hof-alltime-champ');
+                const hofChampSubEl = document.getElementById('hof-alltime-champ-sub');
+                try {
+                    const individuals = (typeof tournamentEngine.getAllIndividualPlayers === 'function')
+                        ? tournamentEngine.getAllIndividualPlayers('tournament_wins')
+                        : [];
+                    if (individuals && individuals.length) {
+                        const topWins = Number(individuals[0].tournament_wins) || 0;
+                        const tied = individuals.filter(p => (Number(p.tournament_wins) || 0) === topWins);
+                        const names = tied.slice(0, 3).map(p => safeName(p.name));
+                        if (hofChampEl) hofChampEl.textContent = names.join(', ');
+                        if (hofChampSubEl) {
+                            hofChampSubEl.textContent = `${topWins} win${topWins === 1 ? '' : 's'}${tied.length > 3 ? ` • +${tied.length - 3} tied` : ''}`;
+                        }
+                    } else {
+                        if (hofChampEl) hofChampEl.textContent = '—';
+                        if (hofChampSubEl) hofChampSubEl.textContent = '';
+                    }
+                } catch (_) {
+                    if (hofChampEl) hofChampEl.textContent = '—';
+                    if (hofChampSubEl) hofChampSubEl.textContent = '';
+                }
+
+                // Stats: best partnership (by avg tricks/round) + longest win streak
+                const statsBestEl = document.getElementById('stats-best-partnership');
+                const statsBestSubEl = document.getElementById('stats-best-partnership-sub');
+                const statsStreakEl = document.getElementById('stats-longest-win-streak');
+                const statsStreakSubEl = document.getElementById('stats-longest-win-streak-sub');
+
+                try {
+                    const pr = (typeof tournamentEngine.getPartnershipPerformanceRankings === 'function')
+                        ? tournamentEngine.getPartnershipPerformanceRankings()
+                        : [];
+                    const MIN_PAIRINGS = 4;
+                    const best = (pr || []).find(p => (Number(p.partnerships_count) || 0) >= MIN_PAIRINGS) || (pr && pr[0]) || null;
+                    if (best && Array.isArray(best.players) && best.players.length === 2) {
+                        const a = best.players[0];
+                        const b = best.players[1];
+                        if (statsBestEl) statsBestEl.textContent = `${best.average_tricks.toFixed(2)} avg/round`;
+                        if (statsBestSubEl) statsBestSubEl.textContent = `${safeName(a)} & ${safeName(b)} • ${Number(best.partnerships_count || best.total_rounds || 0)} games`;
+                    } else {
+                        if (statsBestEl) statsBestEl.textContent = '—';
+                        if (statsBestSubEl) statsBestSubEl.textContent = '';
+                    }
+
+                    // Longest win streak across partnerships (shared hands excluded; min 4 games) — match the Stats page logic.
+                    const eligible = (pr || []).filter(p => (Number(p.partnerships_count) || 0) >= MIN_PAIRINGS);
+                    const allowedKeys = new Set(eligible.map(p => p.partnership));
+                    const rankingByKey = new Map(eligible.map(p => [p.partnership, p]));
+
+                    const winAggByKey = new Map(); // key -> {played, games:[{year,round,table,isWin}]}
+                    for (const t of (tournamentEngine.tournaments ? tournamentEngine.tournaments.values() : [])) {
+                        if (!t || !Array.isArray(t.rounds)) continue;
+                        const year = Number.isFinite(t.year) ? t.year : (Number.isFinite(t.Year) ? t.Year : parseInt(t.year || t.Year || '0'));
+                        for (const r of t.rounds) {
+                            if (!r || !Array.isArray(r.tables)) continue;
+                            const roundNum = Number.isFinite(r.round) ? r.round : (Number.isFinite(r.Round) ? r.Round : parseInt(r.round || r.Round || '0'));
+                            for (const table of r.tables) {
+                                if (!table || !Array.isArray(table.partnerships)) continue;
+                                const tableNum = Number.isFinite(table.table) ? table.table : parseInt(table.table || table.Table || '0');
+                                for (const p of table.partnerships) {
+                                    const pos1IsShared = p.position1 && p.position1.length > 1;
+                                    const pos2IsShared = p.position2 && p.position2.length > 1;
+                                    if (pos1IsShared || pos2IsShared) continue;
+                                    const a = p.position1 && p.position1[0];
+                                    const b = p.position2 && p.position2[0];
+                                    if (!a || !b) continue;
+                                    const key = [a, b].sort().join(' & ');
+                                    if (!allowedKeys.has(key)) continue;
+                                    const tricks = Number.isFinite(p.tricks) ? p.tricks : parseFloat(p.tricks);
+                                    if (!Number.isFinite(tricks)) continue;
+
+                                    if (!winAggByKey.has(key)) winAggByKey.set(key, { played: 0, games: [] });
+                                    const rec = winAggByKey.get(key);
+                                    rec.played += 1;
+                                    rec.games.push({
+                                        year: Number.isFinite(year) ? year : 0,
+                                        round: Number.isFinite(roundNum) ? roundNum : 0,
+                                        table: Number.isFinite(tableNum) ? tableNum : 0,
+                                        isWin: tricks >= 7
+                                    });
+                                }
+                            }
+                        }
+                    }
+
+                    const longestByKey = new Map(); // key -> {played, longestWinStreak}
+                    for (const key of allowedKeys.values()) {
+                        const rec = winAggByKey.get(key) || { played: 0, games: [] };
+                        const played = Number.isFinite(rec.played) ? rec.played : 0;
+                        const games = Array.isArray(rec.games) ? rec.games.slice() : [];
+                        games.sort((a, b) => (a.year - b.year) || (a.round - b.round) || (a.table - b.table));
+                        let longestWinStreak = 0;
+                        let w = 0;
+                        for (const g of games) {
+                            if (g && g.isWin) {
+                                w += 1;
+                                if (w > longestWinStreak) longestWinStreak = w;
+                            } else {
+                                w = 0;
+                            }
+                        }
+                        longestByKey.set(key, { played, longestWinStreak });
+                    }
+
+                    const bestLongestWin = Math.max(0, ...Array.from(longestByKey.values()).map(m => ((m.played >= MIN_PAIRINGS) ? (m.longestWinStreak || 0) : 0)));
+                    const tieKeys = bestLongestWin > 0
+                        ? Array.from(longestByKey.entries())
+                            .filter(([k, m]) => (m.played >= MIN_PAIRINGS) && ((m.longestWinStreak || 0) === bestLongestWin))
+                            .sort((a, b) => (b[1].played - a[1].played) || String(a[0]).localeCompare(String(b[0])))
+                            .map(([k]) => k)
+                        : [];
+
+                    if (bestLongestWin > 0 && tieKeys.length) {
+                        const pick = rankingByKey.get(tieKeys[0]);
+                        const a = pick?.players?.[0];
+                        const b = pick?.players?.[1];
+                        if (statsStreakEl) statsStreakEl.textContent = `${bestLongestWin}`;
+                        if (statsStreakSubEl) {
+                            const label = (a && b) ? `${safeName(a)} & ${safeName(b)}` : tieKeys[0];
+                            statsStreakSubEl.textContent = `${label}${tieKeys.length > 1 ? ` • ${tieKeys.length} tied` : ''}`;
+                        }
+                    } else {
+                        if (statsStreakEl) statsStreakEl.textContent = '—';
+                        if (statsStreakSubEl) statsStreakSubEl.textContent = '';
+                    }
+                } catch (_) {
+                    if (statsBestEl) statsBestEl.textContent = '—';
+                    if (statsBestSubEl) statsBestSubEl.textContent = '';
+                    if (statsStreakEl) statsStreakEl.textContent = '—';
+                    if (statsStreakSubEl) statsStreakSubEl.textContent = '';
                 }
 
                 // Home history
@@ -692,7 +988,7 @@
                     const el = document.getElementById(id);
                     if (el) el.textContent = value;
                 };
-                setMetric('home-metric-players', `${totalPlayers.size}`);
+                setMetric('home-metric-players', `${competedCount || rosterCount || 0}`);
                 setMetric('home-metric-tournaments', `${tournaments.length}`);
                 setMetric('home-metric-rounds', `${totalRounds}`);
 
@@ -867,10 +1163,31 @@
             font-weight: 600;
         }
 
+        .latest-story-list {
+            margin: 0.35rem 0 0;
+            padding-left: 1.1rem;
+            color: rgba(255, 255, 255, 0.92);
+            line-height: 1.65;
+            font-weight: 650;
+        }
+
+        .latest-story-list li {
+            margin: 0.45rem 0;
+        }
+
         .latest-podium-side {
             display: flex;
             flex-direction: column;
             gap: var(--spacing-lg);
+        }
+
+        .latest-podium-meta {
+            color: rgba(255, 255, 255, 0.88);
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            font-size: 0.92rem;
+            text-align: right;
+            margin-top: 0.15rem;
         }
 
         .mini-card {
@@ -1050,6 +1367,36 @@
             gap: var(--spacing-md);
         }
 
+        .feature-metrics--stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+
+        .feature-metrics--stack .feature-metric {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: var(--spacing-lg);
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+
+        .feature-metrics--stack .feature-metric:not(:last-child) {
+            padding-bottom: 0.65rem;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        .feature-metrics--stack .feature-metric-number {
+            font-size: 1.55rem;
+        }
+
+        .feature-metrics--stack .feature-metric-label {
+            margin-top: 0;
+            text-align: right;
+        }
+
         .feature-metric {
             background: white;
             border-radius: var(--border-radius-md);
@@ -1070,6 +1417,120 @@
             font-size: 0.85rem;
             letter-spacing: 0.04em;
             text-transform: uppercase;
+        }
+
+        .feature-panel-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: var(--spacing-md);
+        }
+
+        .feature-panel-metric {
+            background: rgba(15, 23, 42, 0.04);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: var(--border-radius-md);
+            padding: 0.85rem 0.9rem;
+        }
+
+        .feature-panel-kicker {
+            font-weight: 900;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-secondary-dark);
+            font-size: 0.78rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .feature-panel-value {
+            font-weight: 950;
+            color: var(--text-primary-dark);
+            font-size: 1.25rem;
+            line-height: 1.15;
+        }
+
+        .feature-panel-subvalue {
+            margin-top: 0.35rem;
+            color: var(--text-secondary-dark);
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .seed-mini-table {
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+            margin-top: 0.15rem;
+        }
+
+        .seed-mini-row {
+            display: grid;
+            grid-template-columns: 3.5ch 1fr 6.5ch 96px;
+            align-items: center;
+            gap: 0.65rem;
+            background: rgba(15, 23, 42, 0.04);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: var(--border-radius-md);
+            padding: 0.75rem 0.8rem;
+        }
+
+        .seed-mini-row--highlight {
+            background: rgba(217, 175, 61, 0.12);
+            border-color: rgba(217, 175, 61, 0.28);
+        }
+
+        .seed-mini-rank {
+            font-weight: 950;
+            color: var(--text-primary-dark);
+            font-size: 0.95rem;
+        }
+
+        .seed-mini-name {
+            font-weight: 900;
+            color: var(--text-primary-dark);
+            font-size: 1rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .seed-mini-points {
+            font-weight: 900;
+            color: var(--text-primary-dark);
+            font-size: 0.95rem;
+            text-align: right;
+        }
+
+        .seed-mini-trend {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .seed-mini-footer {
+            margin-top: 0.8rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(15, 23, 42, 0.10);
+            color: var(--text-secondary-dark);
+            font-weight: 750;
+            font-size: 0.95rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+        }
+
+        .seed-mini-footer-label {
+            font-weight: 900;
+            color: var(--text-primary-dark);
+        }
+
+        .seed-mini-footer-value {
+            font-weight: 950;
+            color: var(--text-primary-dark);
+        }
+
+        .seed-mini-footer-sub {
+            color: var(--text-secondary-dark);
+            font-weight: 750;
         }
 
         /* Feature sections: default is dark background (white text). Only force dark text on the white sections. */
@@ -1093,6 +1554,9 @@
             .winner-stats-row { grid-template-columns: 1fr; }
             .feature-grid { grid-template-columns: 1fr; }
             .latest-top-grid { grid-template-columns: 1fr; }
+            .feature-panel-metrics { grid-template-columns: 1fr; }
+            .latest-podium-meta { text-align: left; }
+            .seed-mini-row { grid-template-columns: 3.5ch 1fr 6.5ch 1fr; }
         }
 
         @media (max-width: 560px) {

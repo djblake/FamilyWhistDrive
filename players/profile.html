@@ -344,9 +344,27 @@
                 // Precompute global min/max avg tricks per round (for barometer scaling)
                 window.__globalAvgTricksRange = computeGlobalAvgTricksRange(tournamentEngine, tournaments);
                 
-                // Find the player
-                const player = players.find(p => p.name.toLowerCase() === playerName.toLowerCase());
-                
+                // Find the player (either someone who has competed, or a roster-only player)
+                let player = players.find(p => String(p?.name || '').toLowerCase() === String(playerName || '').toLowerCase());
+
+                // If not found in tournament-derived stats, fall back to Players-sheet roster entry
+                if (!player && typeof tournamentEngine.getPlayersRoster === 'function') {
+                    const roster = tournamentEngine.getPlayersRoster() || [];
+                    const rosterEntry = roster.find(r => String(r?.id || '').toLowerCase() === String(playerName || '').toLowerCase()) || null;
+                    if (rosterEntry && rosterEntry.id) {
+                        player = {
+                            name: rosterEntry.id,
+                            tournaments_played: 0,
+                            total_tricks: 0,
+                            total_rounds: 0,
+                            average_tricks: '0.00',
+                            tournament_wins: 0,
+                            top_three_finishes: 0,
+                            tournament_history: []
+                        };
+                    }
+                }
+
                 if (!player) {
                     console.error(`❌ Player "${playerName}" not found`);
                     document.getElementById('player-name').textContent = 'Player Not Found';
@@ -421,6 +439,43 @@
                     return sharedHandRanking <= 3 && sharedHandRanking > 0;
                 }).length;
                 
+                const hasCompeted = playerTournaments.length > 0;
+
+                if (!hasCompeted) {
+                    // Roster-only player: render a profile shell that makes it clear they haven't competed yet.
+                    document.getElementById('player-icon').textContent = '📝';
+                    document.getElementById('player-title').textContent = 'On the roster • Yet to compete';
+
+                    document.getElementById('first-tournament').textContent = '—';
+                    document.getElementById('years-active').textContent = '—';
+                    document.getElementById('total-tournaments').textContent = '0';
+                    document.getElementById('current-ranking').textContent = '—';
+
+                    document.getElementById('tournament-victories').textContent = '0';
+                    document.getElementById('total-tricks').textContent = '0';
+                    document.getElementById('avg-tricks').textContent = '—';
+                    document.getElementById('top-finishes').textContent = '0';
+
+                    const msg = `<div class="loading-message">This player is listed on the Players sheet, but has not yet competed in a tournament.</div>`;
+                    const setHtml = (id) => {
+                        const el = document.getElementById(id);
+                        if (el) el.innerHTML = msg;
+                    };
+                    setHtml('trophy-cabinet-content');
+                    setHtml('performance-stats');
+                    setHtml('partnership-stats');
+                    setHtml('trump-stats');
+                    setHtml('seed-rank-meta');
+                    setHtml('seed-rank-chart');
+                    setHtml('tournament-timeline');
+
+                    const seeAll = document.getElementById('see-all-partnerships');
+                    if (seeAll) seeAll.style.display = 'none';
+
+                    console.log('ℹ️ Roster-only player profile rendered (no tournament history yet).');
+                    return;
+                }
+
                 const firstYear = Math.min(...playerTournaments.map(t => t.year));
                 const lastYear = Math.max(...playerTournaments.map(t => t.year));
                 const yearsActive = lastYear - firstYear + 1;
