@@ -601,7 +601,8 @@
                 const b = p.players[1];
                 const aLabel = escapeHtml(a);
                 const bLabel = escapeHtml(b);
-                const href = `../players/partnership-games.html?player=${encodeURIComponent(a)}&partner=${encodeURIComponent(b)}`;
+                // IMPORTANT: use &amp; inside HTML so the browser doesn't treat "&par..." as an entity and drop the partner param.
+                const href = `../players/partnership-games?player=${encodeURIComponent(a)}&amp;partner=${encodeURIComponent(b)}`;
                 return `<a href="${href}" class="partnership-link">${aLabel} <span class="partnership-separator">&</span> ${bLabel}</a>`;
             };
 
@@ -738,7 +739,8 @@
                 const played = Number.isFinite(winAgg.played) ? winAgg.played : 0;
                 const wins = Number.isFinite(winAgg.wins) ? winAgg.wins : 0;
                 const winRateText = played > 0 ? `${Math.round((wins / played) * 100)}%` : '—';
-                const gamesHref = `../players/partnership-games.html?player=${encodeURIComponent(p.players[0])}&partner=${encodeURIComponent(p.players[1])}`;
+                // IMPORTANT: use &amp; inside HTML so the browser doesn't treat "&par..." as an entity and drop the partner param.
+                const gamesHref = `../players/partnership-games?player=${encodeURIComponent(p.players[0])}&amp;partner=${encodeURIComponent(p.players[1])}`;
                 return `
                     <tr>
                         <td class="rank-column">${idx + 1}</td>

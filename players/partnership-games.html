@@ -142,7 +142,27 @@
             const playerId = getParam('player');
             const partnerId = getParam('partner');
             if (!playerId || !partnerId) {
-                window.location.href = './';
+                // Don't redirect (family site; keep URL intact). Show a helpful message instead.
+                document.title = 'All games together — Missing player/partner';
+                const subtitle = document.getElementById('page-subtitle');
+                if (subtitle) subtitle.textContent = 'Missing required URL parameters: player and partner.';
+                const big = document.getElementById('pair-title-big');
+                if (big) big.textContent = 'Missing player/partner';
+                const body = document.getElementById('games-tbody');
+                if (body) {
+                    body.innerHTML = `
+                        <tr>
+                            <td colspan="9" style="text-align:center; padding: 2rem; color: #444;">
+                                <div style="font-weight: 900; margin-bottom: 0.35rem;">This page needs URL parameters</div>
+                                <div style="color:#666; margin-bottom: 0.75rem;">Use the “See all games” buttons (or add <code>?player=Name&partner=Name</code> to the URL).</div>
+                                <div style="display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap;">
+                                    <a class="btn btn-secondary" href="./">Back to Players</a>
+                                    <a class="btn btn-primary" href="../stats/">Go to Statistics</a>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
                 return;
             }
 

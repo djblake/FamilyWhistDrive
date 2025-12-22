@@ -742,7 +742,7 @@
             const distinctPartners = partners.length;
 
             const displayName = (id) => (engine && typeof engine.getDisplayName === 'function') ? engine.getDisplayName(id) : id;
-            const partnerGamesLink = (id) => `partnership-games.html?player=${encodeURIComponent(playerId)}&partner=${encodeURIComponent(id)}`;
+            const partnerGamesLink = (id) => `partnership-games?player=${encodeURIComponent(playerId)}&partner=${encodeURIComponent(id)}`;
 
             const mostFreq = (() => {
                 const paired = partners.filter(p => (p.timesPaired || 0) > 0);

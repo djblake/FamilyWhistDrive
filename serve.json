@@ -1,0 +1,28 @@
+{
+  "cleanUrls": false,
+  "rewrites": [
+    { "source": "/leaderboard", "destination": "/leaderboard/index.html" },
+    { "source": "/leaderboard/", "destination": "/leaderboard/index.html" },
+
+    { "source": "/players", "destination": "/players/index.html" },
+    { "source": "/players/", "destination": "/players/index.html" },
+    { "source": "/players/partnership-games", "destination": "/players/partnership-games.html" },
+    { "source": "/players/partnership-games/", "destination": "/players/partnership-games.html" },
+    { "source": "/players/partnerships", "destination": "/players/partnerships.html" },
+    { "source": "/players/partnerships/", "destination": "/players/partnerships.html" },
+    { "source": "/players/profile", "destination": "/players/profile.html" },
+    { "source": "/players/profile/", "destination": "/players/profile.html" },
+
+    { "source": "/stats", "destination": "/stats/index.html" },
+    { "source": "/stats/", "destination": "/stats/index.html" },
+
+    { "source": "/tournaments", "destination": "/tournaments/index.html" },
+    { "source": "/tournaments/", "destination": "/tournaments/index.html" },
+
+    { "source": "/families", "destination": "/families/index.html" },
+    { "source": "/families/", "destination": "/families/index.html" },
+
+    { "source": "/memorial", "destination": "/memorial/index.html" },
+    { "source": "/memorial/", "destination": "/memorial/index.html" }
+  ]
+}

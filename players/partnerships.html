@@ -356,7 +356,7 @@
                     tbody.innerHTML = view.map(row => {
                         const partnerName = escapeHtml(displayName(row.partnerId));
                         const partnerHref = `profile.html?player=${encodeURIComponent(row.partnerId)}`;
-                        const gamesHref = `partnership-games.html?player=${encodeURIComponent(playerId)}&partner=${encodeURIComponent(row.partnerId)}`;
+                        const gamesHref = `partnership-games?player=${encodeURIComponent(playerId)}&partner=${encodeURIComponent(row.partnerId)}`;
                         const hasWin = Number.isFinite(row.winPct) && (row.timesPaired || 0) > 0;
                         const winPctText = hasWin ? `${Math.round(row.winPct * 100)}%` : '—';
                         const winDetail = hasWin ? `<span class="muted-cell">(${row.wins}/${row.timesPaired})</span>` : '';
