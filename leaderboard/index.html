@@ -124,9 +124,14 @@
                         <h3>Current Dynasty</h3>
                         <div class="insight-content">
                             <p id="insight-current-dynasty-text">Loading latest champion…</p>
-                            <div class="insight-stat">
+                            <div class="insight-stat insight-stat--stacked">
                                 <span class="stat-number" id="insight-current-dynasty-number">—</span>
-                                <span class="stat-label" id="insight-current-dynasty-label">Most recent winner</span>
+                                <div class="insight-stat-meta">
+                                    <span class="stat-label" id="insight-current-dynasty-label">Most recent winner</span>
+                                    <div class="insight-stat-footnotes">
+                                        <div class="hof-record-footnotes" id="insight-current-dynasty-footnotes"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -136,33 +141,48 @@
                         <h3>All-Time Champion</h3>
                         <div class="insight-content">
                             <p id="insight-all-time-champ-text">Loading all-time champion…</p>
-                            <div class="insight-stat">
+                            <div class="insight-stat insight-stat--stacked">
                                 <span class="stat-number" id="insight-all-time-champ-number">—</span>
-                                <span class="stat-label" id="insight-all-time-champ-label">Total championships</span>
+                                <div class="insight-stat-meta">
+                                    <span class="stat-label" id="insight-all-time-champ-label">Total championships</span>
+                                    <div class="insight-stat-footnotes">
+                                        <div class="hof-record-footnotes" id="insight-all-time-champ-footnotes"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="insight-card">
-                        <div class="insight-icon">⚡</div>
-                        <h3>Best Recent Form</h3>
-                        <div class="insight-content">
-                            <p id="insight-recent-form-text">Loading best recent form…</p>
-                            <div class="insight-stat">
-                                <span class="stat-number" id="insight-recent-form-number">—</span>
-                                <span class="stat-label" id="insight-recent-form-label">Recent form score</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="insight-card">
-                        <div class="insight-icon">🎯</div>
-                        <h3>Consistency King</h3>
+                        <div class="insight-icon">🥉</div>
+                        <h3>Podium magnet</h3>
                         <div class="insight-content">
                             <p id="insight-consistency-text">Loading top-3 leader…</p>
-                            <div class="insight-stat">
+                            <div class="insight-stat insight-stat--stacked">
                                 <span class="stat-number" id="insight-consistency-number">—</span>
-                                <span class="stat-label" id="insight-consistency-label">Top-3 finishes</span>
+                                <div class="insight-stat-meta">
+                                    <span class="stat-label" id="insight-consistency-label">Top-3 finishes</span>
+                                    <div class="insight-stat-footnotes">
+                                        <div class="hof-record-footnotes" id="insight-consistency-footnotes"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Record insights (all categories together) -->
+                <div class="insights-subsection">
+                    <div class="insights-grid" id="hof-record-insights-grid">
+                        <div class="insight-card">
+                            <div class="insight-icon">⏳</div>
+                            <h3>Loading</h3>
+                            <div class="insight-content">
+                                <p class="muted">Loading insights…</p>
+                                <div class="insight-stat">
+                                    <span class="stat-number">—</span>
+                                    <span class="stat-label">Please wait</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -242,19 +262,6 @@
                             <div class="stat-detail">Average tournament size</div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="records-section">
-            <div class="container">
-                <h2 class="section-title">
-                    <span class="title-icon">🥇</span>
-                    Tournament Records & Achievements
-                </h2>
-
-                <div id="hof-records-panels" class="hof-records-panels">
-                    <div class="muted">Loading…</div>
                 </div>
             </div>
         </section>
@@ -437,6 +444,53 @@
                 const uniqueChampionSet = new Set(champions.map(c => c.winner).filter(Boolean));
 
                 // --- Insights
+                const setFootnotesHtml = (id, html) => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.innerHTML = html || '';
+                };
+
+                const joinHtmlList = (items) => {
+                    const arr = (items || []).filter(Boolean);
+                    if (arr.length === 0) return '';
+                    if (arr.length === 1) return arr[0];
+                    if (arr.length === 2) return `${arr[0]} & ${arr[1]}`;
+                    return `${arr.slice(0, -1).join(', ')} & ${arr[arr.length - 1]}`;
+                };
+
+                const formatNamesInlineHtml = (names) => {
+                    const parts = (names || []).filter(Boolean).map(n => `<span class="hof-name">${tournamentEngine.getDisplayName(n)}</span>`);
+                    return joinHtmlList(parts);
+                };
+
+                const renderPlacementFootnotesHtml = (secondNames, thirdNames, options = {}) => {
+                    const pos2 = (secondNames || []).filter(Boolean);
+                    const pos3 = (thirdNames || []).filter(Boolean);
+                    const tie2 = pos2.length > 1;
+                    const showThird = !tie2 && pos3.length > 0;
+
+                    const lines = [];
+
+                    if (pos2.length) {
+                        const label2 = tie2 ? 'TIED FOR 2ND' : '2ND';
+                        const metric2 = options.secondMetricText ? ` with <span class="hof-lead-metric">${options.secondMetricText}</span>` : '';
+                        lines.push(
+                            `<div class="hof-record-footnote"><span class="hof-record-footnote-rank">${label2}:</span> <span class="hof-record-footnote-text">${formatNamesInlineHtml(pos2)}${metric2}.</span></div>`
+                        );
+                    }
+
+                    if (showThird) {
+                        const tie3 = pos3.length > 1;
+                        const label3 = tie3 ? 'TIED FOR 3RD' : '3RD';
+                        const metric3 = options.thirdMetricText ? ` with <span class="hof-lead-metric">${options.thirdMetricText}</span>` : '';
+                        lines.push(
+                            `<div class="hof-record-footnote"><span class="hof-record-footnote-rank">${label3}:</span> <span class="hof-record-footnote-text">${formatNamesInlineHtml(pos3)}${metric3}.</span></div>`
+                        );
+                    }
+
+                    return lines.join('');
+                };
+
                 const latest = champions.length > 0 ? champions[champions.length - 1] : null;
                 if (latest && latest.winner) {
                     const champName = tournamentEngine.getDisplayName(latest.winner);
@@ -447,8 +501,18 @@
                     }
                     setText('insight-current-dynasty-number', latest.year);
                     setText('insight-current-dynasty-label', 'Most recent champion');
+
+                    // 2nd/3rd from the latest tournament standings (mirrors Championship History table logic).
+                    const latestTournament = (tournaments || []).find(t => t && Number.isFinite(t.year) && t.year === latest.year) || ((tournaments || []).length ? (tournaments || [])[tournaments.length - 1] : null);
+                    const st = latestTournament && Array.isArray(latestTournament.final_standings) ? latestTournament.final_standings : [];
+                    const secondRows = st.filter(s => (Number(s?.position) === 2) && s?.player);
+                    const thirdRows = st.filter(s => (Number(s?.position) === 3) && s?.player);
+                    const secondNames = (secondRows.length ? secondRows : (st[1] ? [st[1]] : [])).map(s => s.player).filter(Boolean);
+                    const thirdNames = (thirdRows.length ? thirdRows : (st[2] ? [st[2]] : [])).map(s => s.player).filter(Boolean);
+                    setFootnotesHtml('insight-current-dynasty-footnotes', renderPlacementFootnotesHtml(secondNames, thirdNames));
                 } else {
                     setText('insight-current-dynasty-text', 'No champion data available yet.');
+                    setFootnotesHtml('insight-current-dynasty-footnotes', '');
                 }
 
                 const playersByWins = tournamentEngine.getAllPlayers('tournament_wins');
@@ -460,28 +524,25 @@
                     }
                     setText('insight-all-time-champ-number', allTime.tournament_wins || 0);
                     setText('insight-all-time-champ-label', 'Total championships');
-                }
 
-                // Best recent form
-                let bestRecent = null;
-                if (recentFormScoresAllTime && recentFormScoresAllTime.size) {
-                    for (const player of (allPlayers || [])) {
-                        const score = recentFormScoresAllTime.get(player.name);
-                        if (typeof score !== 'number') continue;
-                        if (!bestRecent || score > bestRecent.score) {
-                            bestRecent = { playerId: player.name, score };
-                        }
+                    // 2nd/3rd by championship wins (ties supported; if 2nd is tied we hide 3rd).
+                    const eligible = (playersByWins || []).filter(pp => pp && (pp.tournament_wins || 0) > 0);
+                    const winsToPlayers = new Map(); // wins -> [{id}]
+                    for (const pp of eligible) {
+                        const w = Number(pp.tournament_wins) || 0;
+                        if (!winsToPlayers.has(w)) winsToPlayers.set(w, []);
+                        winsToPlayers.get(w).push(pp.name);
                     }
-                }
-                if (bestRecent) {
-                    const p = document.getElementById('insight-recent-form-text');
-                    if (p) {
-                        p.innerHTML = `<strong>${tournamentEngine.getDisplayName(bestRecent.playerId)}</strong> has the best recent form over the last 5 tournaments.`;
-                    }
-                    setText('insight-recent-form-number', Math.round(bestRecent.score));
-                    setText('insight-recent-form-label', 'Recent form score');
-                } else {
-                    setText('insight-recent-form-text', 'Recent form data unavailable.');
+                    const winsSorted = Array.from(winsToPlayers.keys()).sort((a, b) => b - a);
+                    const secondWins = winsSorted.length > 1 ? winsSorted[1] : null;
+                    const thirdWins = winsSorted.length > 2 ? winsSorted[2] : null;
+                    const secondNames = (secondWins !== null) ? (winsToPlayers.get(secondWins) || []) : [];
+                    const thirdNames = (thirdWins !== null) ? (winsToPlayers.get(thirdWins) || []) : [];
+                    const fmtWins = (n) => (n === 1) ? '1 win' : `${n} wins`;
+                    setFootnotesHtml('insight-all-time-champ-footnotes', renderPlacementFootnotesHtml(secondNames, thirdNames, {
+                        secondMetricText: (secondWins !== null) ? fmtWins(secondWins) : '',
+                        thirdMetricText: (thirdWins !== null) ? fmtWins(thirdWins) : ''
+                    }));
                 }
 
                 // Consistency (top-3 finishes)
@@ -493,6 +554,24 @@
                     }
                     setText('insight-consistency-number', top3Leader.top_three_finishes || 0);
                     setText('insight-consistency-label', 'Top-3 finishes');
+
+                    const eligible = (allPlayers || []).filter(pp => pp && (pp.top_three_finishes || 0) > 0);
+                    const countToPlayers = new Map(); // count -> [id]
+                    for (const pp of eligible) {
+                        const c = Number(pp.top_three_finishes) || 0;
+                        if (!countToPlayers.has(c)) countToPlayers.set(c, []);
+                        countToPlayers.get(c).push(pp.name);
+                    }
+                    const countsSorted = Array.from(countToPlayers.keys()).sort((a, b) => b - a);
+                    const secondCount = countsSorted.length > 1 ? countsSorted[1] : null;
+                    const thirdCount = countsSorted.length > 2 ? countsSorted[2] : null;
+                    const secondNames = (secondCount !== null) ? (countToPlayers.get(secondCount) || []) : [];
+                    const thirdNames = (thirdCount !== null) ? (countToPlayers.get(thirdCount) || []) : [];
+                    const fmtCount = (n) => (n === 1) ? '1 finish' : `${n} finishes`;
+                    setFootnotesHtml('insight-consistency-footnotes', renderPlacementFootnotesHtml(secondNames, thirdNames, {
+                        secondMetricText: (secondCount !== null) ? fmtCount(secondCount) : '',
+                        thirdMetricText: (thirdCount !== null) ? fmtCount(thirdCount) : ''
+                    }));
                 }
 
                 // --- Championship history stats
@@ -743,6 +822,173 @@
                     `;
                 };
 
+                const renderInsightFromRecord = (headline, icon, recordLabel, entries, options = {}) => {
+                    const groups = buildRankGroups(entries);
+                    const first = groups[0] || null;
+                    const second = groups[1] || null;
+                    const third = groups[2] || null;
+
+                    const secondTied = isTieGroup(second);
+                    const showThird = !secondTied && !!third;
+
+                    const firstItem = first && first.items && first.items.length ? first.items[0] : null;
+                    const tieForFirst = isTieGroup(first);
+                    const winnerNamesHtml = first ? formatNamesHtml(first.items, 3, false) : '<span class="muted">No record yet</span>';
+                    const verb = tieForFirst ? 'lead with' : 'leads with';
+
+                    const metricText = firstItem ? formatMetricText(firstItem) : '';
+                    const extraPhrase = firstItem ? formatExtraPhrase(firstItem.extraText) : '';
+
+                    const firstExtraSet = new Set((first?.items || []).map(i => (i.extraText || '').trim()).filter(Boolean));
+                    const tieExtrasDiffer = tieForFirst && firstExtraSet.size > 1;
+                    const tieExtraLine = tieExtrasDiffer
+                        ? `<div class="hof-record-lead-extras">${formatNamesHtml(first.items, 4, true)}</div>`
+                        : '';
+
+                    const mainSentence = metricText
+                        ? `<div class="hof-record-lead-sentence">${winnerNamesHtml} <span class="hof-lead-verb">${verb}</span> <span class="hof-lead-metric">${metricText}</span>${extraPhrase ? ` <span class="hof-lead-extra">${extraPhrase}</span>` : ''}.</div>`
+                        : `<div class="hof-record-lead-sentence"><span class="muted">${options.noDataText || 'No data available yet.'}</span></div>`;
+
+                    const renderInlineFootnote = (rank, group) => {
+                        if (!group || !Array.isArray(group.items) || group.items.length === 0) return '';
+                        const tied = isTieGroup(group);
+                        const label = rankLabel(rank, tied);
+                        const item0 = group.items[0];
+                        const metric = formatMetricText(item0);
+                        const extraSet = new Set(group.items.map(i => (i.extraText || '').trim()).filter(Boolean));
+                        const includeExtra = tied && extraSet.size > 1;
+                        const names = formatNamesHtml(group.items, 3, includeExtra);
+                        const extra = (!includeExtra && item0 && item0.extraText) ? formatExtraPhrase(item0.extraText) : '';
+                        const withMetric = metric ? ` with <span class="hof-lead-metric">${metric}</span>` : '';
+                        const withExtra = extra ? ` <span class="hof-lead-extra">${extra}</span>` : '';
+                        return `<div class="hof-record-footnote"><span class="hof-record-footnote-rank">${label}:</span> <span class="hof-record-footnote-text">${names}${withMetric}${withExtra}.</span></div>`;
+                    };
+
+                    const footnotes = [
+                        renderInlineFootnote(2, second),
+                        showThird ? renderInlineFootnote(3, third) : ''
+                    ].filter(Boolean).join('');
+
+                    const extractStatNumber = (item) => {
+                        if (!item) return '—';
+                        const raw = (typeof item.valueText === 'number') ? String(item.valueText) : String(item.valueText || '').trim();
+                        if (!raw) return '—';
+                        if (raw.endsWith('%')) return raw;
+                        const m = raw.match(/-?\d+(\.\d+)?/);
+                        return m ? m[0] : raw;
+                    };
+
+                    const statNumber = (firstItem && metricText) ? extractStatNumber(firstItem) : '—';
+                    const statLabel = recordLabel;
+
+                    return `
+                        <div class="insight-card">
+                            <div class="insight-icon">${icon}</div>
+                            <h3>${headline}</h3>
+                            <div class="insight-content">
+                                <p>
+                                    <span class="muted"><strong>${recordLabel}</strong></span><br>
+                                    ${tieForFirst ? `<span class="hof-record-winner-rank">${rankLabel(1, true)}</span>` : ''}
+                                    ${mainSentence}
+                                    ${tieExtraLine}
+                                    ${footnotes ? `<div class="hof-record-footnotes">${footnotes}</div>` : ''}
+                                </p>
+                                <div class="insight-stat">
+                                    <span class="stat-number">${statNumber}</span>
+                                    <span class="stat-label">${statLabel}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                };
+
+                // Variant card style (used for "Deadliest closer" experiment):
+                // - remove duplicated record label at top
+                // - avoid repeating the numeric value in the main sentence
+                // - move 2nd/3rd lines under the bottom stat label
+                const renderInsightFromRecordCompact = (headline, icon, recordLabel, entries, options = {}) => {
+                    const groups = buildRankGroups(entries);
+                    const first = groups[0] || null;
+                    const second = groups[1] || null;
+                    const third = groups[2] || null;
+
+                    const secondTied = isTieGroup(second);
+                    const showThird = !secondTied && !!third;
+
+                    const firstItem = first && first.items && first.items.length ? first.items[0] : null;
+                    const tieForFirst = isTieGroup(first);
+                    const winnerNamesHtml = first ? formatNamesHtml(first.items, 3, false) : '<span class="muted">No record yet</span>';
+
+                    const firstExtraSet = new Set((first?.items || []).map(i => (i.extraText || '').trim()).filter(Boolean));
+                    const tieExtrasDiffer = tieForFirst && firstExtraSet.size > 1;
+                    const tieExtraLine = tieExtrasDiffer
+                        ? `<div class="hof-record-lead-extras">${formatNamesHtml(first.items, 4, true)}</div>`
+                        : '';
+
+                    const renderInlineFootnote = (rank, group) => {
+                        if (!group || !Array.isArray(group.items) || group.items.length === 0) return '';
+                        const tied = isTieGroup(group);
+                        const label = rankLabel(rank, tied);
+                        const item0 = group.items[0];
+                        const metric = formatMetricText(item0);
+                        const extraSet = new Set(group.items.map(i => (i.extraText || '').trim()).filter(Boolean));
+                        const includeExtra = tied && extraSet.size > 1;
+                        const names = formatNamesHtml(group.items, 3, includeExtra);
+                        const extra = (!includeExtra && item0 && item0.extraText) ? formatExtraPhrase(item0.extraText) : '';
+                        const withMetric = metric ? ` with <span class="hof-lead-metric">${metric}</span>` : '';
+                        const withExtra = extra ? ` <span class="hof-lead-extra">${extra}</span>` : '';
+                        return `<div class="hof-record-footnote"><span class="hof-record-footnote-rank">${label}:</span> <span class="hof-record-footnote-text">${names}${withMetric}${withExtra}.</span></div>`;
+                    };
+
+                    const footnotes = [
+                        renderInlineFootnote(2, second),
+                        showThird ? renderInlineFootnote(3, third) : ''
+                    ].filter(Boolean).join('');
+
+                    const extractStatNumber = (item) => {
+                        if (!item) return '—';
+                        const raw = (typeof item.valueText === 'number') ? String(item.valueText) : String(item.valueText || '').trim();
+                        if (!raw) return '—';
+                        if (raw.endsWith('%')) return raw;
+                        const m = raw.match(/-?\d+(\.\d+)?/);
+                        return m ? m[0] : raw;
+                    };
+
+                    const statNumber = firstItem ? extractStatNumber(firstItem) : '—';
+                    const leaderVerb = tieForFirst ? 'share' : 'has';
+
+                    // Let each card provide a "meaning" sentence that avoids repeating the numeric value.
+                    // Example: "the highest tournament score", "the most 12+ trick rounds", etc.
+                    const primarySentence = (options && typeof options.primarySentence === 'string')
+                        ? options.primarySentence.trim()
+                        : '';
+                    const fallbackSentence = `the record for ${String(recordLabel || '').toLowerCase()}`;
+                    const sentence = primarySentence || fallbackSentence;
+
+                    const leaderSentence = firstItem
+                        ? `<p>${winnerNamesHtml} ${leaderVerb} ${sentence}.</p>`
+                        : `<p class="muted">${options.noDataText || 'No data available yet.'}</p>`;
+
+                    return `
+                        <div class="insight-card">
+                            <div class="insight-icon">${icon}</div>
+                            <h3>${headline}</h3>
+                            <div class="insight-content">
+                                ${tieForFirst ? `<div class="hof-record-winner-rank">${rankLabel(1, true)}</div>` : ''}
+                                ${leaderSentence}
+                                ${tieExtraLine}
+                                <div class="insight-stat insight-stat--stacked">
+                                    <span class="stat-number">${statNumber}</span>
+                                    <div class="insight-stat-meta">
+                                        <span class="stat-label">${recordLabel}</span>
+                                        ${footnotes ? `<div class="insight-stat-footnotes"><div class="hof-record-footnotes">${footnotes}</div></div>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                };
+
                 const renderSection = (emoji, sectionTitle, recordCardsHtml) => `
                     <div class="hof-records-section">
                         <h3 class="hof-records-section-title"><span class="hof-records-section-emoji">${emoji}</span> ${sectionTitle}</h3>
@@ -752,11 +998,15 @@
                     </div>
                 `;
 
-                if (recordsPanels) {
+                {
                     const championshipCards = [];
                     const performanceCards = [];
                     const participationCards = [];
                     const partnershipCards = [];
+                    const performanceInsightCards = [];
+                    const championshipInsightCards = [];
+                    const participationInsightCards = [];
+                    const partnershipInsightCards = [];
 
                     // Championship Records
                     {
@@ -774,6 +1024,8 @@
                     {
                         championshipCards.push(renderRecordCard('Youngest Winner', [], { noDataText: 'Requires birth dates.' }));
                         championshipCards.push(renderRecordCard('Oldest Winner', [], { noDataText: 'Requires birth dates.' }));
+                        championshipInsightCards.push(renderInsightFromRecordCompact('Young gun', '🧒', 'Youngest Winner', [], { noDataText: 'Requires birth dates.' }));
+                        championshipInsightCards.push(renderInsightFromRecordCompact('Late bloomer', '🧓', 'Oldest Winner', [], { noDataText: 'Requires birth dates.' }));
                     }
 
                     // Performance Records
@@ -793,11 +1045,14 @@
                             .filter(x => x && Number.isFinite(x.tricks))
                             .map(x => ({ key: String(x.tricks), sortValue: x.tricks, item: makeEntry(fmtPlayer(x.player), x.tricks, 'tricks', `Year ${x.year}`) }));
                         performanceCards.push(renderRecordCard('Highest Tournament Score', entries));
+                        performanceInsightCards.push(renderInsightFromRecordCompact('Single-tournament explosion', '💥', 'Highest Tournament Score', entries, {
+                            primarySentence: 'the highest tournament score'
+                        }));
                     }
 
                     const minRoundsForPct = 20;
                     const winPctLeaders = (allPlayers || [])
-                        .filter(p => (p.total_rounds || 0) >= minRoundsForPct)
+                        .filter(p => (p.total_rounds || 0) >= minRoundsForPct && (p.tournaments_played || 0) >= 2)
                         .map(p => ({ playerId: p.name, pct: (p.total_rounds || 0) > 0 ? ((p.rounds_won || 0) / p.total_rounds) * 100 : 0, rounds: p.total_rounds || 0 }))
                         .sort((a, b) => (b.pct - a.pct) || (b.rounds - a.rounds));
                     {
@@ -808,6 +1063,9 @@
                                 return { key: pctText, sortValue: x.pct, item: makeEntry(fmtPlayer(x.playerId), `${pctText}%`, 'win rate', '') };
                             });
                         performanceCards.push(renderRecordCard(`Best Win Percentage (7+ tricks, min ${minRoundsForPct} rounds)`, entries));
+                        performanceInsightCards.push(renderInsightFromRecordCompact('Deadliest closer', '🎯', `Best Win Percentage (7+ tricks, min ${minRoundsForPct} rounds)`, entries, {
+                            primarySentence: 'the best win rate percentage'
+                        }));
                     }
 
                     {
@@ -820,6 +1078,9 @@
                                 return { key: String(wins), sortValue: wins, item: makeEntry(fmtPlayer(p.name), wins, 'round wins', '') };
                             });
                         performanceCards.push(renderRecordCard('Most Career Round Wins (7+ tricks)', entries));
+                        performanceInsightCards.push(renderInsightFromRecordCompact('Relentless winner', '🧱', 'Most Career Round Wins (7+ tricks)', entries, {
+                            primarySentence: 'the most career round wins'
+                        }));
                     }
 
                     if (typeof tournamentEngine.getPlayerHighTrickRoundCounts === 'function') {
@@ -831,6 +1092,9 @@
                                     return { key: String(x.count), sortValue: x.count, item: makeEntry(x.playerName, value, '', 'where they scored 11 tricks or more') };
                                 });
                             performanceCards.push(renderRecordCard('Most 11+ Trick Rounds', entries));
+                            performanceInsightCards.push(renderInsightFromRecordCompact('Big-round specialist', '🔥', 'Most 11+ Trick Rounds', entries, {
+                                primarySentence: 'the most 11+ trick rounds'
+                            }));
                         }
 
                         {
@@ -841,10 +1105,19 @@
                                     return { key: String(x.count), sortValue: x.count, item: makeEntry(x.playerName, value, '', 'where they scored 12 tricks or more') };
                                 });
                             performanceCards.push(renderRecordCard('Most 12+ Trick Rounds', entries));
+                            performanceInsightCards.push(renderInsightFromRecordCompact('Monster rounds', '🐉', 'Most 12+ Trick Rounds', entries, {
+                                primarySentence: 'the most 12+ trick rounds'
+                            }));
                         }
                     } else {
                         performanceCards.push(renderRecordCard('Most 11+ Trick Rounds', []));
                         performanceCards.push(renderRecordCard('Most 12+ Trick Rounds', []));
+                        performanceInsightCards.push(renderInsightFromRecordCompact('Big-round specialist', '🔥', 'Most 11+ Trick Rounds', [], {
+                            primarySentence: 'the most 11+ trick rounds'
+                        }));
+                        performanceInsightCards.push(renderInsightFromRecordCompact('Monster rounds', '🐉', 'Most 12+ Trick Rounds', [], {
+                            primarySentence: 'the most 12+ trick rounds'
+                        }));
                     }
 
                     if (typeof tournamentEngine.getPlayerMajorityWinStreaks === 'function') {
@@ -857,8 +1130,14 @@
                                 return { key: String(streak), sortValue: streak, item: makeEntry(s.playerName, streak, 'rounds', `from ${from} to ${to}`) };
                             });
                         performanceCards.push(renderRecordCard('Longest Majority-Win Streak (7+ tricks)', entries));
+                        performanceInsightCards.push(renderInsightFromRecordCompact('On a heater', '🚀', 'Longest Majority-Win Streak (7+ tricks)', entries, {
+                            primarySentence: 'the longest majority-win streak'
+                        }));
                     } else {
                         performanceCards.push(renderRecordCard('Longest Majority-Win Streak (7+ tricks)', []));
+                        performanceInsightCards.push(renderInsightFromRecordCompact('On a heater', '🚀', 'Longest Majority-Win Streak (7+ tricks)', [], {
+                            primarySentence: 'the longest majority-win streak'
+                        }));
                     }
 
                     // Best tournament averages (top 3)
@@ -905,6 +1184,9 @@
                                 return { key, sortValue: x.avgTricks, item: makeEntry(fmtPlayer(x.playerId), key, 'avg tricks', `Year ${x.year}`) };
                             });
                         performanceCards.push(renderRecordCard('Best Avg Tricks (single tournament)', entries));
+                        performanceInsightCards.push(renderInsightFromRecordCompact('Peak performance', '📈', 'Best Avg Tricks (single tournament)', entries, {
+                            primarySentence: 'the best single-tournament average'
+                        }));
                     }
 
                     // Participation Records
@@ -917,6 +1199,9 @@
                                 return { key: String(played), sortValue: played, item: makeEntry(fmtPlayer(p.name), played, 'tournaments', '') };
                             });
                         participationCards.push(renderRecordCard('Most Tournaments Played', entries));
+                        participationInsightCards.push(renderInsightFromRecordCompact('The ironman', '🧳', 'Most Tournaments Played', entries, {
+                            primarySentence: 'the most tournaments played'
+                        }));
                     }
                     {
                         const entries = (allPlayers || [])
@@ -936,13 +1221,16 @@
                                 return { key: String(played), sortValue: played, item: makeEntry(fmtPlayer(p.name), played, 'tournaments', 'and 0 last-place finishes') };
                             });
                         participationCards.push(renderRecordCard('Never Last Place (min 10 tournaments)', entries));
+                        participationInsightCards.push(renderInsightFromRecordCompact('Never the booby', '🛡️', 'Never Last Place (min 10 tournaments)', entries, {
+                            primarySentence: 'the most tournaments without ever finishing last'
+                        }));
                     }
 
                     // Partnership Records
                     if (typeof tournamentEngine.getPartnershipAnalysis === 'function') {
                         const partnerships = tournamentEngine.getPartnershipAnalysis() || [];
                         const partnershipAvgs = partnerships
-                            .filter(p => p && Array.isArray(p.players) && p.players.length === 2 && (p.rounds_played || 0) >= 3)
+                            .filter(p => p && Array.isArray(p.players) && p.players.length === 2 && (p.rounds_played || 0) >= 4)
                             .map(p => {
                                 const avg = (p.total_tricks / p.rounds_played);
                                 const names = p.players.map(id => tournamentEngine.getDisplayName(id)).join(' & ');
@@ -957,6 +1245,9 @@
                                     return { key: x.avg.toFixed(2), sortValue: x.avg, item: makeEntry(x.names, x.avg.toFixed(2), 'avg tricks', `over ${rounds} rounds`) };
                                 });
                             partnershipCards.push(renderRecordCard('Best Partnership (avg tricks)', entries));
+                            partnershipInsightCards.push(renderInsightFromRecordCompact('Dream team', '🤝', 'Best Partnership (avg tricks)', entries, {
+                                primarySentence: 'the best partnership average'
+                            }));
                         }
 
                         const partnerSets = new Map();
@@ -977,10 +1268,19 @@
                                 .sort((a, b) => (b.count - a.count) || fmtPlayer(a.playerId).localeCompare(fmtPlayer(b.playerId)))
                                 .map(x => ({ key: String(x.count), sortValue: x.count, item: makeEntry(fmtPlayer(x.playerId), x.count, 'partners', '') }));
                             partnershipCards.push(renderRecordCard('Most Different Partners', entries));
+                            partnershipInsightCards.push(renderInsightFromRecordCompact('Social connector', '🕸️', 'Most Different Partners', entries, {
+                                primarySentence: 'the most different partners'
+                            }));
                         }
                     } else {
                         partnershipCards.push(renderRecordCard('Best Partnership (avg tricks)', []));
                         partnershipCards.push(renderRecordCard('Most Different Partners', []));
+                        partnershipInsightCards.push(renderInsightFromRecordCompact('Dream team', '🤝', 'Best Partnership (avg tricks)', [], {
+                            primarySentence: 'the best partnership average'
+                        }));
+                        partnershipInsightCards.push(renderInsightFromRecordCompact('Social connector', '🕸️', 'Most Different Partners', [], {
+                            primarySentence: 'the most different partners'
+                        }));
                     }
 
                     const sectionsHtml = [];
@@ -989,7 +1289,22 @@
                     if (participationCards.length) sectionsHtml.push(renderSection('👥', 'Participation Records', participationCards.join('')));
                     if (partnershipCards.length) sectionsHtml.push(renderSection('🤝', 'Partnership Records', partnershipCards.join('')));
 
-                    recordsPanels.innerHTML = sectionsHtml.join('');
+                    if (recordsPanels) {
+                        recordsPanels.innerHTML = sectionsHtml.join('');
+                    }
+
+                    // Record insights: all categories together (no section sub-headings).
+                    const insightsGrid = document.getElementById('hof-record-insights-grid');
+                    if (insightsGrid) {
+                        const cards = []
+                            .concat(performanceInsightCards)
+                            .concat(participationInsightCards)
+                            .concat(partnershipInsightCards)
+                            .concat(championshipInsightCards);
+                        insightsGrid.innerHTML = cards.length
+                            ? cards.join('')
+                            : `<div class="muted">No insights available yet.</div>`;
+                    }
                 }
 
                 // --- Big rounds lists (12 exactly, and 13)
@@ -2692,6 +3007,70 @@
             border-top: 1px solid var(--border);
         }
 
+        /* "Clean" preview cards: ensure the gold number aligns to the title line,
+           not the whole block (which may include 2nd/3rd lines). */
+        .insight-stat--stacked {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            grid-template-rows: auto auto;
+            column-gap: var(--spacing-md);
+            row-gap: 0.35rem;
+            align-items: start;
+        }
+
+        /* Let children become grid items so we can place title + footnotes on separate rows. */
+        .insight-stat--stacked .insight-stat-meta {
+            display: contents;
+        }
+
+        .insight-stat--stacked .stat-number {
+            grid-column: 1;
+            grid-row: 1;
+            align-self: center; /* centers vs the title line */
+        }
+
+        .insight-stat--stacked .stat-label {
+            grid-column: 2;
+            grid-row: 1;
+            align-self: center;
+        }
+
+        .insight-stat--stacked .insight-stat-footnotes {
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        .insight-stat-footnotes .hof-record-footnotes {
+            margin-top: 0.35rem;
+            gap: 0.3rem;
+        }
+
+        .insight-stat-footnotes .hof-record-footnote {
+            font-size: 0.82rem;
+            line-height: 1.25;
+        }
+
+        .insights-subsection {
+            margin-top: var(--spacing-2xl);
+        }
+
+        .insights-subtitle {
+            font-family: var(--font-secondary);
+            font-size: 0.95rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.92);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0 0 var(--spacing-lg);
+        }
+
+        .insights-subtitle .title-icon {
+            font-size: 1.25rem;
+        }
+
         .stat-number {
             font-size: 2rem;
             font-weight: 900;
@@ -2765,6 +3144,11 @@
         }
 
         .record-category h3 {
+            font-family: var(--font-secondary);
+            font-size: 0.85rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 900;
             color: var(--primary);
             margin-bottom: var(--spacing-lg);
             padding-bottom: var(--spacing-sm);
@@ -2875,6 +3259,11 @@
         }
 
         .hof-records-section-title {
+            font-family: var(--font-secondary);
+            font-size: 0.9rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 900;
             color: var(--primary);
             margin-bottom: var(--spacing-lg);
             padding-bottom: var(--spacing-sm);
@@ -2911,11 +3300,14 @@
         }
 
         .hof-record-title {
-            font-family: var(--font-primary);
+            font-family: var(--font-secondary);
+            font-size: 0.98rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
             font-weight: 900;
-            color: var(--text-primary-dark);
-            font-size: 1.4rem;
-            line-height: 1.15;
+            color: rgba(15, 23, 42, 0.90);
+            line-height: 1.2;
+            margin: 0;
         }
 
         .hof-record-main {
