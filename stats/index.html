@@ -595,6 +595,16 @@
                 `;
             };
 
+            // Insight cards (above the table): make the entire partnership clickable to "all games together"
+            const fmtPairInsight = (p) => {
+                const a = p.players[0];
+                const b = p.players[1];
+                const aLabel = escapeHtml(a);
+                const bLabel = escapeHtml(b);
+                const href = `../players/partnership-games.html?player=${encodeURIComponent(a)}&partner=${encodeURIComponent(b)}`;
+                return `<a href="${href}" class="partnership-link">${aLabel} <span class="partnership-separator">&</span> ${bLabel}</a>`;
+            };
+
             // Streak metrics per partnership (shared hands excluded)
             const metricsByKey = new Map(); // key -> {wins, played, winPct, longestWinStreak, longestLoseStreak, currentWinStreak, currentLoseStreak}
             for (const key of allowedKeys.values()) {
@@ -649,7 +659,7 @@
                 if (!list.length) return '—';
                 const shown = list.slice(0, cap);
                 const more = list.length - shown.length;
-                return `${shown.map(p => fmtPair(p)).join(', ')}${more > 0 ? ` <span class="muted-inline">(+${more} more)</span>` : ''}`;
+                return `${shown.map(p => fmtPairInsight(p)).join(', ')}${more > 0 ? ` <span class="muted-inline">(+${more} more)</span>` : ''}`;
             };
 
             const invinciblesKeys = Array.from(metricsByKey.entries())
@@ -689,12 +699,12 @@
                 <div class="insight-card">
                     <div class="insight-kicker">Best partnership</div>
                     <div class="insight-value">${bestAvg.average_tricks.toFixed(2)} <span class="insight-unit">avg/round</span></div>
-                    <div class="insight-detail">${fmtPair(bestAvg)} • ${bestAvg.total_rounds} rounds</div>
+                    <div class="insight-detail">${fmtPairInsight(bestAvg)} • ${bestAvg.total_rounds} rounds</div>
                 </div>
                 <div class="insight-card">
                     <div class="insight-kicker">Most rounds together</div>
                     <div class="insight-value">${mostRounds.total_rounds.toLocaleString()}</div>
-                    <div class="insight-detail">${fmtPair(mostRounds)}</div>
+                    <div class="insight-detail">${fmtPairInsight(mostRounds)}</div>
                 </div>
                 <div class="insight-card">
                     <div class="insight-kicker">The Invincibles</div>
@@ -1565,6 +1575,17 @@
 
         .player-name-link:hover {
             color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        /* Insight cards: whole partnership is a single link */
+        .partnership-link {
+            color: var(--primary-dark);
+            text-decoration: none;
+            font-weight: 800;
+        }
+
+        .partnership-link:hover {
             text-decoration: underline;
         }
 

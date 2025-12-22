@@ -200,29 +200,31 @@
                                 const playerSeat = playerInPos1 ? pos1 : pos2;
                                 const otherSeat = playerInPos1 ? pos2 : pos1;
 
-                                // Show "who you're sharing a hand with" clearly:
-                                // - First group = other people on the player's hand (joined with "/")
-                                // - Second group = the other hand (joined with "/")
-                                // Joined together with "&" to make the two hands distinct.
-                                const yourPlayerSeatOthers = playerSeat
-                                    .filter(x => x && x !== playerId)
-                                    .map(x => display(x));
-                                const yourOtherSeat = otherSeat
-                                    .filter(x => x)
-                                    .map(x => display(x));
+                                // Show the full partnership seats clearly:
+                                // - Within a shared hand: "David/Jennifer"
+                                // - Between seats: "David/Jennifer & Jon"
+                                const orderedSeat = (seat, primaryId) => {
+                                    const ids = Array.isArray(seat) ? seat.filter(Boolean) : [];
+                                    if (primaryId && ids.includes(primaryId)) {
+                                        return [primaryId, ...ids.filter(x => x !== primaryId)];
+                                    }
+                                    return ids;
+                                };
+                                const yourPlayerSeatIds = orderedSeat(playerSeat, playerId);
+                                const yourOtherSeatIds = orderedSeat(otherSeat, partnerId);
 
-                                const opponentsSeat1 = oppPos1.map(x => display(x));
-                                const opponentsSeat2 = oppPos2.map(x => display(x));
+                                const opponentsSeat1Ids = oppPos1.slice();
+                                const opponentsSeat2Ids = oppPos2.slice();
 
                                 games.push({
                                     year: Number.isFinite(year) ? year : 0,
                                     round: Number.isFinite(roundNum) ? roundNum : 0,
                                     table: Number.isFinite(tableNum) ? tableNum : 0,
                                     suit,
-                                    yourPlayerSeatOthers,
-                                    yourOtherSeat,
-                                    opponentsSeat1,
-                                    opponentsSeat2,
+                                    yourPlayerSeatIds,
+                                    yourOtherSeatIds,
+                                    opponentsSeat1Ids,
+                                    opponentsSeat2Ids,
                                     tricks,
                                     isSharedHand,
                                     isWin
@@ -253,16 +255,24 @@
                     tbody.innerHTML = view.map(g => {
                         const isRed = g.suit === 'Hearts' || g.suit === 'Diamonds';
                         const trump = g.suit ? `<span class="suit ${isRed ? 'suit--red' : 'suit--dark'}">${escapeHtml(suitIcon(g.suit))} ${escapeHtml(g.suit)}</span>` : '—';
-                        const renderHands = (handA, handB) => {
-                            const a = Array.isArray(handA) ? handA.filter(Boolean) : [];
-                            const b = Array.isArray(handB) ? handB.filter(Boolean) : [];
+                        const renderHands = (handAIds, handBIds) => {
+                            const a = Array.isArray(handAIds) ? handAIds.filter(Boolean) : [];
+                            const b = Array.isArray(handBIds) ? handBIds.filter(Boolean) : [];
                             const parts = [];
-                            if (a.length) parts.push(a.join(' / '));
-                            if (b.length) parts.push(b.join(' / '));
-                            return parts.length ? escapeHtml(parts.join(' & ')) : '—';
+
+                            const nameLink = (id) => {
+                                const href = `profile.html?player=${encodeURIComponent(id)}`;
+                                return `<a class="name-link" href="${href}">${escapeHtml(display(id))}</a>`;
+                            };
+
+                            const seatHtml = (ids) => ids.map(nameLink).join('<span class="seat-sep">/</span>');
+                            if (a.length) parts.push(seatHtml(a));
+                            if (b.length) parts.push(seatHtml(b));
+
+                            return parts.length ? parts.join('<span class="hand-sep"> & </span>') : '—';
                         };
-                        const yourSide = renderHands(g.yourPlayerSeatOthers, g.yourOtherSeat);
-                        const opp = renderHands(g.opponentsSeat1, g.opponentsSeat2);
+                        const yourSide = renderHands(g.yourPlayerSeatIds, g.yourOtherSeatIds);
+                        const opp = renderHands(g.opponentsSeat1Ids, g.opponentsSeat2Ids);
                         const scorecardHref = `../tournaments/scorecard.html?year=${encodeURIComponent(g.year)}&player=${encodeURIComponent(playerId)}`;
                         return `
                             <tr>
@@ -471,6 +481,28 @@
             color: var(--primary-dark);
             font-weight: 900;
             white-space: nowrap;
+        }
+
+        .name-link {
+            color: var(--primary-dark);
+            font-weight: 800;
+            text-decoration: none;
+        }
+
+        .name-link:hover {
+            text-decoration: underline;
+        }
+
+        .seat-sep {
+            color: var(--text-secondary-dark);
+            font-weight: 800;
+            padding: 0 0.1rem;
+        }
+
+        .hand-sep {
+            color: var(--text-secondary-dark);
+            font-weight: 700;
+            padding: 0 0.35rem;
         }
 
         .num {

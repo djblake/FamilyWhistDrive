@@ -687,7 +687,7 @@
             const distinctPartners = partners.length;
 
             const displayName = (id) => (engine && typeof engine.getDisplayName === 'function') ? engine.getDisplayName(id) : id;
-            const partnerLink = (id) => `profile.html?player=${encodeURIComponent(id)}`;
+            const partnerGamesLink = (id) => `partnership-games.html?player=${encodeURIComponent(playerId)}&partner=${encodeURIComponent(id)}`;
 
             const mostFreq = (() => {
                 const paired = partners.filter(p => (p.timesPaired || 0) > 0);
@@ -758,7 +758,7 @@
 
             const renderTiedPartners = (list) => {
                 if (!list || !list.length) return '—';
-                return list.map(p => `<a class="inline-link" href="${partnerLink(p.partnerId)}">${escapeHtml(displayName(p.partnerId))}</a>`).join(', ');
+                return list.map(p => `<a class="inline-link" href="${partnerGamesLink(p.partnerId)}">${escapeHtml(displayName(p.partnerId))}</a>`).join(', ');
             };
 
             statsEl.innerHTML = `
@@ -769,7 +769,7 @@
                 <div class="meta-item">
                     <span class="meta-label">Most frequent partner</span>
                     <span class="meta-value">
-                        <a class="inline-link" href="${partnerLink(mostFreq.partnerId)}">${escapeHtml(displayName(mostFreq.partnerId))}</a>
+                        <a class="inline-link" href="${partnerGamesLink(mostFreq.partnerId)}">${escapeHtml(displayName(mostFreq.partnerId))}</a>
                         <span class="meta-subvalue">(${(mostFreq.timesPaired || 0) > 0 ? `${mostFreq.timesPaired} non-shared` : `${mostFreq.gamesTogether} games`})</span>
                     </span>
                 </div>
@@ -777,7 +777,7 @@
                     <span class="meta-label">Best partnership</span>
                     <span class="meta-value">
                         ${bestAvg ? `
-                            <a class="inline-link" href="${partnerLink(bestAvg.partnerId)}">${escapeHtml(displayName(bestAvg.partnerId))}</a>
+                            <a class="inline-link" href="${partnerGamesLink(bestAvg.partnerId)}">${escapeHtml(displayName(bestAvg.partnerId))}</a>
                             <span class="meta-subvalue">(${bestAvg.avgPaired.toFixed(2)} avg/round • ${bestAvg.timesPaired} games)</span>
                         ` : `
                             —
@@ -789,7 +789,7 @@
                     <span class="meta-label">Worst partnership</span>
                     <span class="meta-value">
                         ${worstAvg ? `
-                            <a class="inline-link" href="${partnerLink(worstAvg.partnerId)}">${escapeHtml(displayName(worstAvg.partnerId))}</a>
+                            <a class="inline-link" href="${partnerGamesLink(worstAvg.partnerId)}">${escapeHtml(displayName(worstAvg.partnerId))}</a>
                             <span class="meta-subvalue">(${worstAvg.avgPaired.toFixed(2)} avg/round • ${worstAvg.timesPaired} games)</span>
                         ` : `
                             —
@@ -801,7 +801,7 @@
                     <span class="meta-label">Longest win streak</span>
                     <span class="meta-value">
                         ${bestWinStreak ? `
-                            <a class="inline-link" href="${partnerLink(bestWinStreak.partnerId)}">${escapeHtml(displayName(bestWinStreak.partnerId))}</a>
+                            <a class="inline-link" href="${partnerGamesLink(bestWinStreak.partnerId)}">${escapeHtml(displayName(bestWinStreak.partnerId))}</a>
                             <span class="meta-subvalue">(${bestWinStreak.longestWinStreak} wins)</span>
                         ` : `
                             —
@@ -813,7 +813,7 @@
                     <span class="meta-label">Longest losing streak</span>
                     <span class="meta-value">
                         ${bestLoseStreak ? `
-                            <a class="inline-link" href="${partnerLink(bestLoseStreak.partnerId)}">${escapeHtml(displayName(bestLoseStreak.partnerId))}</a>
+                            <a class="inline-link" href="${partnerGamesLink(bestLoseStreak.partnerId)}">${escapeHtml(displayName(bestLoseStreak.partnerId))}</a>
                             <span class="meta-subvalue">(${bestLoseStreak.longestLoseStreak} losses)</span>
                         ` : `
                             —
@@ -825,7 +825,7 @@
                     <span class="meta-label">Highest win record</span>
                     <span class="meta-value">
                         ${highestWin ? `
-                            <a class="inline-link" href="${partnerLink(highestWin.partnerId)}">${escapeHtml(displayName(highestWin.partnerId))}</a>
+                            <a class="inline-link" href="${partnerGamesLink(highestWin.partnerId)}">${escapeHtml(displayName(highestWin.partnerId))}</a>
                             <span class="meta-subvalue">(${Math.round(highestWin.winPct * 100)}% • ${highestWin.winsPaired}/${highestWin.timesPaired})</span>
                         ` : `
                             —
@@ -837,7 +837,7 @@
                     <span class="meta-label">Lowest win record</span>
                     <span class="meta-value">
                         ${lowestWin ? `
-                            <a class="inline-link" href="${partnerLink(lowestWin.partnerId)}">${escapeHtml(displayName(lowestWin.partnerId))}</a>
+                            <a class="inline-link" href="${partnerGamesLink(lowestWin.partnerId)}">${escapeHtml(displayName(lowestWin.partnerId))}</a>
                             <span class="meta-subvalue">(${Math.round(lowestWin.winPct * 100)}% • ${lowestWin.winsPaired}/${lowestWin.timesPaired})</span>
                         ` : `
                             —

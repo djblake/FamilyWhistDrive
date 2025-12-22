@@ -62,8 +62,11 @@
                 <!-- Player Header -->
                 <div class="player-header">
                     <div class="player-info">
-                        <div class="back-link">
-                            <a href="#" id="back-to-tournament">← Back to Tournament</a>
+                        <div class="player-nav-row">
+                            <div class="back-link">
+                                <a href="#" id="back-to-tournament">← Back to Tournament</a>
+                            </div>
+                            <div class="player-actions" id="player-profile-actions" aria-label="Player actions"></div>
                         </div>
                         <h1 class="player-name" id="player-name">Loading...</h1>
                         <p class="tournament-context" id="tournament-context">Tournament Context</p>
@@ -522,6 +525,13 @@
             const displayName = displayIdentity.displayName || playerName;
             const playerNameEl = document.getElementById('player-name');
 
+            const escapeHtmlText = (value) => String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+
             const renderPlayerLink = (id, label) => {
                 if (!id || !label) {
                     return label || id || '';
@@ -545,6 +555,27 @@
                 playerNameEl.innerHTML = renderPlayerLinks(playerStanding.partnership_players);
             } else {
                 playerNameEl.innerHTML = renderPlayerLinks(playerName);
+            }
+
+            // Extra obvious CTA to the player's profile (in case the name link is missed).
+            const actionsEl = document.getElementById('player-profile-actions');
+            if (actionsEl) {
+                const ids = Array.isArray(displayIdentity?.canonicalIds) ? displayIdentity.canonicalIds.filter(Boolean) : [];
+                const uniqueIds = Array.from(new Set(ids));
+
+                if (uniqueIds.length === 1) {
+                    const id = uniqueIds[0];
+                    actionsEl.innerHTML = `
+                        <a class="player-action-btn" href="../players/profile.html?player=${encodeURIComponent(id)}">See player profile</a>
+                    `;
+                } else if (uniqueIds.length > 1) {
+                    actionsEl.innerHTML = uniqueIds.map(id => {
+                        const label = engine && typeof engine.getDisplayName === 'function' ? engine.getDisplayName(id) : id;
+                        return `<a class="player-action-btn" href="../players/profile.html?player=${encodeURIComponent(id)}">See ${escapeHtmlText(label)} profile</a>`;
+                    }).join('');
+                } else {
+                    actionsEl.innerHTML = '';
+                }
             }
 
             const chartLabelEl = document.getElementById('chart-player-name');
@@ -614,7 +645,7 @@
             document.getElementById('best-round').textContent = mostTricksText;
 
             // Generate scorecard table
-            generateScorecardTable(playerRounds);
+            generateScorecardTable(playerRounds, params.year);
             
             // Create rank progression chart (use canonical identifier for highlighting)
             createRankProgressionChart(tournament, canonicalChartIdentifier, displayName, 0, engine);
@@ -816,8 +847,14 @@
             return playerRounds.sort((a, b) => a.round - b.round);
         }
 
-        function generateScorecardTable(playerRounds) {
+        function generateScorecardTable(playerRounds, tournamentYear) {
             const tbody = document.getElementById('scorecard-body');
+            const yearParam = tournamentYear || '';
+
+            const scorecardHrefForPlayer = (id) => {
+                // Link to that player's scorecard for this same tournament year.
+                return `scorecard.html?year=${encodeURIComponent(yearParam)}&player=${encodeURIComponent(id)}`;
+            };
 
             const escapeHtmlAttribute = (value) => {
                 if (value === null || value === undefined) {
@@ -865,10 +902,10 @@
                         <td class="partner-name">
                             ${Array.isArray(round.partnerDetails) && round.partnerDetails.length > 0
                                 ? round.partnerDetails.map(partner => 
-                                    `<a href="../players/profile.html?player=${encodeURIComponent(partner.id)}" class="player-name-link">${partner.displayName}</a>`
+                                    `<a href="${scorecardHrefForPlayer(partner.id)}" class="player-name-link">${partner.displayName}</a>`
                                   ).join(' / ')
                                 : (round.partner && round.partner !== 'Unknown'
-                                    ? `<a href="../players/profile.html?player=${encodeURIComponent(round.partner)}" class="player-name-link">${round.partner}</a>`
+                                    ? `<a href="${scorecardHrefForPlayer(round.partner)}" class="player-name-link">${round.partner}</a>`
                                     : 'Unknown')
                             }
                         </td>
@@ -883,7 +920,7 @@
                             ${Array.isArray(round.opponentGroups) && round.opponentGroups.length > 0
                                 ? round.opponentGroups.map(group => 
                                     group.map(opponent => 
-                                        `<a href="../players/profile.html?player=${encodeURIComponent(opponent.id)}" class="player-name-link">${opponent.displayName}</a>`
+                                        `<a href="${scorecardHrefForPlayer(opponent.id)}" class="player-name-link">${opponent.displayName}</a>`
                                     ).join(' / ')
                                 ).join(' & ')
                                 : 'Unknown'}
@@ -1060,19 +1097,39 @@
             text-align: center;
         }
 
-        .back-link {
+        .player-nav-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
             margin-bottom: var(--spacing-md);
+            padding: 0 0.4rem;
+        }
+
+        .back-link {
+            margin-bottom: 0;
+            flex: 0 0 auto;
         }
 
         .back-link a {
-            color: rgba(255, 255, 255, 0.8);
+            display: inline-flex;
+            align-items: center;
+            padding: 0.55rem 0.95rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            background: rgba(255, 255, 255, 0.10);
+            color: rgba(255, 255, 255, 0.92);
             text-decoration: none;
             font-size: 0.9rem;
-            transition: color 0.3s ease;
+            font-weight: 800;
+            transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
         }
 
         .back-link a:hover {
             color: white;
+            background: rgba(255, 255, 255, 0.16);
+            transform: translateY(-1px);
         }
 
         .player-name {
@@ -1561,6 +1618,37 @@
         .opponents-names .player-name-link:hover {
             color: var(--primary-color);
             background-color: rgba(79, 70, 229, 0.1);
+        }
+
+        /* Header: "See player profile" CTA */
+        .player-actions {
+            display: flex;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin: 0;
+            flex: 1 1 auto;
+            padding-right: 0.25rem;
+        }
+
+        .player-action-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.55rem 0.95rem;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            background: rgba(255, 255, 255, 0.16);
+            color: rgba(255, 255, 255, 0.96);
+            font-weight: 900;
+            text-decoration: none;
+            white-space: nowrap;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+        }
+
+        .player-action-btn:hover {
+            text-decoration: underline;
+            background: rgba(255, 255, 255, 0.22);
         }
 
         .data-issues-banner {
