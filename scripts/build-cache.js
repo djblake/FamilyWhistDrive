@@ -72,5 +72,3 @@ main().catch((err) => {
   process.stderr.write('\n');
   process.exit(1);
 });
-
-

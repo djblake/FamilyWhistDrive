@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ruston Family Whist Drive - The Most Prestigious Tournament in the World</title>
     <meta name="description" content="40 Years of Family Whist Excellence - Tournament Results, Player Statistics, and Championship Glory">
+    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="assets/css/main.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -62,35 +63,167 @@
             </div>
         </section>
 
-        <section class="current-champion-section">
+        <section class="home-winner-section">
             <div class="container">
-                <h2 class="section-title">Tournament Champion</h2>
-                <div class="champion-card">
-                    <div class="champion-crown">👑</div>
-                    <h3 class="champion-name" id="current-champion">Loading Champion...</h3>
-                    <p class="champion-year" id="champion-year">Loading Tournament...</p>
-                    <p class="champion-record" id="champion-record">Loading Record...</p>
-                    <a href="#" class="champion-link" id="champion-link">View Championship Profile</a>
+                <h2 class="champion-section-title">Current Champion</h2>
+
+                <div class="winner-card" aria-live="polite">
+                    <div class="winner-kicker" aria-label="Latest tournament">
+                        <div class="winner-year" id="latest-tournament-year">—</div>
+                        <div class="winner-tournament-name" id="latest-tournament-name">Loading latest tournament…</div>
+                    </div>
+
+                    <div class="winner-trophy" aria-hidden="true">🏆</div>
+                    <div class="winner-name" id="winner-name">—</div>
+                    <div class="winner-badge" id="winner-badge">Winner —</div>
+
+                    <div class="winner-tricks-line" id="winner-tricks-line">—</div>
+                    <div class="winner-avg-line" id="winner-avg-line">—</div>
+
+                    <div class="winner-stats-row">
+                        <div class="winner-stat">
+                            <div class="winner-stat-number" id="winner-seed-rank">—</div>
+                            <div class="winner-stat-label">Current seed rank</div>
+                        </div>
+                        <div class="winner-stat">
+                            <div class="winner-stat-number" id="winner-career-played">—</div>
+                            <div class="winner-stat-label">Tournaments played</div>
+                        </div>
+                        <div class="winner-stat">
+                            <div class="winner-stat-number" id="winner-career-wins">—</div>
+                            <div class="winner-stat-label">Tournament wins</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="latest-highlights">
+                    <h3 class="latest-highlights-heading" id="latest-highlights-title">Tournament Highlights</h3>
+
+                    <div class="latest-top-grid">
+                        <div class="latest-story">
+                            <div class="latest-story-title">The story</div>
+                            <div class="latest-story-text" id="latest-tournament-blurb">Loading…</div>
+                        </div>
+                        <div class="latest-podium-side" aria-label="Podium">
+                            <div class="mini-card mini-card--silver" aria-label="Second place">
+                                <div class="mini-kicker">🥈 Second</div>
+                                <div class="mini-value" id="latest-mini-second-name">—</div>
+                                <div class="mini-subvalue" id="latest-mini-second-stats">—</div>
+                            </div>
+                            <div class="mini-card mini-card--bronze" aria-label="Third place">
+                                <div class="mini-kicker">🥉 Third</div>
+                                <div class="mini-value" id="latest-mini-third-name">—</div>
+                                <div class="mini-subvalue" id="latest-mini-third-stats">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="latest-extra-card">
+                        <div class="latest-extra-title">More highlights</div>
+                        <ul class="latest-extra-list" id="latest-extra-list">
+                            <li>Loading…</li>
+                        </ul>
+                    </div>
+
+                    <div class="latest-cta">
+                        <a href="tournaments/" class="btn btn-primary" id="winner-results-cta">See full results for this tournament</a>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <section class="quick-stats-section">
+        <section class="home-history-section">
             <div class="container">
-                <div class="stats-grid" id="quick-stats">
-                    <!-- Stats will be loaded from real tournament data -->
+                <h2 class="section-title">A Brief History</h2>
+                <div class="history-card">
+                    <div class="history-text" id="home-history-description">Loading history…</div>
                 </div>
             </div>
         </section>
 
-        <section class="recent-tournaments-section">
+        <section class="home-feature-section home-feature-section--tournaments">
             <div class="container">
-                <h2 class="section-title">Recent Tournament Glory</h2>
-                <div class="tournament-grid" id="tournament-grid">
-                    <!-- Tournaments will be loaded from real data -->
+                <div class="feature-grid">
+                    <div class="feature-copy">
+                        <h2 class="section-title">Tournament Archive</h2>
+                        <p class="section-subtitle">Every year, every result, every scorecard — the full history of the drive.</p>
+                        <div class="feature-actions">
+                            <a class="btn btn-primary" href="tournaments/">Browse all tournaments</a>
+                        </div>
+                    </div>
+                    <div class="feature-panel">
+                        <div class="feature-panel-title">Recent tournaments</div>
+                        <ul class="feature-list" id="recent-tournaments-list">
+                            <li>Loading…</li>
+                        </ul>
+                    </div>
                 </div>
-                <div class="view-all-tournaments">
-                    <a href="tournaments/" class="btn btn-primary" id="view-all-link">View All Tournaments</a>
+            </div>
+        </section>
+
+        <section class="home-feature-section home-feature-section--players">
+            <div class="container">
+                <div class="feature-grid">
+                    <div class="feature-copy">
+                        <h2 class="section-title">Players</h2>
+                        <p class="section-subtitle">Profiles, partnerships, seed ranking history, and career highlights for every player.</p>
+                        <div class="feature-actions">
+                            <a class="btn btn-primary" href="players/">Explore players</a>
+                        </div>
+                    </div>
+                    <div class="feature-panel">
+                        <div class="feature-panel-title">At a glance</div>
+                        <div class="feature-metrics">
+                            <div class="feature-metric">
+                                <div class="feature-metric-number" id="home-metric-players">—</div>
+                                <div class="feature-metric-label">Players tracked</div>
+                            </div>
+                            <div class="feature-metric">
+                                <div class="feature-metric-number" id="home-metric-tournaments">—</div>
+                                <div class="feature-metric-label">Tournaments</div>
+                            </div>
+                            <div class="feature-metric">
+                                <div class="feature-metric-number" id="home-metric-rounds">—</div>
+                                <div class="feature-metric-label">Rounds</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="home-feature-section home-feature-section--hof">
+            <div class="container">
+                <div class="feature-grid">
+                    <div class="feature-copy">
+                        <h2 class="section-title">Hall of Fame</h2>
+                        <p class="section-subtitle">Champions, podiums, legacy — the leaderboard of all-time greats.</p>
+                        <div class="feature-actions">
+                            <a class="btn btn-primary" href="leaderboard/">Open Hall of Fame</a>
+                        </div>
+                    </div>
+                    <div class="feature-panel">
+                        <div class="feature-panel-title">Why it matters</div>
+                        <p class="feature-panel-text">One good tournament is a moment. A Hall-of-Fame career is a story told over decades.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="home-feature-section home-feature-section--stats">
+            <div class="container">
+                <div class="feature-grid">
+                    <div class="feature-copy">
+                        <h2 class="section-title">Statistics</h2>
+                        <p class="section-subtitle">Partnership rankings, streaks, family stats — the deeper layer behind the trophies.</p>
+                        <div class="feature-actions">
+                            <a class="btn btn-primary" href="stats/">Open statistics</a>
+                        </div>
+                    </div>
+                    <div class="feature-panel">
+                        <div class="feature-panel-title">On this page</div>
+                        <p class="feature-panel-text">Find the strongest partnerships, the invincibles, and the streaks that define eras.</p>
+                    </div>
                 </div>
             </div>
         </section>
@@ -121,7 +254,7 @@
         </div>
     </footer>
 
-            <script src="assets/js/tournament-engine.js?v=cache1"></script>
+    <script src="assets/js/tournament-engine.js?v=cache1"></script>
     <script>
         // Load real tournament data from Google Sheets
         document.addEventListener('DOMContentLoaded', async function() {
@@ -129,11 +262,67 @@
             const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
             
             try {
-                console.log('🏆 Loading real tournament data...');
+                console.log('🏠 Loading home page data...');
                 await tournamentEngine.loadFromGoogleSheets(sheetId);
+
+                async function loadHistoryDescription(engine, sid) {
+                    try {
+                        const url = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sid)}/gviz/tq?tqx=out:csv&sheet=History`;
+                        const response = await fetch(url, { cache: 'no-store' });
+                        if (!response.ok) return '';
+                        const csv = await response.text();
+                        const rows = (engine && typeof engine.parseCSVRows === 'function')
+                            ? engine.parseCSVRows(String(csv || '').trim())
+                            : [];
+                        if (!Array.isArray(rows) || rows.length === 0) return '';
+
+                        const norm = (v) => String(v || '').trim();
+                        const normLower = (v) => norm(v).toLowerCase();
+
+                        const findRowIndex = (needle) => {
+                            const n = normLower(needle);
+                            for (let i = 0; i < rows.length; i++) {
+                                const r = rows[i];
+                                const a = Array.isArray(r) ? normLower(r[0]) : '';
+                                if (a === n) return i;
+                            }
+                            return -1;
+                        };
+
+                        const idx = findRowIndex('Description');
+                        if (idx >= 0) {
+                            const row = rows[idx] || [];
+                            const inline = Array.isArray(row) ? norm(row.slice(1).join(',')) : '';
+                            if (inline) return inline;
+
+                            // Common History format: Row0 = "Description", Row1+ = text (single column)
+                            const lines = [];
+                            for (let j = idx + 1; j < rows.length; j++) {
+                                const r = rows[j];
+                                if (!Array.isArray(r) || r.length === 0) continue;
+                                const v = String(r[0] ?? '');
+                                lines.push(v);
+                            }
+                            return lines.join('\n').trim();
+                        }
+
+                        // Fallback: treat first non-empty cell as description
+                        for (const r of rows) {
+                            if (!Array.isArray(r) || r.length === 0) continue;
+                            const v = norm(r[0]);
+                            if (v) return v;
+                        }
+                        return '';
+                    } catch (_) {
+                        return '';
+                    }
+                }
                 
                 // Update hero stats - get tournaments sorted by year (most recent first)
-                const tournaments = tournamentEngine.getAllTournaments();
+                const tournaments = (tournamentEngine.getAllTournaments && typeof tournamentEngine.getAllTournaments === 'function')
+                    ? tournamentEngine.getAllTournaments().slice()
+                    : Array.from((tournamentEngine.tournaments || new Map()).values());
+                tournaments.sort((a, b) => (Number(b.year) || 0) - (Number(a.year) || 0));
                 const totalRounds = tournaments.reduce((sum, t) => sum + t.total_rounds, 0);
                 
                 // Fix tricks calculation - avoid double counting by only counting unique hands
@@ -157,66 +346,762 @@
                 document.getElementById('tricks-count').textContent = totalTricks.toLocaleString();
                 document.getElementById('players-count').textContent = totalPlayers.size;
                 
-                // Update current champion (latest tournament winner)
-                if (tournaments.length > 0) {
-                    const latestTournament = tournaments[0]; // First tournament is most recent (sorted by year desc)
-                    document.getElementById('current-champion').textContent = latestTournament.winner;
-                    document.getElementById('champion-year').textContent = `${latestTournament.name} ${latestTournament.year} Champion`;
-                    document.getElementById('champion-record').textContent = `${latestTournament.final_standings[0].total_tricks} Total Tricks • Tournament Victory`;
-                    document.getElementById('champion-link').href = `players/profile.html?player=${encodeURIComponent(latestTournament.winner)}`;
+                // Winner spotlight + tournament highlights
+                const uniqueDesc = (tournamentEngine.getAllTournamentsUnique && typeof tournamentEngine.getAllTournamentsUnique === 'function')
+                    ? tournamentEngine.getAllTournamentsUnique('desc')
+                    : tournaments.slice();
+
+                const safeName = (id) => (tournamentEngine && typeof tournamentEngine.getDisplayName === 'function')
+                    ? tournamentEngine.getDisplayName(id)
+                    : (id || '—');
+
+                const toTitleCase = (s) => {
+                    const raw = String(s || '').trim();
+                    if (!raw) return '';
+                    return raw.split(/\s+/g).map(w => {
+                        if (!w) return w;
+                        // keep acronyms / already-cased words
+                        const hasUpperInside = /[A-Z]/.test(w.slice(1));
+                        if (hasUpperInside) return w;
+                        return w.charAt(0).toUpperCase() + w.slice(1);
+                    }).join(' ');
+                };
+
+                const appendHighlight = (ul, text) => {
+                    if (!ul || !text) return;
+                    const li = document.createElement('li');
+                    li.textContent = text;
+                    ul.appendChild(li);
+                };
+
+                const extractParticipantIds = (tournamentObj) => {
+                    const ids = [];
+                    const standings = Array.isArray(tournamentObj?.final_standings) ? tournamentObj.final_standings : [];
+                    for (const s of standings) {
+                        if (Array.isArray(s?.partnership_players) && s.partnership_players.length) {
+                            ids.push(...s.partnership_players.filter(Boolean));
+                            continue;
+                        }
+                        const p = String(s?.player || '').trim();
+                        if (!p) continue;
+                        if (p.includes('/') || p.includes('&') || p.includes('+')) {
+                            p.split(/[\/&+]/g).map(x => x.trim()).filter(Boolean).forEach(x => ids.push(x));
+                        } else {
+                            ids.push(p);
+                        }
+                    }
+                    return Array.from(new Set(ids));
+                };
+
+                if (uniqueDesc.length > 0) {
+                    const latest = uniqueDesc[0];
+                    const year = latest && Number.isFinite(Number(latest.year)) ? latest.year : '';
+                    const resultsHref = `tournaments/results.html?year=${encodeURIComponent(year)}`;
+
+                    const yearEl = document.getElementById('latest-tournament-year');
+                    if (yearEl) yearEl.textContent = `${latest.year || '—'}`;
+                    const nameEl = document.getElementById('latest-tournament-name');
+                    if (nameEl) nameEl.textContent = `${toTitleCase(latest.name || latest.title || 'Tournament')}`;
+
+                    // Title is fixed: "Tournament Highlights"
+
+                    const standings = Array.isArray(latest.final_standings) ? latest.final_standings.slice() : [];
+                    const champ = standings.find(s => s && s.position === 1) || standings[0] || null;
+                    const second = standings.find(s => s && s.position === 2) || standings[1] || null;
+                    const third = standings.find(s => s && s.position === 3) || standings[2] || null;
+                    const booby = standings.length ? standings[standings.length - 1] : null;
+
+                    const champName = champ?.player ? safeName(champ.player) : '—';
+                    const winnerNameEl = document.getElementById('winner-name');
+                    if (winnerNameEl) winnerNameEl.textContent = champName;
+                    const badgeEl = document.getElementById('winner-badge');
+                    if (badgeEl) badgeEl.textContent = `Winner ${latest.year || ''}`.trim();
+
+                    const champTricks = champ && Number.isFinite(Number(champ.total_tricks)) ? Number(champ.total_tricks) : null;
+                    const champAvg = champ && Number.isFinite(Number(champ.average_tricks)) ? Number(champ.average_tricks) : null;
+                    const tricksLineEl = document.getElementById('winner-tricks-line');
+                    if (tricksLineEl) tricksLineEl.textContent = (champTricks !== null) ? `${champTricks.toLocaleString()} tricks` : '—';
+                    const avgLineEl = document.getElementById('winner-avg-line');
+                    if (avgLineEl) avgLineEl.textContent = (champAvg !== null) ? `${champAvg.toFixed(2)} avg/round` : '—';
+
+                    const cta = document.getElementById('winner-results-cta');
+                    if (cta) cta.href = resultsHref;
+
+                    // Seed ranks: current vs previous (excluding latest)
+                    const tournamentsAsc = (tournamentEngine.getAllTournamentsUnique && typeof tournamentEngine.getAllTournamentsUnique === 'function')
+                        ? tournamentEngine.getAllTournamentsUnique('asc')
+                        : uniqueDesc.slice().reverse();
+                    const allForSeed = tournamentsAsc.filter(t => t && t.id);
+                    const beforeForSeed = allForSeed.filter(t => t.id !== latest.id);
+                    const seedCurrent = (typeof tournamentEngine.computeOfficialSeedRankingsForTournaments === 'function')
+                        ? tournamentEngine.computeOfficialSeedRankingsForTournaments(allForSeed, true)
+                        : [];
+                    const seedBefore = (typeof tournamentEngine.computeOfficialSeedRankingsForTournaments === 'function')
+                        ? tournamentEngine.computeOfficialSeedRankingsForTournaments(beforeForSeed, true)
+                        : [];
+
+                    const champSeed = champ?.player ? seedCurrent.find(r => r && r.name === champ.player) : null;
+                    const champSeedText = champSeed ? `#${champSeed.seed_rank} (${champSeed.seed_points} pts)` : '—';
+                    const winnerSeedEl = document.getElementById('winner-seed-rank');
+                    if (winnerSeedEl) winnerSeedEl.textContent = champSeedText;
+
+                    // Podium mini panels (2nd / 3rd)
+                    const playedOn = latest?.date ? `${latest.date}` : null;
+                    const entrantsNum = standings.length ? standings.length : (latest?.total_players ? Number(latest.total_players) : null);
+                    const roundsNum = latest?.total_rounds ? Number(latest.total_rounds) : null;
+
+                    const setPodiumMini = (which, row) => {
+                        const nameEl = document.getElementById(`latest-mini-${which}-name`);
+                        const statsEl = document.getElementById(`latest-mini-${which}-stats`);
+                        if (!row) {
+                            if (nameEl) nameEl.textContent = '—';
+                            if (statsEl) statsEl.textContent = '';
+                            return;
+                        }
+                        const nm = safeName(row.player);
+                        const tr = Number.isFinite(Number(row.total_tricks)) ? Number(row.total_tricks) : null;
+                        const av = Number.isFinite(Number(row.average_tricks)) ? Number(row.average_tricks) : null;
+                        if (nameEl) nameEl.textContent = nm;
+                        if (statsEl) statsEl.textContent = `${tr !== null ? tr : '—'} tricks • ${av !== null ? av.toFixed(2) : '—'} avg/round`;
+                    };
+                    setPodiumMini('second', second);
+                    setPodiumMini('third', third);
+
+                    // Returnees (gap >= 3 years)
+                    const participantsLatest = extractParticipantIds(latest);
+                    const lastPlayedYear = new Map();
+                    for (const t of allForSeed) {
+                        if (!t || !Number.isFinite(Number(t.year)) || t.id === latest.id) continue;
+                        const ids = extractParticipantIds(t);
+                        for (const pid of ids) {
+                            if (!lastPlayedYear.has(pid) || Number(t.year) > Number(lastPlayedYear.get(pid))) {
+                                lastPlayedYear.set(pid, Number(t.year));
+                            }
+                        }
+                    }
+                    const returnees = [];
+                    for (const pid of participantsLatest) {
+                        const prev = lastPlayedYear.get(pid);
+                        if (!prev) continue;
+                        const gap = Number(latest.year) - Number(prev);
+                        if (gap >= 3) {
+                            returnees.push({ pid, prev });
+                        }
+                    }
+
+                    // 12 / 13 trick hands (raw scorecards)
+                    const yearNum = Number(latest.year);
+                    const scorecards = Array.isArray(tournamentEngine.rawScorecards) ? tournamentEngine.rawScorecards : [];
+                    const inLatestYear = scorecards.filter(sc => Number(sc?.Year) === yearNum);
+                    const tricks12 = [];
+                    const tricks13 = [];
+                    for (const sc of inLatestYear) {
+                        const tw = Number(sc?.Tricks_Won);
+                        if (!Number.isFinite(tw)) continue;
+                        if (tw === 12) tricks12.push(sc);
+                        if (tw === 13) tricks13.push(sc);
+                    }
+                    const summarizeBigHands = (rows) => {
+                        const byPlayer = new Map();
+                        for (const r of rows) {
+                            const p = String(r?.Player || '').trim();
+                            if (!p) continue;
+                            byPlayer.set(p, (byPlayer.get(p) || 0) + 1);
+                        }
+                        const top = Array.from(byPlayer.entries())
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 4)
+                            .map(([p, c]) => `${safeName(p)} ×${c}`);
+                        return { total: rows.length, top };
+                    };
+                    if (tricks13.length) {
+                        const s = summarizeBigHands(tricks13);
+                        // queued to extra highlights below
+                    }
+                    if (tricks12.length) {
+                        const s = summarizeBigHands(tricks12);
+                        // queued to extra highlights below
+                    }
+
+                    // Seed narrative: new #1 + winner rank + movement
+                    const currentOne = seedCurrent && seedCurrent[0] ? seedCurrent[0] : null;
+                    const prevOne = seedBefore && seedBefore[0] ? seedBefore[0] : null;
+                    const seedLeadText = (() => {
+                        if (!(currentOne && currentOne.name)) return '';
+                        if (prevOne && prevOne.name && currentOne.name !== prevOne.name) {
+                            return `A new #1 seed emerges: ${safeName(currentOne.name)} (overtaking ${safeName(prevOne.name)}).`;
+                        }
+                        return `The current #1 seed remains ${safeName(currentOne.name)}.`;
+                    })();
+
+                    // Winner career context
+                    let careerSentence = '';
+                    if (champ?.player && typeof tournamentEngine.getPlayerStats === 'function') {
+                        const stats = tournamentEngine.getPlayerStats(champ.player, true);
+                        if (stats) {
+                            const wins = Number(stats.tournament_wins) || 0;
+                            const played = Number(stats.tournaments_played) || 0;
+                            const playedEl = document.getElementById('winner-career-played');
+                            if (playedEl) playedEl.textContent = `${played}`;
+                            const winsEl = document.getElementById('winner-career-wins');
+                            if (winsEl) winsEl.textContent = `${wins}`;
+                            careerSentence = `${champName} now has ${wins} tournament win${wins === 1 ? '' : 's'} across ${played} tournament${played === 1 ? '' : 's'}.`;
+                        }
+                    }
+
+                    // Late comeback heuristic (winner not leading after round N-3 but wins overall)
+                    let comebackSentence = '';
+                    if (champ?.player && latest?.rounds && Array.isArray(latest.rounds) && inLatestYear.length) {
+                        const perRound = new Map(); // round -> Map<player, tricks>
+                        for (const sc of inLatestYear) {
+                            const r = Number(sc?.Round);
+                            const p = String(sc?.Player || '').trim();
+                            const tw = Number(sc?.Tricks_Won);
+                            if (!Number.isFinite(r) || !p || !Number.isFinite(tw)) continue;
+                            if (!perRound.has(r)) perRound.set(r, new Map());
+                            const m = perRound.get(r);
+                            m.set(p, (m.get(p) || 0) + tw);
+                        }
+                        const roundsSorted = Array.from(perRound.keys()).sort((a, b) => a - b);
+                        const cutoffRound = roundsSorted.length >= 4 ? roundsSorted[roundsSorted.length - 3] : null;
+                        if (cutoffRound !== null) {
+                            const cumulative = new Map();
+                            let winnerWasLeading = false;
+                            let winnerPosAtCutoff = null;
+                            for (const r of roundsSorted) {
+                                const m = perRound.get(r);
+                                for (const [p, tw] of m.entries()) {
+                                    cumulative.set(p, (cumulative.get(p) || 0) + tw);
+                                }
+                                if (r === cutoffRound) {
+                                    const sorted = Array.from(cumulative.entries()).sort((a, b) => (b[1] - a[1]));
+                                    winnerWasLeading = sorted.length && sorted[0][0] === champ.player;
+                                    winnerPosAtCutoff = sorted.findIndex(x => x[0] === champ.player) + 1;
+                                }
+                            }
+                            if (!winnerWasLeading) {
+                                const pos = Number.isFinite(Number(winnerPosAtCutoff)) && winnerPosAtCutoff > 0 ? winnerPosAtCutoff : null;
+                                const ord = (pos && typeof tournamentEngine.getOrdinalSuffix === 'function')
+                                    ? `${pos}${tournamentEngine.getOrdinalSuffix(pos)}`
+                                    : (pos ? `${pos}th` : 'outside 1st');
+                                comebackSentence = `A late surge sealed it: after round ${cutoffRound}, ${champName} was ${ord} — then surged to win.`;
+                            }
+                        }
+                    }
+
+                    // Tournament blurb (narrative text)
+                    const blurbEl = document.getElementById('latest-tournament-blurb');
+                    if (blurbEl) {
+                        const parts = [];
+                        if (playedOn || entrantsNum || roundsNum) {
+                            const bits = [];
+                            if (playedOn) bits.push(`Played on ${playedOn}`);
+                            if (entrantsNum) bits.push(`${entrantsNum} entrants`);
+                            if (roundsNum) bits.push(`${roundsNum} rounds`);
+                            parts.push(bits.join(' • ') + '.');
+                        }
+                        if (champTricks !== null && champAvg !== null) {
+                            parts.push(`${champName} won ${latest.year} with ${champTricks} tricks (${champAvg.toFixed(2)} avg/round).`);
+                        } else if (champTricks !== null) {
+                            parts.push(`${champName} won ${latest.year} with ${champTricks} tricks.`);
+                        } else {
+                            parts.push(`${champName} took the title in ${latest.year}.`);
+                        }
+                        if (champSeed) {
+                            parts.push(`${champName} is now Seed #${champSeed.seed_rank} with ${champSeed.seed_points} points.`);
+                        }
+                        if (seedLeadText) parts.push(seedLeadText);
+                        if (careerSentence) parts.push(careerSentence);
+                        if (comebackSentence) parts.push(comebackSentence);
+                        if (booby && booby.player) {
+                            parts.push(`At the other end of the table, the booby prize went to ${safeName(booby.player)}.`);
+                        }
+                        blurbEl.textContent = parts.join(' ');
+                    }
+
+                    // Extra highlights list (returnees, 12/13, booby if you want it repeated, etc.)
+                    const extraUl = document.getElementById('latest-extra-list');
+                    if (extraUl) {
+                        extraUl.innerHTML = '';
+                        const add = (txt) => {
+                            const li = document.createElement('li');
+                            li.textContent = txt;
+                            extraUl.appendChild(li);
+                        };
+                        if (returnees.length) {
+                            const top = returnees
+                                .sort((a, b) => (b.prev - a.prev))
+                                .slice(0, 6)
+                                .map(r => `${safeName(r.pid)} (last played ${r.prev})`);
+                            add(`Returnees: ${top.join(', ')}`);
+                        }
+                        if (tricks13.length) {
+                            const s = summarizeBigHands(tricks13);
+                            add(`13-trick hands: ${s.total}${s.top.length ? ` (${s.top.join(', ')})` : ''}`);
+                        }
+                        if (tricks12.length) {
+                            const s = summarizeBigHands(tricks12);
+                            add(`12-trick hands: ${s.total}${s.top.length ? ` (${s.top.join(', ')})` : ''}`);
+                        }
+                        if (!extraUl.children.length) {
+                            add('No extra highlights found for this tournament.');
+                        }
+                    }
                 }
-                
-                // Update quick stats
-                const quickStatsHTML = tournaments.map(tournament => `
-                    <div class="quick-stat-card">
-                        <h3>Tournament Results</h3>
-                        <div class="stat-value">${tournament.name}</div>
-                        <p>${tournament.total_players} Players • ${tournament.total_rounds} Rounds • Year ${tournament.year}</p>
-                        <a href="tournaments/results.html?year=${tournament.year}">View Results</a>
-                    </div>
-                    <div class="quick-stat-card">
-                        <h3>Champion</h3>
-                        <div class="stat-value">${tournament.winner}</div>
-                        <p>${tournament.final_standings[0].total_tricks} Total Tricks • ${tournament.final_standings[0].average_tricks} Average</p>
-                        <a href="players/profile.html?player=${encodeURIComponent(tournament.winner)}">View Profile</a>
-                    </div>
-                    <div class="quick-stat-card">
-                        <h3>Runner-up</h3>
-                        <div class="stat-value">${tournament.runner_up}</div>
-                        <p>${tournament.final_standings[1].total_tricks} Total Tricks • Close Competition</p>
-                        <a href="players/profile.html?player=${encodeURIComponent(tournament.runner_up)}">View Profile</a>
-                    </div>
-                    <div class="quick-stat-card">
-                        <h3>Data Quality</h3>
-                        <div class="stat-value">${tournamentEngine.rawScorecards.length} Scorecards</div>
-                        <p>32 Shared Hands • 3 Historical Data Issues</p>
-                        <a href="google-sheets-example.html">View Details</a>
-                    </div>
-                `).join('');
-                document.getElementById('quick-stats').innerHTML = quickStatsHTML;
-                
-                // Update tournament grid
-                const tournamentGridHTML = tournaments.map(tournament => `
-                    <div class="tournament-card">
-                        <div class="tournament-year">${tournament.year}</div>
-                        <h3 class="tournament-title">${tournament.name}</h3>
-                        <div class="tournament-winner">Champion: ${tournamentEngine.getDisplayName(tournament.winner)}</div>
-                        <div class="tournament-stats">${tournament.total_players} Players • ${tournament.final_standings.reduce((sum, s) => sum + s.total_tricks, 0)} Total Tricks</div>
-                        <a href="tournaments/results.html?year=${tournament.year}" class="tournament-link">Full Results</a>
-                    </div>
-                `).join('');
-                document.getElementById('tournament-grid').innerHTML = tournamentGridHTML;
-                
-                // Update view all link
-                document.getElementById('view-all-link').textContent = `View Tournament Details`;
-                
-                console.log('✅ Real tournament data loaded successfully!');
+
+                // Home history
+                const historyEl = document.getElementById('home-history-description');
+                if (historyEl) {
+                    let desc = (tournamentEngine && typeof tournamentEngine.getHistoryValue === 'function')
+                        ? String(tournamentEngine.getHistoryValue('Description') || '')
+                        : '';
+                    if (!desc.trim()) {
+                        desc = await loadHistoryDescription(tournamentEngine, sheetId);
+                    }
+                    historyEl.textContent = (desc && desc.trim()) ? desc.trim() : 'History coming soon.';
+                }
+
+                // Recent tournaments list in archive section
+                const recentList = document.getElementById('recent-tournaments-list');
+                if (recentList) {
+                    recentList.innerHTML = '';
+                    const last = uniqueDesc.slice(0, 5);
+                    last.forEach(t => {
+                        const li = document.createElement('li');
+                        const year = (t && Number.isFinite(Number(t.year))) ? t.year : '';
+                        const winner = t && t.winner ? safeName(t.winner) : '—';
+                        const a = document.createElement('a');
+                        a.href = `tournaments/results.html?year=${encodeURIComponent(year)}`;
+                        a.textContent = `${year} • ${t.name} • Winner: ${winner}`;
+                        a.style.color = 'inherit';
+                        a.style.textDecoration = 'none';
+                        a.addEventListener('mouseenter', () => { a.style.textDecoration = 'underline'; });
+                        a.addEventListener('mouseleave', () => { a.style.textDecoration = 'none'; });
+                        li.appendChild(a);
+                        recentList.appendChild(li);
+                    });
+                    if (!last.length) {
+                        const li = document.createElement('li');
+                        li.textContent = 'No tournaments found.';
+                        recentList.appendChild(li);
+                    }
+                }
+
+                // Metrics in players section
+                const setMetric = (id, value) => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = value;
+                };
+                setMetric('home-metric-players', `${totalPlayers.size}`);
+                setMetric('home-metric-tournaments', `${tournaments.length}`);
+                setMetric('home-metric-rounds', `${totalRounds}`);
+
+                console.log('✅ Home page data loaded successfully!');
                 
             } catch (error) {
-                console.error('❌ Error loading tournament data:', error);
+                const detail = (error && error.stack) ? error.stack : String(error);
+                console.error('❌ Error loading tournament data:', detail);
                 // Keep fallback content if data loading fails
             }
         });
     </script>
+
+    <style>
+        /* Home: winner spotlight + history + feature sections */
+        .home-winner-section {
+            padding: var(--spacing-3xl) 0;
+            background: var(--bg-secondary);
+        }
+
+        .champion-section-title {
+            color: rgba(255, 255, 255, 0.92);
+            font-family: var(--font-primary);
+            font-weight: 900;
+            font-size: 2.2rem;
+            text-align: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .winner-card {
+            max-width: 920px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 247, 224, 0.92) 100%);
+            border-radius: var(--border-radius-xl);
+            padding: var(--spacing-2xl);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(212, 175, 55, 0.24);
+            text-align: center;
+        }
+
+        .winner-kicker {
+            font-weight: 900;
+            letter-spacing: 0.06em;
+            color: var(--text-secondary-dark);
+            margin-bottom: 0.9rem;
+        }
+
+        .winner-year {
+            font-family: var(--font-primary);
+            font-weight: 900;
+            font-size: 2.6rem;
+            letter-spacing: 0.02em;
+            color: var(--text-primary-dark);
+            line-height: 1.05;
+        }
+
+        .winner-tournament-name {
+            margin-top: 0.25rem;
+            font-weight: 900;
+            font-size: 1.05rem;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary-dark);
+        }
+
+        .winner-trophy {
+            font-size: 3.6rem;
+            line-height: 1;
+            margin: 0.25rem 0 0.35rem;
+        }
+
+        .winner-name {
+            font-family: var(--font-primary);
+            font-weight: 900;
+            font-size: 3rem;
+            line-height: 1.02;
+            color: var(--text-primary-dark);
+        }
+
+        .winner-badge {
+            margin-top: 0.25rem;
+            font-weight: 900;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+            color: var(--text-secondary-dark);
+        }
+
+        .winner-tricks-line {
+            margin-top: 1.05rem;
+            font-weight: 950;
+            font-size: 2.25rem;
+            color: var(--gold);
+            text-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        .winner-avg-line {
+            margin-top: 0.35rem;
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: var(--text-secondary-dark);
+            margin-bottom: 1.35rem;
+        }
+
+        .winner-stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: 0;
+        }
+
+        .winner-stat {
+            background: rgba(15, 23, 42, 0.04);
+            border-radius: var(--border-radius-lg);
+            padding: 1rem 1.1rem;
+            border: 1px solid rgba(15, 23, 42, 0.06);
+        }
+
+        .winner-stat-number {
+            font-weight: 900;
+            font-size: 1.6rem;
+            color: var(--text-primary-dark);
+        }
+
+        .winner-stat-label {
+            margin-top: 0.2rem;
+            color: var(--text-secondary-dark);
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .latest-highlights {
+            max-width: 980px;
+            margin: var(--spacing-2xl) auto 0;
+        }
+
+        .latest-highlights-heading {
+            color: rgba(255, 255, 255, 0.92);
+            font-family: var(--font-primary);
+            font-weight: 900;
+            text-align: left;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .latest-top-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+            align-items: start;
+        }
+
+        .latest-story {
+            color: rgba(255, 255, 255, 0.92);
+            text-align: left;
+            padding-right: var(--spacing-md);
+        }
+
+        .latest-story-title {
+            font-weight: 900;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.85rem;
+            margin-bottom: 0.55rem;
+        }
+
+        .latest-story-text {
+            color: rgba(255, 255, 255, 0.92);
+            line-height: 1.7;
+            font-weight: 600;
+        }
+
+        .latest-podium-side {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+        }
+
+        .mini-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: var(--border-radius-lg);
+            padding: 1rem 1.05rem;
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            box-shadow: var(--shadow-card);
+            text-align: left;
+        }
+
+        .mini-kicker {
+            font-weight: 900;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: rgba(15, 23, 42, 0.65);
+            font-size: 0.78rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .mini-value {
+            font-weight: 950;
+            color: var(--text-primary-dark);
+            font-size: 1.25rem;
+            line-height: 1.1;
+        }
+
+        .mini-subvalue {
+            margin-top: 0.35rem;
+            color: rgba(15, 23, 42, 0.70);
+            font-weight: 800;
+            font-size: 0.95rem;
+        }
+
+        .mini-card--silver {
+            background: linear-gradient(135deg, rgba(241, 245, 249, 0.98) 0%, rgba(226, 232, 240, 0.98) 100%);
+        }
+
+        .mini-card--bronze {
+            background: linear-gradient(135deg, rgba(255, 247, 237, 0.98) 0%, rgba(254, 215, 170, 0.55) 100%);
+        }
+
+        .latest-extra-card {
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: var(--border-radius-xl);
+            padding: var(--spacing-xl);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            box-shadow: var(--shadow-card);
+            margin-bottom: var(--spacing-xl);
+            text-align: left;
+        }
+
+        .latest-extra-title {
+            font-weight: 950;
+            color: var(--text-primary-dark);
+            font-size: 1.15rem;
+            margin-bottom: 0.45rem;
+        }
+
+        .latest-extra-list {
+            margin: 0;
+            padding-left: 1.25rem;
+            color: var(--text-primary-dark);
+            line-height: 1.6;
+            font-weight: 600;
+        }
+
+        .latest-extra-list li {
+            margin: 0.35rem 0;
+        }
+
+        .latest-cta {
+            display: flex;
+            justify-content: center;
+            margin-top: var(--spacing-xl);
+        }
+
+        .latest-cta .btn {
+            padding: 0.9rem 1.25rem;
+        }
+
+        .home-history-section {
+            padding: var(--spacing-3xl) 0;
+            background: white;
+        }
+        .home-history-section .section-title {
+            color: var(--text-primary-dark);
+        }
+
+        .history-card {
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-2xl);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            box-shadow: var(--shadow-card);
+        }
+
+        .history-text {
+            color: var(--text-primary-dark);
+            font-size: 1rem;
+            line-height: 1.65;
+            white-space: pre-line;
+        }
+
+        .home-feature-section {
+            padding: var(--spacing-3xl) 0;
+            background: var(--bg-secondary);
+        }
+
+        .home-feature-section--players,
+        .home-feature-section--stats {
+            background: white;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: var(--spacing-xl);
+            align-items: stretch;
+        }
+
+        .feature-copy {
+            text-align: center;
+        }
+
+        .feature-copy .section-title,
+        .feature-copy .section-subtitle {
+            text-align: inherit;
+        }
+
+        .feature-copy .section-subtitle {
+            margin-top: 0.35rem;
+        }
+
+        .feature-actions {
+            margin-top: var(--spacing-lg);
+            display: flex;
+            justify-content: center;
+        }
+
+        .feature-panel {
+            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-card);
+        }
+
+        .feature-panel-title {
+            font-weight: 900;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-secondary-dark);
+            margin-bottom: 0.65rem;
+        }
+
+        .feature-panel-text {
+            margin: 0;
+            color: var(--text-primary-dark);
+            line-height: 1.55;
+        }
+
+        .feature-list {
+            margin: 0;
+            padding-left: 1.25rem;
+            color: var(--text-primary-dark);
+            line-height: 1.55;
+        }
+
+        .feature-list li {
+            margin: 0.35rem 0;
+        }
+
+        .feature-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: var(--spacing-md);
+        }
+
+        .feature-metric {
+            background: white;
+            border-radius: var(--border-radius-md);
+            padding: 0.8rem 0.9rem;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        .feature-metric-number {
+            font-weight: 900;
+            font-size: 1.4rem;
+            color: var(--text-primary-dark);
+        }
+
+        .feature-metric-label {
+            margin-top: 0.2rem;
+            color: var(--text-secondary-dark);
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        /* Feature sections: default is dark background (white text). Only force dark text on the white sections. */
+        .home-feature-section--players,
+        .home-feature-section--stats {
+            color: var(--text-primary-dark);
+        }
+        .home-feature-section--players .section-title,
+        .home-feature-section--players .section-subtitle,
+        .home-feature-section--stats .section-title,
+        .home-feature-section--stats .section-subtitle {
+            color: var(--text-primary-dark);
+        }
+        .home-feature-section--players .section-subtitle,
+        .home-feature-section--stats .section-subtitle {
+            color: var(--text-secondary-dark);
+        }
+
+        @media (max-width: 960px) {
+            .winner-name { font-size: 2.45rem; }
+            .winner-stats-row { grid-template-columns: 1fr; }
+            .feature-grid { grid-template-columns: 1fr; }
+            .latest-top-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 560px) {
+            .winner-card { padding: var(--spacing-xl); }
+            .winner-year { font-size: 2.25rem; }
+            .winner-trophy { font-size: 3rem; }
+            .champion-section-title { font-size: 1.85rem; }
+            .feature-metrics { grid-template-columns: 1fr; }
+        }
+    </style>
 </body>
 </html>
