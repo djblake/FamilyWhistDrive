@@ -97,7 +97,13 @@
                 </div>
 
                 <div class="latest-highlights">
-                    <h3 class="latest-highlights-heading" id="latest-highlights-title">Tournament Highlights</h3>
+                    <div class="latest-highlights-header">
+                        <h3 class="latest-highlights-heading" id="latest-highlights-title">Tournament Highlights</h3>
+                        <div class="latest-highlights-tournament" aria-label="Latest tournament">
+                            <div class="latest-highlights-year" id="latest-highlights-year">—</div>
+                            <div class="latest-highlights-name" id="latest-highlights-name">—</div>
+                        </div>
+                    </div>
 
                     <div class="latest-top-grid">
                         <div class="latest-story">
@@ -137,13 +143,6 @@
                                 <div class="seed-mini-trend" id="latest-seed-row-winner-trend" aria-label="Trend graph"></div>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="latest-extra-card">
-                        <div class="latest-extra-title">More highlights</div>
-                        <ul class="latest-extra-list" id="latest-extra-list">
-                            <li>Loading…</li>
-                        </ul>
                     </div>
 
                     <div class="latest-cta">
@@ -454,6 +453,12 @@
                     if (yearEl) yearEl.textContent = `${latest.year || '—'}`;
                     const nameEl = document.getElementById('latest-tournament-name');
                     if (nameEl) nameEl.textContent = `${toTitleCase(latest.name || latest.title || 'Tournament')}`;
+
+                    // Tournament label in the highlights header (above entrants/rounds)
+                    const highlightsYearEl = document.getElementById('latest-highlights-year');
+                    if (highlightsYearEl) highlightsYearEl.textContent = `${latest.year || '—'}`;
+                    const highlightsNameEl = document.getElementById('latest-highlights-name');
+                    if (highlightsNameEl) highlightsNameEl.textContent = `${toTitleCase(latest.name || latest.title || 'Tournament')}`;
 
                     // Title is fixed: "Tournament Highlights"
 
@@ -776,20 +781,7 @@
                             add(`Booby prize: ${safeName(booby.player)}.`);
                         }
 
-                        if (!storyEl.children.length) {
-                            add('Story coming soon.');
-                        }
-                    }
-
-                    // Extra highlights list (returnees, 12/13, booby if you want it repeated, etc.)
-                    const extraUl = document.getElementById('latest-extra-list');
-                    if (extraUl) {
-                        extraUl.innerHTML = '';
-                        const add = (txt) => {
-                            const li = document.createElement('li');
-                            li.textContent = txt;
-                            extraUl.appendChild(li);
-                        };
+                        // Fold "More highlights" into the story list
                         if (returnees.length) {
                             const top = returnees
                                 .sort((a, b) => (b.prev - a.prev))
@@ -805,8 +797,9 @@
                             const s = summarizeBigHands(tricks12);
                             add(`12-trick hands: ${s.total}${s.top.length ? ` (${s.top.join(', ')})` : ''}`);
                         }
-                        if (!extraUl.children.length) {
-                            add('No extra highlights found for this tournament.');
+
+                        if (!storyEl.children.length) {
+                            add('Story coming soon.');
                         }
                     }
                 }
@@ -1125,13 +1118,40 @@
             margin: var(--spacing-2xl) auto 0;
         }
 
+        .latest-highlights-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: var(--spacing-lg);
+            margin-bottom: 1rem;
+        }
+
         .latest-highlights-heading {
             color: rgba(255, 255, 255, 0.92);
             font-family: var(--font-primary);
             font-weight: 900;
             text-align: left;
             font-size: 1.8rem;
-            margin-bottom: 1rem;
+            margin-bottom: 0;
+        }
+
+        .latest-highlights-tournament {
+            text-align: right;
+            color: rgba(255, 255, 255, 0.92);
+        }
+
+        .latest-highlights-year {
+            font-weight: 950;
+            font-size: 1.1rem;
+            letter-spacing: 0.02em;
+            line-height: 1.1;
+        }
+
+        .latest-highlights-name {
+            font-weight: 850;
+            font-size: 0.95rem;
+            opacity: 0.9;
+            line-height: 1.15;
         }
 
         .latest-top-grid {
@@ -1553,6 +1573,12 @@
             .winner-name { font-size: 2.45rem; }
             .winner-stats-row { grid-template-columns: 1fr; }
             .feature-grid { grid-template-columns: 1fr; }
+            .latest-highlights-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.45rem;
+            }
+            .latest-highlights-tournament { text-align: left; }
             .latest-top-grid { grid-template-columns: 1fr; }
             .feature-panel-metrics { grid-template-columns: 1fr; }
             .latest-podium-meta { text-align: left; }
