@@ -1229,20 +1229,67 @@
                     // Partnership Records
                     if (typeof tournamentEngine.getPartnershipAnalysis === 'function') {
                         const partnerships = tournamentEngine.getPartnershipAnalysis() || [];
+                        const tournamentsList = (typeof tournamentEngine.getAllTournamentsUnique === 'function')
+                            ? tournamentEngine.getAllTournamentsUnique('desc')
+                            : Array.from(tournamentEngine.tournaments.values());
+
+                        // Win rate per partnership (wins = 7+ tricks; shared hands excluded)
+                        const winAggByKey = new Map(); // key -> {wins, played}
+                        for (const t of tournamentsList) {
+                            if (!t || !Array.isArray(t.rounds)) continue;
+                            for (const r of t.rounds) {
+                                if (!r || !Array.isArray(r.tables)) continue;
+                                for (const table of r.tables) {
+                                    if (!table || !Array.isArray(table.partnerships)) continue;
+                                    for (const part of table.partnerships) {
+                                        const pos1IsShared = part.position1 && part.position1.length > 1;
+                                        const pos2IsShared = part.position2 && part.position2.length > 1;
+                                        if (pos1IsShared || pos2IsShared) continue;
+                                        const a = part.position1 && part.position1[0];
+                                        const b = part.position2 && part.position2[0];
+                                        if (!a || !b) continue;
+                                        const key = [a, b].sort().join('_');
+                                        if (!winAggByKey.has(key)) winAggByKey.set(key, { wins: 0, played: 0 });
+                                        const rec = winAggByKey.get(key);
+                                        const tricks = Number.isFinite(part.tricks) ? part.tricks : parseFloat(part.tricks);
+                                        if (!Number.isFinite(tricks)) continue;
+                                        rec.played += 1;
+                                        if (tricks >= 7) rec.wins += 1;
+                                    }
+                                }
+                            }
+                        }
+                        const winRateForPlayers = (players) => {
+                            const key = Array.isArray(players) ? players.slice().sort().join('_') : '';
+                            const rec = winAggByKey.get(key);
+                            const played = rec && Number.isFinite(rec.played) ? rec.played : 0;
+                            const wins = rec && Number.isFinite(rec.wins) ? rec.wins : 0;
+                            return played > 0 ? (wins / played) : 0;
+                        };
+
                         const partnershipAvgs = partnerships
                             .filter(p => p && Array.isArray(p.players) && p.players.length === 2 && (p.rounds_played || 0) >= 4)
                             .map(p => {
                                 const avg = (p.total_tricks / p.rounds_played);
                                 const names = p.players.map(id => tournamentEngine.getDisplayName(id)).join(' & ');
-                                return { names, avg, rounds: p.rounds_played };
+                                const winRate = winRateForPlayers(p.players);
+                                return { names, avg, rounds: p.rounds_played, winRate };
                             })
                         {
                             const entries = (partnershipAvgs || [])
                                 .filter(x => x && typeof x.avg === 'number' && Number.isFinite(x.avg))
-                                .sort((a, b) => (b.avg - a.avg) || (b.rounds - a.rounds))
+                                // Sort: avg tricks/round, then times paired, then win rate (tie breakers).
+                                .sort((a, b) => (b.avg - a.avg) || (b.rounds - a.rounds) || ((b.winRate || 0) - (a.winRate || 0)))
                                 .map(x => {
                                     const rounds = Math.floor(parseFloat(x.rounds ?? 0) || 0);
-                                    return { key: x.avg.toFixed(2), sortValue: x.avg, item: makeEntry(x.names, x.avg.toFixed(2), 'avg tricks', `over ${rounds} rounds`) };
+                                    // IMPORTANT: ties should only occur after applying tie-breakers.
+                                    // So the grouping key must include avg + rounds + winRate (not just avg rounded to 2dp).
+                                    const avg = Number(x.avg) || 0;
+                                    const winRate = Number.isFinite(x.winRate) ? x.winRate : 0;
+                                    const key = `${avg.toFixed(4)}|${rounds}|${winRate.toFixed(6)}`;
+                                    // Also bake tie-breakers into sortValue so rank ordering is deterministic.
+                                    const sortValue = (avg * 1e9) + (rounds * 1e6) + (winRate * 1e3);
+                                    return { key, sortValue, item: makeEntry(x.names, avg.toFixed(2), 'avg tricks', `over ${rounds} rounds`) };
                                 });
                             partnershipCards.push(renderRecordCard('Best Partnership (avg tricks)', entries));
                             partnershipInsightCards.push(renderInsightFromRecordCompact('Dream team', '🤝', 'Best Partnership (avg tricks)', entries, {

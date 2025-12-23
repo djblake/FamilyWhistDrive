@@ -126,7 +126,9 @@
                 loadFamilyStatistics();
 
                 // Footer: keep it simple and useful
-                const tournamentsList = Array.from(tournamentEngine.tournaments.values());
+                const tournamentsList = (typeof tournamentEngine.getAllTournamentsUnique === 'function')
+                    ? tournamentEngine.getAllTournamentsUnique('desc')
+                    : Array.from(tournamentEngine.tournaments.values());
                 const totalRoundsCount = tournamentsList.reduce((sum, t) => sum + (Number.isFinite(t.total_rounds) ? t.total_rounds : 0), 0);
                 const yearsList = tournamentsList.map(t => t.year).filter(y => Number.isFinite(y)).sort((a, b) => a - b);
                 const firstYearValue = yearsList.length ? yearsList[0] : null;
@@ -533,7 +535,7 @@
 
             const MIN_PAIRINGS = 4;
             const allRankings = (engine.getPartnershipPerformanceRankings() || []).slice();
-            const rankings = allRankings.filter(p => (Number(p.partnerships_count) || 0) >= MIN_PAIRINGS);
+            let rankings = allRankings.filter(p => (Number(p.partnerships_count) || 0) >= MIN_PAIRINGS);
             if (!rankings.length) {
                 insights.innerHTML = `<div class="loading-message">No partnership data available.</div>`;
                 container.innerHTML = `<div class="loading-message">No partnerships found with ${MIN_PAIRINGS}+ rounds together.</div>`;
@@ -545,7 +547,10 @@
 
             // Win rate per partnership (wins = 7+ tricks; shared hands excluded)
             const winAggByKey = new Map(); // key -> {wins, played, games:[{year,round,table,isWin}]}
-            for (const t of engine.tournaments.values()) {
+            const tournamentsList = (typeof engine.getAllTournamentsUnique === 'function')
+                ? engine.getAllTournamentsUnique('desc')
+                : Array.from(engine.tournaments.values());
+            for (const t of tournamentsList) {
                 if (!t || !Array.isArray(t.rounds)) continue;
                 const year = Number.isFinite(t.year) ? t.year : (Number.isFinite(t.Year) ? t.Year : parseInt(t.year || t.Year || '0'));
                 for (const r of t.rounds) {
@@ -580,6 +585,26 @@
                     }
                 }
             }
+
+            // Sort partnerships: avg tricks/round, then times paired, then win rate (tie breakers).
+            const winPctFor = (key) => {
+                const rec = winAggByKey.get(key);
+                const played = rec && Number.isFinite(rec.played) ? rec.played : 0;
+                const wins = rec && Number.isFinite(rec.wins) ? rec.wins : 0;
+                return played > 0 ? (wins / played) : 0;
+            };
+            rankings = rankings.slice().sort((a, b) => {
+                const aAvg = Number(a.average_tricks) || 0;
+                const bAvg = Number(b.average_tricks) || 0;
+                if (bAvg !== aAvg) return bAvg - aAvg;
+                const aTimes = Number(a.partnerships_count) || 0;
+                const bTimes = Number(b.partnerships_count) || 0;
+                if (bTimes !== aTimes) return bTimes - aTimes;
+                const aWr = winPctFor(a.partnership);
+                const bWr = winPctFor(b.partnership);
+                if (bWr !== aWr) return bWr - aWr;
+                return String(a.partnership || '').localeCompare(String(b.partnership || ''));
+            });
 
             const bestAvg = rankings[0];
             const mostRounds = rankings.reduce((best, cur) => (cur.total_rounds > best.total_rounds ? cur : best), rankings[0]);

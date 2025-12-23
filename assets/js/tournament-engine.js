@@ -4027,7 +4027,10 @@ class TournamentEngine {
      */
     calculatePartnershipStatistics() {
         // Analyze partnership combinations and success rates
-        for (const [tournamentKey, tournament] of this.tournaments) {
+        const tournamentsList = (typeof this.getAllTournamentsUnique === 'function')
+            ? this.getAllTournamentsUnique('desc')
+            : Array.from(this.tournaments?.values?.() || []);
+        for (const tournament of tournamentsList) {
             for (const round of tournament.rounds) {
                 for (const table of round.tables) {
                     for (const partnership of table.partnerships) {
@@ -4920,7 +4923,10 @@ class TournamentEngine {
         const partnerships = new Map();
 
         // Iterate through all tournaments and rounds
-        for (const [tournamentKey, tournament] of this.tournaments) {
+        const tournamentsList = (typeof this.getAllTournamentsUnique === 'function')
+            ? this.getAllTournamentsUnique('desc')
+            : Array.from(this.tournaments?.values?.() || []);
+        for (const tournament of tournamentsList) {
             for (const round of tournament.rounds) {
                 for (const table of round.tables) {
                     for (const partnership of table.partnerships) {
