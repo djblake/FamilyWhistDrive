@@ -231,6 +231,14 @@ a:hover {
     letter-spacing: 0.5rem;
 }
 
+@media (min-width: 768px) {
+    .card-suits {
+        font-size: 1.25rem;
+        letter-spacing: 0.35rem;
+        margin-bottom: 0.35rem;
+    }
+}
+
 .card-suits .heart,
 .card-suits .diamond {
     color: var(--red-suit);
@@ -251,7 +259,7 @@ a:hover {
 
 @media (min-width: 768px) {
     .site-title {
-        font-size: 2.5rem;
+        font-size: 2.2rem;
     }
 }
 
@@ -265,17 +273,20 @@ a:hover {
 /* Navigation */
 .main-nav {
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-lg);
+    flex-wrap: nowrap;
+    gap: var(--spacing-md);
     justify-content: center;
+    white-space: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .nav-link {
     font-family: var(--font-secondary);
-    font-size: 0.875rem;
+    font-size: 0.85rem;
     font-weight: 500;
     color: var(--text-secondary);
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: 0.45rem 0.65rem;
     border-radius: var(--border-radius);
     transition: all 0.2s ease;
     position: relative;

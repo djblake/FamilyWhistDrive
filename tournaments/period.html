@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Era & Decade Standings | Ruston Family Whist Drive</title>
+    <meta name="description" content="Era and decade standings for the Ruston Family Whist Drive">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
+                    <h1 class="site-title">Ruston Family Whist Drive</h1>
+                    <p class="site-subtitle">Est. 1984 • The World's Most Elite Family Tournament</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="../" class="nav-link">Home</a>
+                    <a href="./" class="nav-link">Tournaments</a>
+                    <a href="../tables/" class="nav-link active">Tables</a>
+                    <a href="../players/" class="nav-link">Players</a>
+                    <a href="../leaderboard/" class="nav-link">Hall of Fame</a>
+                    <a href="../stats/" class="nav-link">Statistics</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="period-hero">
+            <div class="container">
+                <div class="period-hero-inner">
+                    <a class="btn btn-secondary period-back" href="../tables/">← Back to tables</a>
+                    <div class="period-kicker" id="period-kicker">STANDINGS</div>
+                    <h1 class="period-title" id="period-title">Loading…</h1>
+                    <p class="period-subtitle" id="period-subtitle">—</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="period-content">
+            <div class="container">
+                <div class="period-stats-row" aria-label="Summary stats">
+                    <div class="period-stat-card">
+                        <div class="period-stat-num" id="period-stat-tournaments">—</div>
+                        <div class="period-stat-label">Tournaments</div>
+                    </div>
+                    <div class="period-stat-card">
+                        <div class="period-stat-num" id="period-stat-champs">—</div>
+                        <div class="period-stat-label">Unique champions</div>
+                    </div>
+                    <div class="period-stat-card">
+                        <div class="period-stat-num" id="period-stat-players">—</div>
+                        <div class="period-stat-label">Players ranked</div>
+                    </div>
+                </div>
+
+                <div class="period-table-card">
+                    <div class="period-table-wrap">
+                        <table class="period-table" aria-label="Era/Decade standings table">
+                            <colgroup>
+                                <col class="c-rank" />
+                                <col class="c-name" />
+                                <col class="c-firsts" />
+                                <col class="c-seconds" />
+                                <col class="c-thirds" />
+                                <col class="c-tricks" />
+                                <col class="c-points" />
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th class="col-rank">Rank</th>
+                                    <th class="col-name">Player</th>
+                                    <th class="col-wins">1sts</th>
+                                    <th class="col-seconds">2nds</th>
+                                    <th class="col-thirds">3rds</th>
+                                    <th class="col-tricks">Total tricks</th>
+                                    <th class="col-points">Points</th>
+                                </tr>
+                            </thead>
+                            <tbody id="period-standings-body">
+                                <tr><td colspan="7" style="padding: 1.25rem;">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="period-rules">
+                    <h2 class="section-title light period-rules-title">How this is ranked</h2>
+                    <div class="period-rules-body">
+                        <ul class="period-rules-list">
+                            <li><strong>Points:</strong> 1st = 5, 2nd = 3, 3rd = 1 (per tournament).</li>
+                            <li><strong>Tie-break:</strong> if points are equal, we rank by <strong>total tricks</strong>.</li>
+                            <li><strong>Ties:</strong> if both points and tricks are equal, entries share the same rank.</li>
+                            <li><strong>Shared hands:</strong> if a position is shared, we split <strong>total tricks</strong> equally across the people sharing that position.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Archives</h4>
+                    <p><a href="../tables/">Tables</a></p>
+                    <p><a href="./">Tournament Archive</a></p>
+                    <p><a href="../leaderboard/">Hall of Fame</a></p>
+                </div>
+                <div class="footer-section">
+                    <h4>About</h4>
+                    <p>Era and decade standings</p>
+                    <p>Based on official tournament results</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../assets/js/tournament-engine.js?v=cache1"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const params = new URLSearchParams(window.location.search);
+            const kind = (params.get('kind') || params.get('type') || 'period').toLowerCase();
+            const label = (params.get('label') || '').trim();
+            const start = parseInt(params.get('start') || '', 10);
+            const end = parseInt(params.get('end') || '', 10);
+
+            const titleEl = document.getElementById('period-title');
+            const subtitleEl = document.getElementById('period-subtitle');
+            const kickerEl = document.getElementById('period-kicker');
+            const bodyEl = document.getElementById('period-standings-body');
+            const statTournamentsEl = document.getElementById('period-stat-tournaments');
+            const statPlayersEl = document.getElementById('period-stat-players');
+            const statChampsEl = document.getElementById('period-stat-champs');
+
+            const safeSetText = (el, txt) => { if (el) el.textContent = String(txt ?? ''); };
+            const fmtNumber = (n, opts = {}) => {
+                const x = Number(n);
+                if (!Number.isFinite(x)) return '0';
+                const decimals = Number.isFinite(opts.decimals) ? opts.decimals : 0;
+                const s = x.toFixed(decimals);
+                if (decimals > 0) return s.replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
+                return s;
+            };
+
+            const prettyKind = (k) => (k === 'era' ? 'Era standings' : (k === 'decade' ? 'Decade standings' : 'Standings'));
+            safeSetText(kickerEl, prettyKind(kind).toUpperCase());
+
+            if (!Number.isFinite(start) || !Number.isFinite(end)) {
+                safeSetText(titleEl, label || 'Standings');
+                safeSetText(subtitleEl, 'Missing or invalid year range.');
+                if (bodyEl) bodyEl.innerHTML = `<tr><td colspan="7" style="padding: 1.25rem; color: #991b1b; font-weight: 700;">Missing start/end year in URL.</td></tr>`;
+                return;
+            }
+
+            safeSetText(titleEl, label || `${start}–${end}`);
+            safeSetText(subtitleEl, `${start}–${end}`);
+
+            const tournamentEngine = new TournamentEngine();
+            const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+
+            try {
+                await tournamentEngine.loadFromGoogleSheets(sheetId);
+                const tournaments = (typeof tournamentEngine.getAllTournamentsUnique === 'function')
+                    ? tournamentEngine.getAllTournamentsUnique('desc')
+                    : Array.from(tournamentEngine.tournaments.values());
+
+                const inRange = tournaments.filter(t => Number.isFinite(Number(t?.year)) && Number(t.year) >= start && Number(t.year) <= end);
+                if (!inRange.length) {
+                    safeSetText(statTournamentsEl, '0');
+                    safeSetText(statPlayersEl, '0');
+                    safeSetText(statChampsEl, '0');
+                    if (bodyEl) bodyEl.innerHTML = `<tr><td colspan="7" style="padding: 1.25rem;">No data.</td></tr>`;
+                    return;
+                }
+
+                const pointsByPos = { 1: 5, 2: 3, 3: 1 };
+                const stats = new Map(); // id -> {id, points, tricks, wins, seconds, thirds}
+
+                const ensure = (id) => {
+                    const key = String(id || '').trim();
+                    if (!key) return null;
+                    if (!stats.has(key)) {
+                        stats.set(key, { id: key, points: 0, tricks: 0, wins: 0, seconds: 0, thirds: 0 });
+                    }
+                    return stats.get(key);
+                };
+
+                const idsForStanding = (standing) => {
+                    if (!standing) return [];
+                    if (standing.is_partnership && Array.isArray(standing.partnership_players) && standing.partnership_players.length) {
+                        return standing.partnership_players.map(x => String(x || '').trim()).filter(Boolean);
+                    }
+                    const p = String(standing.player || '').trim();
+                    return p ? [p] : [];
+                };
+
+                for (const t of inRange) {
+                    const standings = Array.isArray(t?.final_standings) ? t.final_standings : [];
+                    for (const s of standings) {
+                        const pos = Number.isFinite(Number(s?.position)) ? Number(s.position) : null;
+                        const ids = idsForStanding(s);
+                        if (!ids.length) continue;
+
+                        const rawTr = Number(s?.total_tricks);
+                        const tr = Number.isFinite(rawTr) ? rawTr : 0;
+                        const isShared = !!(s?.is_partnership && Array.isArray(s?.partnership_players) && s.partnership_players.length > 1);
+                        const splitTr = isShared ? (tr / Math.max(1, ids.length)) : tr;
+
+                        const pts = (pos && pointsByPos[pos]) ? pointsByPos[pos] : 0;
+                        for (const id of ids) {
+                            const rec = ensure(id);
+                            if (!rec) continue;
+                            rec.points += pts;
+                            rec.tricks += splitTr;
+                            if (pos === 1) rec.wins += 1;
+                            if (pos === 2) rec.seconds += 1;
+                            if (pos === 3) rec.thirds += 1;
+                        }
+                    }
+                }
+
+                const rows = Array.from(stats.values()).map(r => ({
+                    ...r,
+                    name: tournamentEngine.getDisplayName(r.id)
+                }));
+                rows.sort((a, b) =>
+                    (b.points - a.points) ||
+                    (b.tricks - a.tricks) ||
+                    (b.wins - a.wins) ||
+                    (b.seconds - a.seconds) ||
+                    (b.thirds - a.thirds) ||
+                    String(a.name).localeCompare(String(b.name))
+                );
+
+                // Rank with ties on (points, tricks)
+                let currentRank = 0;
+                let prevKey = null;
+                rows.forEach((r, idx) => {
+                    const key = `${r.points}|${fmtNumber(r.tricks, { decimals: 4 })}`;
+                    if (key !== prevKey) {
+                        currentRank = idx + 1;
+                        prevKey = key;
+                    }
+                    r.rank = currentRank;
+                });
+
+                const uniqueChamps = rows.reduce((acc, r) => acc + ((Number(r.wins) || 0) > 0 ? 1 : 0), 0);
+                safeSetText(statTournamentsEl, String(inRange.length));
+                safeSetText(statPlayersEl, String(rows.length));
+                safeSetText(statChampsEl, String(uniqueChamps));
+
+                if (bodyEl) {
+                    bodyEl.innerHTML = rows.map(r => {
+                        const href = `../players/profile.html?player=${encodeURIComponent(r.id)}`;
+                        return `
+                            <tr>
+                                <td class="col-rank"><span class="rank-pill">${r.rank}</span></td>
+                                <td class="col-name"><a class="name-link" href="${href}">${r.name}</a></td>
+                                <td class="col-wins">${fmtNumber(r.wins)}</td>
+                                <td class="col-seconds">${fmtNumber(r.seconds)}</td>
+                                <td class="col-thirds">${fmtNumber(r.thirds)}</td>
+                                <td class="col-tricks">${fmtNumber(Math.floor(Number(r.tricks) || 0), { decimals: 0 })}</td>
+                                <td class="col-points"><span class="points-pill">${fmtNumber(r.points)}</span></td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            } catch (error) {
+                console.error('Error loading period standings:', error);
+                safeSetText(statTournamentsEl, '—');
+                safeSetText(statPlayersEl, '—');
+                safeSetText(statChampsEl, '—');
+                if (bodyEl) bodyEl.innerHTML = `<tr><td colspan="7" style="padding: 1.25rem; color: #991b1b; font-weight: 700;">${String(error?.message || 'Error loading data.')}</td></tr>`;
+            }
+        });
+    </script>
+
+    <style>
+        .period-hero {
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--primary-dark) 100%);
+            color: var(--text-primary);
+            padding: var(--spacing-3xl) 0 var(--spacing-2xl);
+        }
+        .period-hero-inner {
+            text-align: left;
+            max-width: 980px;
+            margin: 0 auto;
+        }
+        .period-back {
+            display: inline-flex;
+            margin-bottom: var(--spacing-lg);
+        }
+        .period-kicker {
+            display: inline-block;
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 900;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            font-size: 0.78rem;
+        }
+        .period-title {
+            font-family: var(--font-primary);
+            font-weight: 900;
+            font-size: 3rem;
+            margin: 0.65rem 0 0.35rem;
+        }
+        .period-subtitle {
+            margin: 0;
+            color: rgba(255, 255, 255, 0.88);
+            font-weight: 650;
+            max-width: 70ch;
+        }
+
+        .period-content {
+            background: var(--bg-secondary);
+            padding: var(--spacing-3xl) 0;
+            color: var(--text-primary-dark);
+        }
+
+        .period-stats-row {
+            max-width: 980px;
+            margin: 0 auto var(--spacing-xl);
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: var(--spacing-md);
+        }
+
+        .period-stat-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            box-shadow: var(--shadow-card);
+            padding: 1rem 1.1rem;
+            text-align: left;
+        }
+
+        .period-stat-num {
+            font-weight: 950;
+            font-size: 1.45rem;
+            color: var(--text-primary-dark);
+            line-height: 1.05;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .period-stat-label {
+            margin-top: 0.35rem;
+            color: rgba(15, 23, 42, 0.62);
+            font-weight: 900;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+        }
+
+        .period-table-card {
+            max-width: 980px;
+            margin: 0 auto;
+            background: white;
+            border-radius: var(--border-radius-xl);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+            color: var(--text-primary-dark);
+        }
+        .period-table-wrap { overflow-x: auto; }
+        .period-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            min-width: 920px;
+            color: var(--text-primary-dark);
+        }
+        .period-table col.c-rank { width: 7ch; }
+        .period-table col.c-firsts { width: 7ch; }
+        .period-table col.c-seconds { width: 7ch; }
+        .period-table col.c-thirds { width: 7ch; }
+        .period-table col.c-tricks { width: 12ch; }
+        .period-table col.c-points { width: 9ch; }
+        .period-table th, .period-table td {
+            padding: 0.85rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+        .period-table thead th {
+            background: white;
+            color: rgba(15, 23, 42, 0.70);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-size: 0.75rem;
+        }
+        .period-table tbody td {
+            color: var(--text-primary-dark);
+            font-weight: 650;
+            font-variant-numeric: tabular-nums;
+        }
+        .period-table tbody tr:nth-child(even) { background: rgba(15, 23, 42, 0.02); }
+
+        .col-rank { width: 6.5ch; text-align: center; }
+        .period-table th.col-rank { text-align: center; }
+        .col-wins, .col-seconds, .col-thirds, .col-tricks, .col-points { text-align: right; font-variant-numeric: tabular-nums; }
+        .period-table th.col-wins, .period-table th.col-seconds, .period-table th.col-thirds, .period-table th.col-tricks, .period-table th.col-points { text-align: right; }
+
+        .rank-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2.2rem;
+            padding: 0.25rem 0.55rem;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.06);
+            font-weight: 900;
+            color: var(--text-primary-dark);
+            font-variant-numeric: tabular-nums;
+        }
+        .points-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2.4rem;
+            padding: 0.25rem 0.65rem;
+            border-radius: 999px;
+            background: rgba(212, 175, 55, 0.18);
+            color: rgba(120, 53, 15, 0.95);
+            font-weight: 950;
+            font-variant-numeric: tabular-nums;
+        }
+        .name-link {
+            color: var(--text-primary-dark);
+            font-weight: 800;
+            text-decoration: none;
+        }
+        .name-link:hover { text-decoration: underline; }
+
+        .period-rules {
+            max-width: 980px;
+            margin: var(--spacing-2xl) auto 0;
+            background: white;
+            border-radius: var(--border-radius-xl);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            box-shadow: var(--shadow-card);
+            padding: var(--spacing-2xl);
+            color: var(--text-primary-dark);
+        }
+        .period-rules-title { margin-bottom: var(--spacing-lg); }
+        .period-rules-list {
+            margin: 0;
+            padding-left: 1.25rem;
+            color: var(--text-secondary-dark);
+            line-height: 1.65;
+            font-weight: 650;
+        }
+        .period-rules-list strong { color: var(--text-primary-dark); }
+
+        @media (max-width: 640px) {
+            .period-title { font-size: 2.35rem; }
+            .period-rules { padding: var(--spacing-xl); }
+            .period-stats-row { grid-template-columns: 1fr; }
+            .period-stat-card { padding: 0.9rem 1rem; }
+        }
+    </style>
+</body>
+</html>
+

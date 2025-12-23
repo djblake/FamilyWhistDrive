@@ -21,6 +21,9 @@
     { "source": "/tournaments", "destination": "/tournaments/index.html" },
     { "source": "/tournaments/", "destination": "/tournaments/index.html" },
 
+    { "source": "/tables", "destination": "/tables/index.html" },
+    { "source": "/tables/", "destination": "/tables/index.html" },
+
     { "source": "/families", "destination": "/families/index.html" },
     { "source": "/families/", "destination": "/families/index.html" },
 

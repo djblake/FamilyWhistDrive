@@ -22,6 +22,7 @@
                 <nav class="main-nav">
                     <a href="../" class="nav-link">Home</a>
                     <a href="#" class="nav-link active">Tournaments</a>
+                    <a href="../tables/" class="nav-link">Tables</a>
                     <a href="../players/" class="nav-link">Players</a>
                     <a href="../leaderboard/" class="nav-link">Hall of Fame</a>
                     <a href="../stats/" class="nav-link">Statistics</a>
@@ -56,32 +57,6 @@
             </div>
         </section>
 
-        <section class="tournament-chart-section">
-            <div class="container">
-                <h2 class="section-title light">
-                    <span class="title-icon">📈</span>
-                    Tournament Rank Progression
-                </h2>
-                <p class="section-subtitle">See how all players' positions changed throughout the most recent tournament - everyone stands out equally</p>
-                
-                <div class="chart-container">
-                    <canvas id="tournament-rank-chart"></canvas>
-                </div>
-            </div>
-        </section>
-
-        <section class="tournament-decades">
-            <div class="container">
-                <h2 class="section-title light">
-                    <span class="title-icon">📈</span>
-                    Tournaments by Decade
-                </h2>
-                
-                <div class="decades-grid" id="decades-grid">
-                    <!-- Decade statistics will be loaded dynamically -->
-                </div>
-            </div>
-        </section>
     </main>
 
     <footer class="footer">
@@ -112,9 +87,7 @@
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-            <script src="../assets/js/tournament-engine.js?v=cache1"></script>
-    <script src="../assets/js/charts.js?v=20"></script>
+    <script src="../assets/js/tournament-engine.js?v=cache1"></script>
     
     <script>
         // Load real tournament data
@@ -127,7 +100,9 @@
                 await tournamentEngine.loadFromGoogleSheets(sheetId);
                 renderDataIssuesBanner(tournamentEngine.getDataIssues());
                 
-                const tournaments = Array.from(tournamentEngine.tournaments.values());
+                const tournaments = (typeof tournamentEngine.getAllTournamentsUnique === 'function')
+                    ? tournamentEngine.getAllTournamentsUnique('desc')
+                    : Array.from(tournamentEngine.tournaments.values());
                 
                 // Update hero stats
                 const totalRounds = tournaments.reduce((sum, t) => sum + t.total_rounds, 0);
@@ -195,52 +170,6 @@
                 
                 document.getElementById('tournaments-grid').innerHTML = tournamentsHTML;
                 
-                // Generate decade analysis
-                const decadeData = {};
-                tournaments.forEach(tournament => {
-                    const decade = Math.floor(tournament.year / 10) * 10;
-                    if (!decadeData[decade]) {
-                        decadeData[decade] = {
-                            count: 0,
-                            champions: {},
-                            totalPlayers: new Set()
-                        };
-                    }
-                    decadeData[decade].count++;
-                    decadeData[decade].champions[tournament.winner] = (decadeData[decade].champions[tournament.winner] || 0) + 1;
-                    tournament.final_standings.forEach(s => decadeData[decade].totalPlayers.add(s.player));
-                });
-                
-                const decadesHTML = Object.entries(decadeData)
-                    .sort(([a], [b]) => b - a) // Sort decades descending
-                    .map(([decade, data]) => {
-                        const topChampion = Object.entries(data.champions)
-                            .sort(([,a], [,b]) => b - a)[0];
-                        
-                        return `
-                            <div class="decade-card">
-                                <h3 class="decade-title">${decade}s</h3>
-                                <div class="decade-stats">
-                                    <div class="decade-stat">
-                                        <span class="stat-number">${data.count}</span>
-                                        <span class="stat-label">Tournament${data.count !== 1 ? 's' : ''}</span>
-                                    </div>
-                                    <div class="decade-stat">
-                                        <span class="stat-number">
-                                            ${topChampion ? `<a href="../players/profile.html?player=${encodeURIComponent(topChampion[0])}" class="player-name-link">${topChampion[0]}</a>` : 'Various'}
-                                        </span>
-                                        <span class="stat-label">${topChampion && topChampion[1] > 1 ? 'Dominant Champion' : 'Top Champion'}</span>
-                                    </div>
-                                </div>
-                                <p class="decade-description">
-                                    ${data.totalPlayers.size} different players competed across ${data.count} tournament${data.count !== 1 ? 's' : ''} this decade.
-                                </p>
-                            </div>
-                        `;
-                    }).join('');
-                
-                document.getElementById('decades-grid').innerHTML = decadesHTML;
-                
                 // Handle anchor links for specific tournaments
                 if (window.location.hash) {
                     const targetYear = window.location.hash.substring(1);
@@ -252,11 +181,6 @@
                             targetElement.style.boxShadow = '0 0 20px rgba(212, 175, 55, 0.5)';
                         }, 500);
                     }
-                }
-                
-                // Create rank progression chart for the most recent tournament
-                if (tournaments.length > 0) {
-                    createTournamentRankChart(tournaments[0], tournamentEngine);
                 }
                 
                 console.log('✅ Tournament archive loaded successfully!');
@@ -275,39 +199,6 @@
             }
         });
 
-        // Function to create rank progression chart for tournament overview
-        function createTournamentRankChart(tournament, tournamentEngine) {
-            const canvas = document.getElementById('tournament-rank-chart');
-            if (!canvas) {
-                console.warn('⚠️ Tournament rank chart canvas not found');
-                return;
-            }
-
-            console.log(`📊 Creating tournament rank chart for ${tournament.name}`);
-            
-            // Check if Chart.js and our charts library are loaded
-            if (typeof Chart === 'undefined') {
-                console.warn('⚠️ Chart.js not loaded yet');
-                setTimeout(() => createTournamentRankChart(tournament, tournamentEngine), 100);
-                return;
-            }
-            
-            if (typeof TournamentCharts === 'undefined') {
-                console.warn('⚠️ TournamentCharts not loaded yet');
-                setTimeout(() => createTournamentRankChart(tournament, tournamentEngine), 100);
-                return;
-            }
-
-            try {
-                // Create chart with no highlighted player (all players equal)
-                const charts = new TournamentCharts();
-                charts.createRankProgressChart('tournament-rank-chart', tournament, null, tournamentEngine); // null = no highlighted player
-                console.log('✅ Created tournament overview rank progression chart');
-            } catch (error) {
-                console.error('❌ Error creating tournament rank chart:', error);
-            }
-        }
-        
         const TRICK_WARNING_STORAGE_KEY = 'whist_hide_trick_mismatch_warning';
 
         function shouldDisplayTrickWarnings() {
@@ -724,11 +615,6 @@
             margin-top: var(--spacing-xs);
         }
 
-        .tournament-chart-section {
-            padding: var(--spacing-3xl) 0;
-            background: white;
-        }
-
         .section-subtitle {
             text-align: center;
             color: var(--text-secondary-dark);
@@ -736,22 +622,120 @@
             font-size: 1.125rem;
         }
 
-        .chart-container {
+        .tournament-decades {
+            padding: var(--spacing-3xl) 0;
+            background: var(--bg-secondary);
+        }
+
+        .tournament-eras {
+            padding: var(--spacing-3xl) 0;
+            background: white;
+        }
+
+        .eras-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-xl);
+        }
+
+        .era-card {
             background: white;
             border-radius: var(--border-radius-lg);
             padding: var(--spacing-xl);
             box-shadow: var(--shadow-card);
-            border: 1px solid var(--border-light);
-            height: 600px;
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            text-align: left;
         }
 
-        .chart-container canvas {
-            max-height: 100% !important;
+        .era-card--link {
+            display: block;
+            color: inherit;
+            text-decoration: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            cursor: pointer;
+            height: 100%;
         }
 
-        .tournament-decades {
-            padding: var(--spacing-3xl) 0;
-            background: var(--bg-secondary);
+        .era-card--link:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+            border-color: rgba(15, 23, 42, 0.18);
+            text-decoration: none;
+        }
+
+        .era-header {
+            display: flex;
+            justify-content: space-between;
+            gap: var(--spacing-md);
+            align-items: baseline;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .era-title {
+            font-size: 1.35rem;
+            font-weight: 900;
+            color: var(--primary-dark);
+            font-family: var(--font-primary);
+        }
+
+        .era-years {
+            font-weight: 800;
+            color: var(--text-secondary-dark);
+        }
+
+        .era-leader-kicker {
+            font-weight: 900;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: rgba(15, 23, 42, 0.55);
+            font-size: 0.78rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .era-leader-name {
+            font-weight: 950;
+            font-size: 1.15rem;
+            color: var(--text-primary-dark);
+            line-height: 1.15;
+        }
+
+        .era-leader-meta {
+            margin-top: 0.35rem;
+            color: var(--text-secondary-dark);
+            font-weight: 750;
+            font-size: 0.95rem;
+        }
+
+        .era-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-lg);
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid rgba(15, 23, 42, 0.08);
+        }
+
+        .era-stat-num {
+            font-weight: 950;
+            font-size: 1.25rem;
+            color: var(--text-primary-dark);
+            line-height: 1;
+        }
+
+        .era-stat-lbl {
+            margin-top: 0.25rem;
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: var(--text-secondary-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .era-note {
+            margin-top: var(--spacing-lg);
+            color: var(--text-secondary-dark);
+            font-weight: 650;
+            line-height: 1.55;
         }
 
         .decades-grid {
@@ -766,6 +750,23 @@
             padding: var(--spacing-xl);
             text-align: center;
             box-shadow: var(--shadow-card);
+        }
+
+        .decade-card--link {
+            display: block;
+            color: inherit;
+            text-decoration: none;
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            cursor: pointer;
+            height: 100%;
+        }
+
+        .decade-card--link:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+            border-color: rgba(15, 23, 42, 0.18);
+            text-decoration: none;
         }
 
         .decade-title {
@@ -800,6 +801,13 @@
             font-style: italic;
         }
 
+        .decade-champ-meta {
+            margin-top: 0.35rem;
+            color: var(--text-secondary-dark);
+            font-weight: 650;
+            font-size: 0.95rem;
+        }
+
         /* Player name link styles */
         .player-name-link {
             color: inherit;
@@ -814,6 +822,16 @@
             color: var(--primary-color);
             background-color: rgba(79, 70, 229, 0.1);
             text-decoration: none;
+        }
+
+        /* Inline player label for inside clickable cards (no nested anchors). */
+        .player-name-inline {
+            display: inline-block;
+            font-weight: 800;
+            color: var(--text-primary-dark);
+            padding: 2px 4px;
+            margin: -2px -4px;
+            border-radius: 4px;
         }
 
         /* Winner name styling */

@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tables | Ruston Family Whist Drive</title>
+    <meta name="description" content="Era and decade tables for the Ruston Family Whist Drive">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        .tables-hero {
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: var(--spacing-3xl) 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .tables-hero::before {
+            content: '📊';
+            position: absolute;
+            top: 50%;
+            right: 6%;
+            transform: translateY(-50%);
+            font-size: 14rem;
+            opacity: 0.08;
+            z-index: 1;
+            pointer-events: none;
+        }
+        .tables-hero .hero-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }
+        .tables-badge {
+            background: rgba(212, 175, 55, 0.2);
+            color: var(--gold);
+            padding: var(--spacing-sm) var(--spacing-xl);
+            border-radius: var(--border-radius-lg);
+            font-size: 0.875rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            margin-bottom: var(--spacing-lg);
+            display: inline-block;
+        }
+
+        /* Active leagues (dark section, gold bordered panels) */
+        .tables-preview {
+            padding: var(--spacing-3xl) 0;
+            background: var(--bg-primary);
+            color: rgba(255, 255, 255, 0.92);
+        }
+        .tables-preview .section-title.light { color: rgba(255, 255, 255, 0.92); }
+        .tables-preview .section-subtitle { color: rgba(255, 255, 255, 0.82); }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: var(--spacing-xl);
+            align-items: start;
+        }
+        .preview-card {
+            background: white;
+            border-radius: var(--border-radius-xl);
+            border: 2px solid rgba(212, 175, 55, 0.70);
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+        }
+        .preview-card:hover { border-color: rgba(212, 175, 55, 0.92); }
+        .preview-card-header {
+            padding: var(--spacing-xl) var(--spacing-2xl);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            background: rgba(15, 23, 42, 0.02);
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: var(--spacing-md);
+        }
+        .preview-card-title {
+            font-family: var(--font-primary);
+            font-weight: 900;
+            font-size: 1.35rem;
+            color: var(--text-primary-dark);
+            margin: 0;
+        }
+        .preview-card-subtitle {
+            margin: 0.35rem 0 0;
+            color: var(--text-secondary-dark);
+            font-weight: 650;
+        }
+        .preview-card-meta {
+            color: var(--text-secondary-dark);
+            font-weight: 750;
+            font-variant-numeric: tabular-nums;
+        }
+        .preview-table-wrap { overflow-x: auto; }
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 720px;
+        }
+        .preview-table th, .preview-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            white-space: nowrap;
+        }
+        .preview-table thead th {
+            color: rgba(15, 23, 42, 0.70);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-size: 0.72rem;
+            background: white;
+        }
+        .preview-table tbody td {
+            color: var(--text-primary-dark);
+            font-weight: 650;
+            font-variant-numeric: tabular-nums;
+        }
+        .preview-table tbody tr:nth-child(even) { background: rgba(15, 23, 42, 0.02); }
+        .pt-rank { width: 6.5ch; text-align: center; }
+        .preview-table th.pt-rank { text-align: center; }
+        .pt-1, .pt-2, .pt-3, .pt-tricks, .pt-points { text-align: right; }
+        .preview-table th.pt-1, .preview-table th.pt-2, .preview-table th.pt-3, .preview-table th.pt-tricks, .preview-table th.pt-points { text-align: right; }
+        .rank-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2.1rem;
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.06);
+            font-weight: 900;
+        }
+        .points-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2.3rem;
+            padding: 0.2rem 0.65rem;
+            border-radius: 999px;
+            background: rgba(212, 175, 55, 0.18);
+            color: rgba(120, 53, 15, 0.95);
+            font-weight: 950;
+        }
+        .name-link {
+            color: var(--text-primary-dark);
+            font-weight: 800;
+            text-decoration: none;
+        }
+        .name-link:hover { text-decoration: underline; }
+        .preview-card-actions {
+            padding: var(--spacing-lg) var(--spacing-2xl) var(--spacing-xl);
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        /* Era section (white background) */
+        .tables-eras {
+            padding: var(--spacing-3xl) 0;
+            background: white;
+            color: var(--text-primary-dark);
+        }
+        .tables-eras .section-title.light { color: var(--text-primary-dark); }
+        .tables-eras .section-subtitle { color: var(--text-secondary-dark); }
+
+        /* Decade section (dark background) */
+        .tables-decades {
+            padding: var(--spacing-3xl) 0;
+            background: var(--bg-primary);
+            color: rgba(255, 255, 255, 0.92);
+        }
+        .tables-decades .section-title.light { color: rgba(255, 255, 255, 0.92); }
+        .tables-decades .section-subtitle { color: rgba(255, 255, 255, 0.82); }
+
+        .eras-grid, .decades-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-xl);
+        }
+        .era-card, .decade-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            box-shadow: var(--shadow-card);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            text-align: left;
+        }
+        .era-card--active, .decade-card--active {
+            border: 2px solid rgba(212, 175, 55, 0.70);
+        }
+        .era-card--link, .decade-card--link {
+            display: block;
+            color: inherit;
+            text-decoration: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            cursor: pointer;
+            height: 100%;
+        }
+        .era-card--link:hover, .decade-card--link:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+            border-color: rgba(15, 23, 42, 0.18);
+            text-decoration: none;
+        }
+        .era-card--active.era-card--link:hover, .decade-card--active.decade-card--link:hover {
+            border-color: rgba(212, 175, 55, 0.92);
+        }
+        .era-header {
+            display: flex;
+            justify-content: space-between;
+            gap: var(--spacing-md);
+            align-items: baseline;
+            margin-bottom: var(--spacing-lg);
+        }
+        .era-title {
+            font-size: 1.35rem;
+            font-weight: 900;
+            color: var(--primary-dark);
+            font-family: var(--font-primary);
+        }
+        .era-years {
+            font-weight: 800;
+            color: var(--text-secondary-dark);
+            font-variant-numeric: tabular-nums;
+        }
+        .era-leader-kicker {
+            font-weight: 900;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: rgba(15, 23, 42, 0.55);
+            font-size: 0.78rem;
+            margin-bottom: 0.35rem;
+        }
+        .era-leader-name {
+            font-weight: 950;
+            font-size: 1.15rem;
+            color: var(--text-primary-dark);
+            line-height: 1.15;
+        }
+        .era-leader-meta {
+            margin-top: 0.35rem;
+            color: var(--text-secondary-dark);
+            font-weight: 750;
+            font-size: 0.95rem;
+        }
+        .era-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-lg);
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid rgba(15, 23, 42, 0.08);
+        }
+        .era-stat-num {
+            font-weight: 950;
+            font-size: 1.25rem;
+            color: var(--text-primary-dark);
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+        .era-stat-lbl {
+            margin-top: 0.25rem;
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: var(--text-secondary-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .era-note {
+            margin-top: var(--spacing-lg);
+            color: var(--text-secondary-dark);
+            font-weight: 650;
+            line-height: 1.55;
+        }
+
+        .decade-title {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--primary-dark);
+            margin: 0 0 var(--spacing-lg);
+            font-family: var(--font-primary);
+        }
+        .decade-stats { margin-bottom: var(--spacing-lg); }
+        .decade-stat { margin-bottom: var(--spacing-md); }
+        .decade-stat .stat-number {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-primary-dark);
+            margin-bottom: var(--spacing-xs);
+        }
+        .decade-stat .stat-label { color: var(--text-secondary-dark); font-weight: 700; }
+        .decade-champ-meta {
+            margin-top: 0.35rem;
+            color: var(--text-secondary-dark);
+            font-weight: 650;
+            font-size: 0.95rem;
+        }
+        .decade-description { color: var(--text-secondary-dark); font-style: italic; margin: 0; }
+
+        @media (max-width: 960px) { .preview-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 640px) {
+            .preview-card-header, .preview-card-actions { padding-left: var(--spacing-xl); padding-right: var(--spacing-xl); }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
+                    <h1 class="site-title">Ruston Family Whist Drive</h1>
+                    <p class="site-subtitle">Est. 1984 • The World's Most Elite Family Tournament</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="../" class="nav-link">Home</a>
+                    <a href="../tournaments/" class="nav-link">Tournaments</a>
+                    <a href="#" class="nav-link active">Tables</a>
+                    <a href="../players/" class="nav-link">Players</a>
+                    <a href="../leaderboard/" class="nav-link">Hall of Fame</a>
+                    <a href="../stats/" class="nav-link">Statistics</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="tables-hero">
+            <div class="container">
+                <div class="hero-content">
+                    <div class="tables-badge">📊 TABLES</div>
+                    <h1 class="hero-title">Era & Decade Standings</h1>
+                    <p class="hero-subtitle">Quick previews and full tables for each chapter of the drive.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="tables-preview">
+            <div class="container">
+                <h2 class="section-title light" style="margin-bottom: var(--spacing-lg);">
+                    <span class="title-icon">✨</span>
+                    Active Leagues
+                </h2>
+                <div class="preview-grid">
+                    <div class="preview-card" aria-label="Latest decade preview">
+                        <div class="preview-card-header">
+                            <div>
+                                <h3 class="preview-card-title" id="preview-decade-title">Latest decade</h3>
+                                <p class="preview-card-subtitle" id="preview-decade-subtitle">—</p>
+                            </div>
+                            <div class="preview-card-meta" id="preview-decade-meta">—</div>
+                        </div>
+                        <div class="preview-table-wrap">
+                            <table class="preview-table" aria-label="Latest decade top 5">
+                                <thead>
+                                    <tr>
+                                        <th class="pt-rank">Rank</th>
+                                        <th>Player</th>
+                                        <th class="pt-1">1st</th>
+                                        <th class="pt-2">2nd</th>
+                                        <th class="pt-3">3rd</th>
+                                        <th class="pt-tricks">Tricks</th>
+                                        <th class="pt-points">Pts</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="preview-decade-body">
+                                    <tr><td colspan="7" style="padding: 1.25rem;">Loading…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="preview-card-actions">
+                            <a class="btn btn-primary" id="preview-decade-cta" href="../tournaments/period.html">See full decade table</a>
+                        </div>
+                    </div>
+
+                    <div class="preview-card" aria-label="New era preview">
+                        <div class="preview-card-header">
+                            <div>
+                                <h3 class="preview-card-title" id="preview-era-title">The New Era</h3>
+                                <p class="preview-card-subtitle" id="preview-era-subtitle">—</p>
+                            </div>
+                            <div class="preview-card-meta" id="preview-era-meta">—</div>
+                        </div>
+                        <div class="preview-table-wrap">
+                            <table class="preview-table" aria-label="New era top 5">
+                                <thead>
+                                    <tr>
+                                        <th class="pt-rank">Rank</th>
+                                        <th>Player</th>
+                                        <th class="pt-1">1st</th>
+                                        <th class="pt-2">2nd</th>
+                                        <th class="pt-3">3rd</th>
+                                        <th class="pt-tricks">Tricks</th>
+                                        <th class="pt-points">Pts</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="preview-era-body">
+                                    <tr><td colspan="7" style="padding: 1.25rem;">Loading…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="preview-card-actions">
+                            <a class="btn btn-primary" id="preview-era-cta" href="../tournaments/period.html">See full era table</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="tables-eras">
+            <div class="container">
+                <h2 class="section-title light">
+                    <span class="title-icon">🕰️</span>
+                    Three Eras of the Drive
+                </h2>
+                <p class="section-subtitle">Click an era to see the complete standings table.</p>
+                <div class="eras-grid" id="eras-grid"></div>
+            </div>
+        </section>
+
+        <section class="tables-decades">
+            <div class="container">
+                <h2 class="section-title light">
+                    <span class="title-icon">📈</span>
+                    Tournaments by Decade
+                </h2>
+                <p class="section-subtitle">Click a decade to see the complete standings table.</p>
+                <div class="decades-grid" id="decades-grid"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Tables</h4>
+                    <p>Era & decade standings</p>
+                    <p>Points: 1st=5, 2nd=3, 3rd=1</p>
+                    <p>Tie-break: total tricks</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Explore</h4>
+                    <p><a href="../tournaments/">Tournament Archive</a></p>
+                    <p><a href="../leaderboard/">Hall of Fame</a></p>
+                    <p><a href="../stats/">Statistics</a></p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../assets/js/tournament-engine.js?v=cache1"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const tournamentEngine = new TournamentEngine();
+            const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+
+            const normalizeName = (s) => String(s || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+            const safeHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const fmtInt = (n) => {
+                const x = Number(n);
+                return Number.isFinite(x) ? String(Math.floor(x)) : '0';
+            };
+            const fmtTricksFloor = (n) => {
+                const x = Number(n);
+                return Number.isFinite(x) ? String(Math.floor(x)) : '0';
+            };
+
+            const extractIdsFromStanding = (standing) => {
+                if (!standing) return [];
+                if (Array.isArray(standing.partnership_players) && standing.partnership_players.length) {
+                    return standing.partnership_players.map(x => String(x || '').trim()).filter(Boolean);
+                }
+                const raw = String(standing.player || '').trim();
+                if (!raw) return [];
+                if (raw.includes('/') || raw.includes('&') || raw.includes('+')) {
+                    return raw.split(/[\/&+]/g).map(x => x.trim()).filter(Boolean);
+                }
+                return [raw];
+            };
+
+            const computeStandings = (tournamentsInRange) => {
+                const pointsByPos = { 1: 5, 2: 3, 3: 1 };
+                const stats = new Map(); // id -> {id, points, tricks, firsts, seconds, thirds}
+
+                const ensure = (id) => {
+                    const key = String(id || '').trim();
+                    if (!key) return null;
+                    if (!stats.has(key)) {
+                        stats.set(key, { id: key, points: 0, tricks: 0, firsts: 0, seconds: 0, thirds: 0 });
+                    }
+                    return stats.get(key);
+                };
+
+                for (const t of tournamentsInRange) {
+                    const standings = Array.isArray(t?.final_standings) ? t.final_standings : [];
+                    for (const s of standings) {
+                        const pos = Number.isFinite(Number(s?.position)) ? Number(s.position) : null;
+                        const ids = extractIdsFromStanding(s);
+                        if (!ids.length) continue;
+
+                        const rawTr = Number(s?.total_tricks);
+                        const tr = Number.isFinite(rawTr) ? rawTr : 0;
+                        const isShared = !!(s?.is_partnership && Array.isArray(s?.partnership_players) && s.partnership_players.length > 1);
+                        const splitTr = isShared ? (tr / Math.max(1, ids.length)) : tr;
+
+                        const pts = (pos && pointsByPos[pos]) ? pointsByPos[pos] : 0;
+                        for (const id of ids) {
+                            const rec = ensure(id);
+                            if (!rec) continue;
+                            rec.points += pts;
+                            rec.tricks += splitTr;
+                            if (pos === 1) rec.firsts += 1;
+                            if (pos === 2) rec.seconds += 1;
+                            if (pos === 3) rec.thirds += 1;
+                        }
+                    }
+                }
+
+                const rows = Array.from(stats.values()).map(r => ({
+                    ...r,
+                    name: tournamentEngine.getDisplayName(r.id)
+                }));
+
+                rows.sort((a, b) =>
+                    (b.points - a.points) ||
+                    (b.tricks - a.tricks) ||
+                    String(a.name).localeCompare(String(b.name))
+                );
+
+                // Rank with ties on (points, tricks) using underlying tricks precision.
+                let currentRank = 0;
+                let prevKey = null;
+                rows.forEach((r, idx) => {
+                    const key = `${r.points}|${(Number(r.tricks) || 0).toFixed(4)}`;
+                    if (key !== prevKey) {
+                        currentRank = idx + 1;
+                        prevKey = key;
+                    }
+                    r.rank = currentRank;
+                });
+
+                return rows;
+            };
+
+            const renderTop5 = (rows, tbodyEl) => {
+                if (!tbodyEl) return;
+                const top = rows.slice(0, 5);
+                if (!top.length) {
+                    tbodyEl.innerHTML = `<tr><td colspan="7" style="padding: 1.25rem;">No data.</td></tr>`;
+                    return;
+                }
+                tbodyEl.innerHTML = top.map(r => {
+                    const href = `../players/profile.html?player=${encodeURIComponent(r.id)}`;
+                    return `
+                        <tr>
+                            <td class="pt-rank"><span class="rank-pill">${fmtInt(r.rank)}</span></td>
+                            <td><a class="name-link" href="${href}">${safeHtml(r.name)}</a></td>
+                            <td class="pt-1">${fmtInt(r.firsts)}</td>
+                            <td class="pt-2">${fmtInt(r.seconds)}</td>
+                            <td class="pt-3">${fmtInt(r.thirds)}</td>
+                            <td class="pt-tricks">${fmtTricksFloor(r.tricks)}</td>
+                            <td class="pt-points"><span class="points-pill">${fmtInt(r.points)}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+            };
+
+            const findPlayerId = (needle) => {
+                const target = normalizeName(needle);
+                const lookup = tournamentEngine.playersLookup;
+                if (!lookup || !lookup.entries) return null;
+                for (const [id, row] of lookup.entries()) {
+                    const candidates = [
+                        id,
+                        row?.displayName,
+                        row?.firstName,
+                        row?.lastName,
+                        `${row?.firstName || ''} ${row?.lastName || ''}`.trim()
+                    ].filter(Boolean);
+                    if (candidates.some(v => normalizeName(v) === target)) return id;
+                }
+                return null;
+            };
+            const getLastParticipationYear = (playerId, tournaments) => {
+                const id = String(playerId || '').trim();
+                if (!id) return null;
+                let last = null;
+                for (const t of tournaments) {
+                    const y = Number(t?.year);
+                    if (!Number.isFinite(y)) continue;
+                    const standings = Array.isArray(t?.final_standings) ? t.final_standings : [];
+                    let seen = false;
+                    for (const s of standings) {
+                        const ids = extractIdsFromStanding(s);
+                        if (ids.includes(id)) {
+                            seen = true;
+                            break;
+                        }
+                    }
+                    if (seen) last = (last === null) ? y : Math.max(last, y);
+                }
+                return last;
+            };
+            const boundaryYearFor = (displayName, tournaments) => {
+                const id = findPlayerId(displayName) || displayName;
+                const death = (typeof tournamentEngine.getPlayerDeathInfo === 'function') ? tournamentEngine.getPlayerDeathInfo(id) : null;
+                if (death && Number.isFinite(Number(death.year))) return Number(death.year);
+                const last = getLastParticipationYear(id, tournaments);
+                return Number.isFinite(Number(last)) ? Number(last) : null;
+            };
+
+            try {
+                await tournamentEngine.loadFromGoogleSheets(sheetId);
+                const tournaments = (typeof tournamentEngine.getAllTournamentsUnique === 'function')
+                    ? tournamentEngine.getAllTournamentsUnique('desc')
+                    : Array.from(tournamentEngine.tournaments.values());
+                const years = tournaments.map(t => Number(t?.year)).filter(y => Number.isFinite(y)).sort((a, b) => a - b);
+                const firstYear = years.length ? years[0] : null;
+                const lastYear = years.length ? years[years.length - 1] : null;
+                const currentDecade = Number.isFinite(lastYear) ? Math.floor(Number(lastYear) / 10) * 10 : null;
+
+                // --- Determine eras ---
+                const garyEnd = boundaryYearFor('Gary', tournaments);
+                const georgeEnd = boundaryYearFor('George', tournaments);
+                const dorisEnd = boundaryYearFor('Doris', tournaments);
+                const foundersEnd = (Number.isFinite(garyEnd) ? garyEnd : null);
+                const renaissanceEnd = Math.max(
+                    Number.isFinite(georgeEnd) ? georgeEnd : -Infinity,
+                    Number.isFinite(dorisEnd) ? dorisEnd : -Infinity
+                );
+
+                const eras = [];
+                if (Number.isFinite(firstYear) && Number.isFinite(lastYear)) {
+                    const era1End = Number.isFinite(foundersEnd) ? Math.max(firstYear, Math.min(foundersEnd, lastYear)) : null;
+                    const era2End = Number.isFinite(renaissanceEnd) ? Math.max(firstYear, Math.min(renaissanceEnd, lastYear)) : null;
+
+                    if (Number.isFinite(era1End)) {
+                        eras.push({ key: 'foundations', title: 'Foundations', note: 'From the start until Gary’s era ends.', start: firstYear, end: era1End });
+                    }
+                    if (Number.isFinite(era1End) && Number.isFinite(era2End) && (era1End + 1) <= era2End) {
+                        eras.push({ key: 'renaissance', title: 'The Renaissance', note: 'The revival years up to George & Doris\' era ends', start: era1End + 1, end: era2End });
+                    }
+                    if (Number.isFinite(era2End) && (era2End + 1) <= lastYear) {
+                        eras.push({ key: 'modern', title: 'The New Era', note: 'The venue move era to the present day.', start: era2End + 1, end: lastYear });
+                    }
+                }
+
+                const topLeadersByPointsAndTricks = (pointsMap, tricksMap) => {
+                    const rows = Array.from(pointsMap.entries()).map(([id, pts]) => ({ id, pts: Number(pts) || 0, tricks: Number(tricksMap.get(id)) || 0 }));
+                    rows.sort((a, b) => (b.pts - a.pts) || (b.tricks - a.tricks) || String(a.id).localeCompare(String(b.id)));
+                    if (!rows.length) return { leaders: [], topPts: 0 };
+                    const topPts = rows[0].pts;
+                    const topTr = rows[0].tricks;
+                    return { leaders: rows.filter(r => r.pts === topPts && r.tricks === topTr), topPts };
+                };
+
+                const renderEraCard = (era) => {
+                    const eraTournaments = tournaments.filter(t => Number(t?.year) >= era.start && Number(t?.year) <= era.end);
+                    const maps = { players: new Set(), uniqueChampions: new Set(), points: new Map(), tricks: new Map() };
+
+                    for (const t of eraTournaments) {
+                        const standings = Array.isArray(t?.final_standings) ? t.final_standings : [];
+                        standings.forEach(s => extractIdsFromStanding(s).forEach(id => maps.players.add(id)));
+                        const posRow = (pos) => standings.find(s => s && s.position === pos) || standings[pos - 1];
+                        [1, 2, 3].forEach(pos => {
+                            const s = posRow(pos);
+                            if (!s) return;
+                            const ids = extractIdsFromStanding(s);
+                            const pts = pos === 1 ? 5 : (pos === 2 ? 3 : 1);
+                            ids.forEach(id => {
+                                maps.points.set(id, (maps.points.get(id) || 0) + pts);
+                                if (pos === 1) maps.uniqueChampions.add(id);
+                            });
+                        });
+                        for (const s of standings) {
+                            const ids = extractIdsFromStanding(s);
+                            if (!ids.length) continue;
+                            const rawTr = Number(s?.total_tricks);
+                            const tr = Number.isFinite(rawTr) ? rawTr : 0;
+                            const isShared = !!(s?.is_partnership && Array.isArray(s?.partnership_players) && s.partnership_players.length > 1);
+                            const splitTr = isShared ? (tr / Math.max(1, ids.length)) : tr;
+                            for (const id of ids) {
+                                maps.tricks.set(id, (maps.tricks.get(id) || 0) + splitTr);
+                            }
+                        }
+                    }
+
+                    const { leaders, topPts } = topLeadersByPointsAndTricks(maps.points, maps.tricks);
+                    const leaderNames = leaders.slice(0, 3).map(l => safeHtml(tournamentEngine.getDisplayName(l.id)));
+                    const leaderLine = leaders.length ? `${leaderNames.join(', ')}${leaders.length > 3 ? ` +${leaders.length - 3} tied` : ''}` : '—';
+                    const metaLine = leaders.length ? `${topPts} pts` : '';
+                    const href = `../tournaments/period.html?kind=era&start=${encodeURIComponent(era.start)}&end=${encodeURIComponent(era.end)}&label=${encodeURIComponent(`${era.title} (${era.start}–${era.end})`)}`;
+
+                    const isActive = era.key === 'modern';
+                    return `
+                        <a class="era-card era-card--link${isActive ? ' era-card--active' : ''}" href="${href}">
+                            <div class="era-header">
+                                <div class="era-title">${safeHtml(era.title)}</div>
+                                <div class="era-years">${era.start}–${era.end}</div>
+                            </div>
+                            <div class="era-leader">
+                                <div class="era-leader-kicker">Champion of the era</div>
+                                <div class="era-leader-name">${leaderLine}</div>
+                                <div class="era-leader-meta">${metaLine}</div>
+                            </div>
+                            <div class="era-stats">
+                                <div class="era-stat">
+                                    <div class="era-stat-num">${fmtInt(eraTournaments.length)}</div>
+                                    <div class="era-stat-lbl">tournaments</div>
+                                </div>
+                                <div class="era-stat">
+                                    <div class="era-stat-num">${fmtInt(maps.uniqueChampions.size)}</div>
+                                    <div class="era-stat-lbl">unique champs</div>
+                                </div>
+                                <div class="era-stat">
+                                    <div class="era-stat-num">${fmtInt(maps.players.size)}</div>
+                                    <div class="era-stat-lbl">players</div>
+                                </div>
+                            </div>
+                            <div class="era-note">${safeHtml(era.note)}</div>
+                        </a>
+                    `;
+                };
+
+                const erasGrid = document.getElementById('eras-grid');
+                if (erasGrid) erasGrid.innerHTML = eras.length ? eras.map(renderEraCard).join('') : '<p style="color: var(--text-secondary-dark);">Era summaries unavailable.</p>';
+
+                // --- Decades (ascending) ---
+                const decadeData = {};
+                tournaments.forEach(t => {
+                    const y = Number(t?.year);
+                    if (!Number.isFinite(y)) return;
+                    const decade = Math.floor(y / 10) * 10;
+                    decadeData[decade] = decadeData[decade] || { count: 0, players: new Set(), uniqueChampions: new Set(), points: new Map(), tricks: new Map() };
+                    const d = decadeData[decade];
+                    d.count += 1;
+                    const standings = Array.isArray(t?.final_standings) ? t.final_standings : [];
+                    standings.forEach(s => extractIdsFromStanding(s).forEach(id => d.players.add(id)));
+                    const posRow = (pos) => standings.find(s => s && s.position === pos) || standings[pos - 1];
+                    [1, 2, 3].forEach(pos => {
+                        const s = posRow(pos);
+                        if (!s) return;
+                        const ids = extractIdsFromStanding(s);
+                        const pts = pos === 1 ? 5 : (pos === 2 ? 3 : 1);
+                        ids.forEach(id => {
+                            d.points.set(id, (d.points.get(id) || 0) + pts);
+                            if (pos === 1) d.uniqueChampions.add(id);
+                        });
+                    });
+                    for (const s of standings) {
+                        const ids = extractIdsFromStanding(s);
+                        if (!ids.length) continue;
+                        const rawTr = Number(s?.total_tricks);
+                        const tr = Number.isFinite(rawTr) ? rawTr : 0;
+                        const isShared = !!(s?.is_partnership && Array.isArray(s?.partnership_players) && s.partnership_players.length > 1);
+                        const splitTr = isShared ? (tr / Math.max(1, ids.length)) : tr;
+                        for (const id of ids) {
+                            d.tricks.set(id, (d.tricks.get(id) || 0) + splitTr);
+                        }
+                    }
+                });
+
+                const decadeEntries = Object.entries(decadeData).sort(([a], [b]) => Number(a) - Number(b));
+                const decadesGrid = document.getElementById('decades-grid');
+                if (decadesGrid) {
+                    decadesGrid.innerHTML = decadeEntries.map(([decade, data]) => {
+                        const isActive = (Number.isFinite(Number(currentDecade)) && Number(decade) === Number(currentDecade));
+                        const { leaders, topPts } = topLeadersByPointsAndTricks(data.points, data.tricks);
+                        const leaderNames = leaders.slice(0, 2).map(l => safeHtml(tournamentEngine.getDisplayName(l.id)));
+                        const leaderLine = leaders.length ? `${leaderNames.join(', ')}${leaders.length > 2 ? ` +${leaders.length - 2} tied` : ''}` : '—';
+                        const leaderMeta = leaders.length ? `${topPts} pts` : '';
+                        const decadeStart = Number(decade);
+                        const decadeEnd = Number(decade) + 9;
+                        const href = `../tournaments/period.html?kind=decade&start=${encodeURIComponent(decade)}&end=${encodeURIComponent(Number(decade) + 9)}&label=${encodeURIComponent(`${decade}s`)}`;
+                        return `
+                            <a class="decade-card decade-card--link${isActive ? ' decade-card--active' : ''}" href="${href}">
+                                <div class="era-header">
+                                    <div class="era-title">${decade}s</div>
+                                    <div class="era-years">${decadeStart}–${decadeEnd}</div>
+                                </div>
+                                <div class="era-leader">
+                                    <div class="era-leader-kicker">Champion of the decade</div>
+                                    <div class="era-leader-name">${leaderLine}</div>
+                                    <div class="era-leader-meta">${leaderMeta}</div>
+                                </div>
+                                <div class="era-stats">
+                                    <div class="era-stat">
+                                        <div class="era-stat-num">${fmtInt(data.count)}</div>
+                                        <div class="era-stat-lbl">tournaments</div>
+                                    </div>
+                                    <div class="era-stat">
+                                        <div class="era-stat-num">${fmtInt(data.uniqueChampions.size)}</div>
+                                        <div class="era-stat-lbl">unique champs</div>
+                                    </div>
+                                    <div class="era-stat">
+                                        <div class="era-stat-num">${fmtInt(data.players.size)}</div>
+                                        <div class="era-stat-lbl">players</div>
+                                    </div>
+                                </div>
+                            </a>
+                        `;
+                    }).join('');
+                }
+
+                // --- Previews: latest decade + new era ---
+                if (Number.isFinite(currentDecade)) {
+                    const decadeStart = currentDecade;
+                    const decadeEnd = currentDecade + 9;
+                    const decadeTournaments = tournaments.filter(t => Number(t?.year) >= decadeStart && Number(t?.year) <= decadeEnd);
+                    const decadeRows = computeStandings(decadeTournaments);
+
+                    const decadeTitleEl = document.getElementById('preview-decade-title');
+                    const decadeSubEl = document.getElementById('preview-decade-subtitle');
+                    const decadeMetaEl = document.getElementById('preview-decade-meta');
+                    if (decadeTitleEl) decadeTitleEl.textContent = `${currentDecade}s`;
+                    if (decadeSubEl) decadeSubEl.textContent = `Top 5 so far`;
+                    if (decadeMetaEl) decadeMetaEl.textContent = `${decadeTournaments.length} tournaments`;
+
+                    renderTop5(decadeRows, document.getElementById('preview-decade-body'));
+                    const decadeCta = document.getElementById('preview-decade-cta');
+                    if (decadeCta) decadeCta.href = `../tournaments/period.html?kind=decade&start=${encodeURIComponent(decadeStart)}&end=${encodeURIComponent(decadeEnd)}&label=${encodeURIComponent(`${currentDecade}s`)}`;
+                }
+
+                const newEra = eras.find(e => e.key === 'modern') || null;
+                if (newEra) {
+                    const eraTournaments = tournaments.filter(t => Number(t?.year) >= newEra.start && Number(t?.year) <= newEra.end);
+                    const eraRows = computeStandings(eraTournaments);
+
+                    const eraTitleEl = document.getElementById('preview-era-title');
+                    const eraSubEl = document.getElementById('preview-era-subtitle');
+                    const eraMetaEl = document.getElementById('preview-era-meta');
+                    if (eraTitleEl) eraTitleEl.textContent = newEra.title;
+                    if (eraSubEl) eraSubEl.textContent = `${newEra.start}–${newEra.end}`;
+                    if (eraMetaEl) eraMetaEl.textContent = `${eraTournaments.length} tournaments`;
+
+                    renderTop5(eraRows, document.getElementById('preview-era-body'));
+                    const eraCta = document.getElementById('preview-era-cta');
+                    if (eraCta) eraCta.href = `../tournaments/period.html?kind=era&start=${encodeURIComponent(newEra.start)}&end=${encodeURIComponent(newEra.end)}&label=${encodeURIComponent(`${newEra.title} (${newEra.start}–${newEra.end})`)}`;
+                }
+            } catch (error) {
+                console.error('Tables page failed to load:', error);
+                const decadeBody = document.getElementById('preview-decade-body');
+                const eraBody = document.getElementById('preview-era-body');
+                const msg = safeHtml(error?.message || 'Error loading data.');
+                if (decadeBody) decadeBody.innerHTML = `<tr><td colspan="7" style="padding: 1.25rem; color:#991b1b; font-weight:700;">${msg}</td></tr>`;
+                if (eraBody) eraBody.innerHTML = `<tr><td colspan="7" style="padding: 1.25rem; color:#991b1b; font-weight:700;">${msg}</td></tr>`;
+            }
+        });
+    </script>
+</body>
+</html>
+
