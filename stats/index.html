@@ -1240,12 +1240,19 @@
             margin-bottom: var(--spacing-xl);
         }
 
+        /* Classier (non-neon) borders for Stats panels */
+        :root {
+            --stats-panel-border: rgba(15, 23, 42, 0.10);
+            --stats-panel-border-strong: rgba(15, 23, 42, 0.14);
+            --stats-panel-border-on-dark: rgba(255, 255, 255, 0.14);
+        }
+
         .insight-card {
             background: white;
             border-radius: var(--border-radius-lg);
             padding: var(--spacing-xl);
             box-shadow: var(--shadow-lg);
-            border: 2px solid var(--border-light);
+            border: 1px solid var(--stats-panel-border);
         }
 
         .insight-kicker {
@@ -1306,7 +1313,7 @@
             padding: var(--spacing-xl);
             box-shadow: var(--shadow-lg);
             text-align: center;
-            border: 2px solid var(--border-light);
+            border: 1px solid var(--stats-panel-border);
             transition: all 0.2s ease;
         }
 
@@ -1357,7 +1364,7 @@
             border-radius: var(--border-radius-lg);
             padding: var(--spacing-xl);
             box-shadow: var(--shadow-lg);
-            border: 2px solid var(--border-light);
+            border: 1px solid var(--stats-panel-border);
             transition: all 0.2s ease;
         }
 
@@ -1490,7 +1497,7 @@
             border-radius: var(--border-radius-lg);
             padding: var(--spacing-2xl);
             box-shadow: var(--shadow-lg);
-            border: 2px solid var(--border-light);
+            border: 1px solid var(--stats-panel-border);
             text-align: center;
             transition: all 0.2s ease;
         }
@@ -1679,7 +1686,7 @@
             border-radius: var(--border-radius-lg);
             padding: var(--spacing-xl);
             box-shadow: var(--shadow-lg);
-            border: 2px solid var(--border-light);
+            border: 1px solid var(--stats-panel-border-on-dark);
         }
 
         .family-panel-title {
@@ -1759,7 +1766,7 @@
             border-radius: var(--border-radius-lg);
             overflow: hidden;
             box-shadow: var(--shadow-lg);
-            border: 2px solid var(--border-light);
+            border: 1px solid var(--stats-panel-border);
         }
 
         .family-table {
@@ -1776,7 +1783,7 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: var(--text-primary-dark);
-            border-bottom: 2px solid var(--border-light);
+            border-bottom: 1px solid var(--stats-panel-border-strong);
         }
 
         .family-table td {
@@ -1845,7 +1852,7 @@
             border-radius: var(--border-radius-lg);
             padding: var(--spacing-xl);
             box-shadow: var(--shadow-lg);
-            border: 2px solid var(--border-light);
+            border: 1px solid var(--stats-panel-border-on-dark);
             transition: all 0.2s ease;
             position: relative;
             overflow: hidden;
@@ -1889,7 +1896,7 @@
         .family-members {
             margin-bottom: var(--spacing-lg);
             padding-bottom: var(--spacing-lg);
-            border-bottom: 1px solid var(--border-light);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.14);
         }
 
         .member-count {
@@ -1914,7 +1921,7 @@
             font-size: 0.875rem;
             font-weight: 500;
             transition: all 0.2s ease;
-            border: 1px solid var(--border-light);
+            border: 1px solid rgba(15, 23, 42, 0.12);
         }
 
         .member-link:hover {
