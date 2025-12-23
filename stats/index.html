@@ -759,24 +759,9 @@
                 </div>
             `;
 
-            const rows = rankings.slice(0, 10).map((p, idx) => {
-                const winAgg = winAggByKey.get(p.partnership) || { wins: 0, played: Number(p.partnerships_count) || 0 };
-                const played = Number.isFinite(winAgg.played) ? winAgg.played : 0;
-                const wins = Number.isFinite(winAgg.wins) ? winAgg.wins : 0;
-                const winRateText = played > 0 ? `${Math.round((wins / played) * 100)}%` : '—';
-                // IMPORTANT: use &amp; inside HTML so the browser doesn't treat "&par..." as an entity and drop the partner param.
-                const gamesHref = `../players/partnership-games?player=${encodeURIComponent(p.players[0])}&amp;partner=${encodeURIComponent(p.players[1])}`;
-                return `
-                    <tr>
-                        <td class="rank-column">${idx + 1}</td>
-                        <td class="partnership-column"><div class="partnership-names">${fmtPair(p)}</div></td>
-                        <td class="avg-tricks-column">${p.average_tricks.toFixed(2)}</td>
-                        <td class="win-rate-column">${winRateText} <span class="muted-inline">(${wins}/${played})</span></td>
-                        <td class="count-column">${p.partnerships_count.toLocaleString()}</td>
-                        <td class="cta-column"><a class="cta-link" href="${gamesHref}">See all games</a></td>
-                    </tr>
-                `;
-            }).join('');
+            const INITIAL_VISIBLE = 10;
+            const PAGE_SIZE = 10;
+            let visibleCount = Math.min(INITIAL_VISIBLE, rankings.length);
 
             container.innerHTML = `
                 <div class="partnership-table-container">
@@ -791,10 +776,62 @@
                                 <th class="cta-column"></th>
                             </tr>
                         </thead>
-                        <tbody>${rows}</tbody>
+                        <tbody id="partnership-table-body"></tbody>
                     </table>
                 </div>
+
+                <div class="see-more-wrap" id="partnership-see-more-wrap" style="display:none;">
+                    <div class="see-more-meta" id="partnership-see-more-meta"></div>
+                    <button type="button" class="see-more-btn" id="partnership-see-more-btn">See more</button>
+                </div>
             `;
+
+            const tbody = document.getElementById('partnership-table-body');
+            const moreWrap = document.getElementById('partnership-see-more-wrap');
+            const moreMeta = document.getElementById('partnership-see-more-meta');
+            const moreBtn = document.getElementById('partnership-see-more-btn');
+
+            const renderRows = () => {
+                if (!tbody) return;
+                const rows = rankings.slice(0, visibleCount).map((p, idx) => {
+                    const winAgg = winAggByKey.get(p.partnership) || { wins: 0, played: Number(p.partnerships_count) || 0 };
+                    const played = Number.isFinite(winAgg.played) ? winAgg.played : 0;
+                    const wins = Number.isFinite(winAgg.wins) ? winAgg.wins : 0;
+                    const winRateText = played > 0 ? `${Math.round((wins / played) * 100)}%` : '—';
+                    // IMPORTANT: use &amp; inside HTML so the browser doesn't treat "&par..." as an entity and drop the partner param.
+                    const gamesHref = `../players/partnership-games?player=${encodeURIComponent(p.players[0])}&amp;partner=${encodeURIComponent(p.players[1])}`;
+                    return `
+                        <tr>
+                            <td class="rank-column">${idx + 1}</td>
+                            <td class="partnership-column"><div class="partnership-names">${fmtPair(p)}</div></td>
+                            <td class="avg-tricks-column">${p.average_tricks.toFixed(2)}</td>
+                            <td class="win-rate-column">${winRateText} <span class="muted-inline">(${wins}/${played})</span></td>
+                            <td class="count-column">${p.partnerships_count.toLocaleString()}</td>
+                            <td class="cta-column"><a class="cta-link" href="${gamesHref}">See all games</a></td>
+                        </tr>
+                    `;
+                }).join('');
+                tbody.innerHTML = rows;
+
+                const remaining = Math.max(0, rankings.length - visibleCount);
+                if (moreWrap && moreBtn && moreMeta && remaining > 0) {
+                    moreWrap.style.display = 'flex';
+                    const next = Math.min(PAGE_SIZE, remaining);
+                    moreMeta.textContent = `Showing ${visibleCount} of ${rankings.length} • ${remaining} more`;
+                    moreBtn.textContent = `See ${next} more`;
+                } else if (moreWrap) {
+                    moreWrap.style.display = 'none';
+                }
+            };
+
+            if (moreBtn) {
+                moreBtn.addEventListener('click', () => {
+                    visibleCount = Math.min(rankings.length, visibleCount + PAGE_SIZE);
+                    renderRows();
+                });
+            }
+
+            renderRows();
         }
 
         function loadFamilyStatistics() {
@@ -1708,6 +1745,45 @@
 
         .cta-link:hover {
             text-decoration: underline;
+        }
+
+        .see-more-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-lg);
+        }
+
+        .see-more-meta {
+            color: var(--text-secondary-dark);
+            font-weight: 650;
+            font-size: 0.95rem;
+        }
+
+        .see-more-btn {
+            appearance: none;
+            border: 1px solid rgba(0, 0, 0, 0.10);
+            background: var(--primary);
+            color: var(--primary-dark);
+            border-radius: 999px;
+            padding: 0.7rem 1.15rem;
+            font-weight: 850;
+            cursor: pointer;
+            white-space: nowrap;
+            box-shadow: 0 10px 18px rgba(212, 175, 55, 0.22), 0 2px 6px rgba(15, 23, 42, 0.10);
+            letter-spacing: 0.01em;
+        }
+
+        .see-more-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 24px rgba(212, 175, 55, 0.26), 0 4px 10px rgba(15, 23, 42, 0.12);
+            text-decoration: none;
+        }
+
+        .see-more-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 8px 14px rgba(212, 175, 55, 0.20), 0 2px 6px rgba(15, 23, 42, 0.10);
         }
 
         /* Family Statistics Styles */
