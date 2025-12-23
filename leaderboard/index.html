@@ -1369,11 +1369,18 @@
                         const maxRows = 60;
                         const rows = events12.slice(0, maxRows).map(e => {
                             const suit = e.trumpSuit ? ` • ${e.trumpSuit}` : '';
+                            const firstSeat = String(e.partnership || '').split('&')[0].trim();
+                            const firstPerson = firstSeat.split('/')[0].trim();
+                            const canonical = (tournamentEngine && typeof tournamentEngine.getCanonicalPlayerId === 'function')
+                                ? tournamentEngine.getCanonicalPlayerId(firstPerson)
+                                : firstPerson;
+                            const playerParam = canonical || firstPerson;
+                            const href = `../tournaments/scorecard.html?year=${encodeURIComponent(e.year)}&player=${encodeURIComponent(playerParam)}`;
                             return `
-                                <div class="record-item">
+                                <a class="record-item record-item--link" href="${href}">
                                     <span class="record-title">${e.year} • Round ${e.round} • Table ${e.table}${suit}</span>
                                     <span class="record-holder">${e.partnership}</span>
-                                </div>
+                                </a>
                             `;
                         }).join('');
                         const more = events12.length > maxRows
@@ -1389,11 +1396,18 @@
                     if (events13 && events13.length > 0) {
                         list13.innerHTML = events13.map(e => {
                             const suit = e.trumpSuit ? ` • ${e.trumpSuit}` : '';
+                            const firstSeat = String(e.partnership || '').split('&')[0].trim();
+                            const firstPerson = firstSeat.split('/')[0].trim();
+                            const canonical = (tournamentEngine && typeof tournamentEngine.getCanonicalPlayerId === 'function')
+                                ? tournamentEngine.getCanonicalPlayerId(firstPerson)
+                                : firstPerson;
+                            const playerParam = canonical || firstPerson;
+                            const href = `../tournaments/scorecard.html?year=${encodeURIComponent(e.year)}&player=${encodeURIComponent(playerParam)}`;
                             return `
-                                <div class="record-item">
+                                <a class="record-item record-item--link" href="${href}">
                                     <span class="record-title">${e.year} • Round ${e.round} • Table ${e.table}${suit}</span>
                                     <span class="record-holder">${e.partnership}</span>
-                                </div>
+                                </a>
                             `;
                         }).join('');
                     }
@@ -3218,6 +3232,17 @@
             border-radius: var(--border-radius);
             box-shadow: var(--shadow-sm);
             gap: var(--spacing-lg);
+        }
+
+        /* Clickable Big Rounds rows */
+        .record-item--link {
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .record-item--link:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
         }
 
         .record-title {

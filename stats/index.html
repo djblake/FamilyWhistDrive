@@ -914,24 +914,70 @@
                 return '';
             };
 
-            // Legitimate families are discovered dynamically:
-            // traverse the direct descendant line from George & Doris, then collect surnames.
-            const descendantSurnames = new Set();
-            roster.forEach(p => {
-                if (!descendants.has(p.id)) return;
-                const ln = String(p.lastName || '').trim();
-                if (!ln) return;
-                descendantSurnames.add(ln);
-            });
-            const legitFamilies = Array.from(descendantSurnames).sort((a, b) => a.localeCompare(b));
+            // Legitimate families are discovered dynamically using the Players-sheet family tree:
+            //
+            // Rule: you only branch out into a new family surname if you've had children.
+            // Otherwise (e.g., surname changed via marriage but no children), you inherit your
+            // parents' family surname for membership purposes.
+            //
+            // This prevents single-member families like "West" when Eloise has no children.
+            const hasChildren = (id) => {
+                if (!id) return false;
+                const kids = childrenByParent.get(id);
+                if (kids && kids.size > 0) return true;
+                const row = byId.get(id);
+                const hadKids = Array.isArray(row?.familyTreeHadChildrenWith) ? row.familyTreeHadChildrenWith : [];
+                return hadKids.length > 0;
+            };
+
+            const familyOf = new Map(); // descendantId -> family surname
+            const famQueue = [];
+            const seedRootFamily = (rootId) => {
+                if (!rootId) return;
+                const ln = String(getLastName(rootId) || '').trim();
+                const fam = ln || 'Unknown';
+                if (!familyOf.has(rootId)) {
+                    familyOf.set(rootId, fam);
+                    famQueue.push(rootId);
+                }
+            };
+            seedRootFamily(georgeId);
+            seedRootFamily(dorisId);
+
+            while (famQueue.length) {
+                const parentId = famQueue.shift();
+                const parentFam = String(familyOf.get(parentId) || '').trim();
+                const kids = childrenByParent.get(parentId);
+                if (!kids) continue;
+                for (const kidId of kids.values()) {
+                    if (!descendants.has(kidId)) continue;
+                    const kidRow = byId.get(kidId);
+                    const kidLast = String(kidRow?.lastName || getLastName(kidId) || '').trim();
+                    const kidBranches = hasChildren(kidId) && kidLast && parentFam && (kidLast.toLowerCase() !== parentFam.toLowerCase());
+                    const kidFam = kidBranches ? kidLast : parentFam;
+
+                    if (!familyOf.has(kidId)) {
+                        familyOf.set(kidId, kidFam);
+                        famQueue.push(kidId);
+                    } else {
+                        // If discovered via both parents, prefer a branching surname when applicable.
+                        const existing = String(familyOf.get(kidId) || '').trim();
+                        if (kidBranches && existing.toLowerCase() !== kidFam.toLowerCase()) {
+                            familyOf.set(kidId, kidFam);
+                        }
+                    }
+                }
+            }
+
+            const legitFamilies = Array.from(new Set(Array.from(familyOf.values()).filter(Boolean)))
+                .sort((a, b) => a.localeCompare(b));
 
             const families = legitFamilies.map(famName => {
-                // Core members = descendants with this surname
+                // Core members = descendants whose *family membership surname* is this family.
+                // (Not necessarily their current roster lastName if they never had children.)
+                const famKey = String(famName).trim().toLowerCase();
                 const baseMembers = roster
-                    .filter(p =>
-                        descendants.has(p.id) &&
-                        String(p.lastName || '').trim().toLowerCase() === String(famName).trim().toLowerCase()
-                    )
+                    .filter(p => descendants.has(p.id) && String(familyOf.get(p.id) || '').trim().toLowerCase() === famKey)
                     .map(p => p.id);
 
                 // Include partners / co-parents of any member as MEMBERS (even if their surname differs)

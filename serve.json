@@ -1,6 +1,8 @@
 {
   "cleanUrls": false,
   "rewrites": [
+    { "source": "/", "destination": "/index.html" },
+
     { "source": "/leaderboard", "destination": "/leaderboard/index.html" },
     { "source": "/leaderboard/", "destination": "/leaderboard/index.html" },
 
