@@ -3015,7 +3015,8 @@
             border-radius: var(--border-radius-lg);
             padding: var(--spacing-xl);
             box-shadow: var(--shadow-card);
-            border: 2px solid var(--card-border);
+            /* Classier neutral border (avoid bright green) */
+            border: 1px solid rgba(15, 23, 42, 0.12);
             transition: all 0.2s ease;
         }
 
@@ -3051,7 +3052,8 @@
             gap: var(--spacing-md);
             margin-top: var(--spacing-lg);
             padding-top: var(--spacing-lg);
-            border-top: 1px solid var(--border);
+            /* Match the card border tone */
+            border-top: 1px solid rgba(15, 23, 42, 0.10);
         }
 
         /* "Clean" preview cards: ensure the gold number aligns to the title line,
