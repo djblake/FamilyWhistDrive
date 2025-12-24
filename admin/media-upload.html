@@ -114,7 +114,7 @@
         .photo-delete-item .missing {
             width: 100%;
             height: 110px;
-            display:none;
+            display:flex;
             align-items:center;
             justify-content:center;
             background: rgba(15, 23, 42, 0.06);
@@ -122,6 +122,7 @@
             font-weight: 800;
             font-size: 0.8rem;
         }
+        .photo-delete-item img[data-loaded="1"] + .missing { display:none; }
         .photo-delete-item .meta {
             padding: 0.55rem 0.6rem;
             display: grid;
@@ -780,7 +781,7 @@
                             <input type="checkbox" data-full-key="${safeKey.replaceAll('"', '&quot;')}">
                             Delete
                         </label>
-                        ${safeStart ? `<img alt="photo ${idx + 1}" src="${safeStart}" data-full="${safeFull}" loading="lazy" onerror="if(this.dataset.full && this.src!==this.dataset.full){this.src=this.dataset.full;return;} this.style.display='none'; const m=this.parentElement&&this.parentElement.querySelector&&this.parentElement.querySelector('.missing'); if(m) m.style.display='flex';">` : ``}
+                        ${safeStart ? `<img alt="photo ${idx + 1}" src="${safeStart}" data-full="${safeFull}" loading="lazy" onload="this.dataset.loaded='1';" onerror="if(this.dataset.full && this.src!==this.dataset.full){this.src=this.dataset.full;return;} this.style.display='none';">` : ``}
                         <div class="missing">Missing preview</div>
                         <div class="meta">
                             <div class="k">${safeUploader || 'Uploader'}</div>

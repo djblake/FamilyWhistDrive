@@ -47,11 +47,8 @@
       }
       .whist-lightbox__img {
         display: block;
-        width: auto;
-        height: auto;
-        /* Constrain directly to viewport so portrait photos never clip. */
-        max-width: calc(100vw - (2 * var(--whist-lightbox-pad)));
-        max-height: calc(100vh - (2 * var(--whist-lightbox-pad)));
+        width: 100%;
+        height: 100%;
         object-fit: contain;
         background: #0b1220;
       }
@@ -220,9 +217,13 @@
     const img = new Image();
     const entry = {
       loaded: false,
+      w: 0,
+      h: 0,
       promise: new Promise((resolve) => {
         img.onload = () => {
           entry.loaded = true;
+          entry.w = img.naturalWidth || 0;
+          entry.h = img.naturalHeight || 0;
           resolve();
         };
         img.onerror = () => resolve(); // best-effort
@@ -246,6 +247,7 @@
   const render = () => {
     const root = ensureDom();
     const img = root.querySelector('.whist-lightbox__img');
+    const media = root.querySelector('.whist-lightbox__media');
     const spinner = root.querySelector('.whist-lightbox__loading');
     const btnPrev = root.querySelector('.whist-lightbox__prev');
     const btnNext = root.querySelector('.whist-lightbox__next');
@@ -272,6 +274,50 @@
     if (startUrl && img.getAttribute('src') !== startUrl) {
       img.src = startUrl;
     }
+
+    // Keep the rendered size stable across thumb->full by sizing the media box to the
+    // "contain" size computed from the image aspect ratio + viewport constraints.
+    const applyContainSize = (aspect) => {
+      if (!media) return;
+      const ar = Number(aspect);
+      if (!Number.isFinite(ar) || ar <= 0) return;
+
+      const cs = window.getComputedStyle(root);
+      const pad = parseFloat(cs.getPropertyValue('--whist-lightbox-pad') || '0') || 0;
+      const maxW = Math.max(120, window.innerWidth - (2 * pad));
+      const maxH = Math.max(120, window.innerHeight - (2 * pad));
+
+      let w = maxW;
+      let h = w / ar;
+      if (h > maxH) {
+        h = maxH;
+        w = h * ar;
+      }
+      media.style.width = `${Math.round(w)}px`;
+      media.style.height = `${Math.round(h)}px`;
+    };
+
+    // If we already know the full-res dimensions, size immediately (prevents jump).
+    if (media && fullEntry && fullEntry.loaded && fullEntry.w && fullEntry.h) {
+      applyContainSize(Number(fullEntry.w) / Number(fullEntry.h));
+    } else if (media && cur && cur.ar) {
+      applyContainSize(cur.ar);
+    } else if (media) {
+      // clear stale size
+      media.style.width = '';
+      media.style.height = '';
+    }
+
+    // After the (thumb) image loads, compute aspect ratio once and lock the box size.
+    img.addEventListener('load', () => {
+      if (img.dataset.swapToken !== token) return;
+      const w = img.naturalWidth || 0;
+      const h = img.naturalHeight || 0;
+      if (w > 0 && h > 0) {
+        cur.ar = w / h;
+        applyContainSize(cur.ar);
+      }
+    }, { once: true });
 
     // 2) Show spinner while waiting for the full-res image.
     const loadingFull = Boolean(fullUrl && !fullLoaded);
