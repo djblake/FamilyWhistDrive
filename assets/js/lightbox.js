@@ -44,8 +44,8 @@
       .whist-lightbox__hud {
         position: absolute;
         left: 50%;
-        bottom: 20px;
-        transform: translateX(-50%);
+        top: 0;
+        transform: translate(-50%, -50%);
         width: min(1040px, 92vw);
         display: none;
         gap: 0.75rem;
@@ -173,6 +173,7 @@
     const img = root.querySelector('.whist-lightbox__img');
     const btnPrev = root.querySelector('.whist-lightbox__prev');
     const btnNext = root.querySelector('.whist-lightbox__next');
+    const panel = root.querySelector('.whist-lightbox__panel');
     const hud = root.querySelector('.whist-lightbox__hud');
     const captionEl = root.querySelector('.whist-lightbox__hud .whist-lightbox__caption');
     const goToEl = root.querySelector('.whist-lightbox__hud .whist-lightbox__goto');
@@ -189,8 +190,12 @@
     btnNext.disabled = !hasMany;
 
     const captionText = cur && cur.caption ? String(cur.caption) : '';
-    if (captionEl) captionEl.textContent = captionText;
-    if (hud) hud.setAttribute('aria-hidden', captionText || goToHref ? 'false' : 'true');
+    if (captionEl) {
+      captionEl.textContent = captionText;
+      captionEl.style.display = captionText ? 'inline-flex' : 'none';
+    }
+    const hudVisible = Boolean(captionText || goToHref);
+    if (hud) hud.setAttribute('aria-hidden', hudVisible ? 'false' : 'true');
     if (goToEl) {
       if (goToHref) {
         goToEl.href = goToHref;
@@ -200,6 +205,39 @@
         goToEl.style.display = 'none';
       }
     }
+
+    const positionHud = () => {
+      if (!hudVisible) return;
+      if (!hud || !panel) return;
+
+      // Reset so we can compute from the "natural" layout.
+      panel.style.marginBottom = '0px';
+
+      // Measure.
+      const style = window.getComputedStyle(root);
+      const padBottom = parseFloat(style.paddingBottom || '0') || 0;
+      let panelRect = panel.getBoundingClientRect();
+      const hudRect = hud.getBoundingClientRect();
+      const hudH = hudRect && Number.isFinite(hudRect.height) ? hudRect.height : 0;
+
+      // We want the HUD centered in the empty space below the photo/panel, *without* touching it.
+      const minBelow = Math.max(0, hudH + 10); // ensure a little breathing room
+      let availableBelow = window.innerHeight - padBottom - panelRect.bottom;
+
+      if (availableBelow < minBelow) {
+        const needed = minBelow - availableBelow;
+        panel.style.marginBottom = `${Math.ceil(needed)}px`;
+        panelRect = panel.getBoundingClientRect();
+        availableBelow = window.innerHeight - padBottom - panelRect.bottom;
+      }
+
+      const centerY = panelRect.bottom + Math.max(0, availableBelow) / 2;
+      hud.style.top = `${Math.round(centerY)}px`;
+    };
+
+    // Position once now, and again after the image settles (important on tall images).
+    requestAnimationFrame(positionHud);
+    img.onload = () => requestAnimationFrame(positionHud);
   };
 
   const normalizeItems = (arr) => {
@@ -250,11 +288,9 @@
   const buildCaptionFromDataset = (ds) => {
     if (!ds) return '';
     const uploader = String(ds.uploader || '').trim();
-    const filename = String(ds.filename || '').trim();
     const key = String(ds.key || '').trim();
     const parts = [];
     if (uploader) parts.push(`Uploader: ${uploader}`);
-    if (filename) parts.push(`File: ${filename}`);
     if (key) parts.push(`Key: ${key}`);
     return parts.join(' • ');
   };
