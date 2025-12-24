@@ -318,6 +318,16 @@
             <script src="../assets/js/charts.js?v=20"></script>
     
     <script>
+        // Global HTML escaper (used by functions outside DOMContentLoaded, e.g. photo gallery rendering).
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
         // Helper function to extract individual round scores for a player or partnership
         // playerCanonicalIds: either a string (single player canonical ID) or array (shared hand canonical IDs)
         function extractPlayerRoundScores(tournament, playerCanonicalIds, engine) {
