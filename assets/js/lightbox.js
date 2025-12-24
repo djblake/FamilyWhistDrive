@@ -27,60 +27,60 @@
         border: 1px solid rgba(255,255,255,0.14);
         box-shadow: 0 24px 70px rgba(0,0,0,0.55);
         overflow: hidden;
-        display: grid;
-        grid-template-rows: minmax(0, 1fr) auto;
       }
       .whist-lightbox__media {
         position: relative;
-        min-height: 0; /* critical: allows the image row to shrink so the caption row is always visible */
         overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
       }
       .whist-lightbox__img {
         display: block;
         width: 100%;
-        height: 100%;
+        height: auto;
+        max-height: 100%;
         object-fit: contain;
         background: #0b1220;
       }
-      .whist-lightbox__captionbar {
-        padding: 0.75rem 0.9rem;
-        display: flex;
+      /* HUD sits outside the photo boundaries, near bottom of the viewport */
+      .whist-lightbox__hud {
+        position: absolute;
+        left: 50%;
+        bottom: 20px;
+        transform: translateX(-50%);
+        width: min(1040px, 92vw);
+        display: none;
         gap: 0.75rem;
         align-items: center;
-        justify-content: space-between;
-        /* Low-opacity overlay strip, beneath the photo (outside the photo area) */
-        background: rgba(0, 0, 0, 0.55);
-        border-top: 1px solid rgba(255,255,255,0.12);
-        color: rgba(255,255,255,0.92);
+        justify-content: center;
+        pointer-events: none;
       }
+      .whist-lightbox__hud[aria-hidden="false"] { display: flex; }
       .whist-lightbox__caption {
-        font-size: 0.85rem;
-        font-weight: 700;
+        pointer-events: auto;
+        color: rgba(255,255,255,0.92);
+        font-size: 0.9rem;
+        font-weight: 750;
         line-height: 1.25;
+        text-align: center;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.45);
+        padding: 0.35rem 0.6rem;
+        border-radius: 999px;
+        background: rgba(0,0,0,0.35);
+        border: 1px solid rgba(255,255,255,0.14);
         max-width: 100%;
-        white-space: normal;
-      }
-      .whist-lightbox__caption code {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        font-size: 0.82rem;
-        color: rgba(255,255,255,0.88);
-        word-break: break-all;
-      }
-      .whist-lightbox__goto {
-        flex: 0 0 auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
       }
-      .whist-lightbox__goto.btn {
-        background: rgba(255,255,255,0.12);
-        border-color: rgba(255,255,255,0.22);
-        color: rgba(255,255,255,0.94);
+      .whist-lightbox__goto {
+        pointer-events: auto;
+        white-space: nowrap;
+        background: rgba(0,0,0,0.35);
+        border: 1px solid rgba(255,255,255,0.16);
+        color: rgba(255,255,255,0.92);
       }
-      .whist-lightbox__goto.btn:hover {
-        background: rgba(255,255,255,0.16);
-        border-color: rgba(255,255,255,0.32);
+      .whist-lightbox__goto:hover {
+        background: rgba(0,0,0,0.48);
+        border-color: rgba(255,255,255,0.26);
       }
       .whist-lightbox__close {
         position: absolute;
@@ -125,7 +125,8 @@
       @media (max-width: 520px) {
         .whist-lightbox { padding: 0.75rem; }
         .whist-lightbox__btn { width: 40px; height: 40px; font-size: 22px; }
-        .whist-lightbox__caption { font-size: 0.8rem; }
+        .whist-lightbox__hud { width: 92vw; }
+        .whist-lightbox__caption { font-size: 0.82rem; }
       }
     `;
     document.head.appendChild(style);
@@ -152,10 +153,10 @@
             <button type="button" class="whist-lightbox__btn whist-lightbox__next" aria-label="Next photo">›</button>
           </div>
         </div>
-        <div class="whist-lightbox__captionbar">
-          <div class="whist-lightbox__caption" aria-live="polite"></div>
-          <a class="btn btn-secondary whist-lightbox__goto" href="#" style="display:none;">Go to gallery</a>
-        </div>
+      </div>
+      <div class="whist-lightbox__hud" aria-hidden="true">
+        <div class="whist-lightbox__caption" aria-live="polite"></div>
+        <a class="btn whist-lightbox__goto" href="#" style="display:none;">Go to gallery</a>
       </div>
     `;
     document.body.appendChild(root);
@@ -172,8 +173,9 @@
     const img = root.querySelector('.whist-lightbox__img');
     const btnPrev = root.querySelector('.whist-lightbox__prev');
     const btnNext = root.querySelector('.whist-lightbox__next');
-    const captionEl = root.querySelector('.whist-lightbox__caption');
-    const goToEl = root.querySelector('.whist-lightbox__goto');
+    const hud = root.querySelector('.whist-lightbox__hud');
+    const captionEl = root.querySelector('.whist-lightbox__hud .whist-lightbox__caption');
+    const goToEl = root.querySelector('.whist-lightbox__hud .whist-lightbox__goto');
     if (!img || !btnPrev || !btnNext) return;
 
     const hasMany = items.length > 1;
@@ -186,9 +188,9 @@
     btnPrev.disabled = !hasMany;
     btnNext.disabled = !hasMany;
 
-    if (captionEl) {
-      captionEl.textContent = cur && cur.caption ? String(cur.caption) : '';
-    }
+    const captionText = cur && cur.caption ? String(cur.caption) : '';
+    if (captionEl) captionEl.textContent = captionText;
+    if (hud) hud.setAttribute('aria-hidden', captionText || goToHref ? 'false' : 'true');
     if (goToEl) {
       if (goToHref) {
         goToEl.href = goToHref;
