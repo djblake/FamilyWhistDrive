@@ -91,6 +91,14 @@
         background: rgba(0,0,0,0.35);
         border: 1px solid rgba(255,255,255,0.16);
         color: rgba(255,255,255,0.92);
+        font-size: 0.78rem;
+        font-weight: 650;
+        padding: 0.2rem 0.5rem;
+        line-height: 1.1;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
       }
       .whist-lightbox__goto:hover {
         background: rgba(0,0,0,0.48);
@@ -224,31 +232,20 @@
       if (!hudVisible) return;
       if (!hud || !panel) return;
 
-      // Reset so we can compute from the "natural" layout.
-      panel.style.marginBottom = '0px';
-
-      // Measure.
-      const style = window.getComputedStyle(root);
-      const padBottom = parseFloat(style.paddingBottom || '0') || 0;
+      // Measure available space beneath the panel (including the overlay padding).
       let panelRect = panel.getBoundingClientRect();
       const hudRect = hud.getBoundingClientRect();
       const hudH = hudRect && Number.isFinite(hudRect.height) ? hudRect.height : 0;
 
-      // We want the HUD centered in the empty space below the photo/panel, *without* touching it.
-      const minBelow = Math.max(0, hudH + 10); // ensure a little breathing room
-      let availableBelow = window.innerHeight - padBottom - panelRect.bottom;
+      const availableBelow = Math.max(0, window.innerHeight - panelRect.bottom);
+      const halfHud = Math.max(0, hudH / 2);
 
-      if (availableBelow < minBelow) {
-        const needed = minBelow - availableBelow;
-        // Note: the lightbox root uses justify-content:center, so bottom margin only yields ~half the visual gap.
-        // Double it so we actually create ~`needed` pixels of breathing room beneath the panel.
-        panel.style.marginBottom = `${Math.ceil(needed * 2)}px`;
-        panelRect = panel.getBoundingClientRect();
-        availableBelow = window.innerHeight - padBottom - panelRect.bottom;
-      }
-
-      const centerY = panelRect.bottom + Math.max(0, availableBelow) / 2;
-      hud.style.top = `${Math.round(centerY)}px`;
+      // Center the HUD in the gap below the photo. Clamp so it doesn't overlap the panel or go off-screen.
+      const minY = panelRect.bottom + halfHud + 6;
+      const maxY = window.innerHeight - halfHud - 6;
+      const desiredY = panelRect.bottom + availableBelow / 2;
+      const y = Math.max(minY, Math.min(maxY, desiredY));
+      hud.style.top = `${Math.round(y)}px`;
     };
 
     // Position once now, and again after the image settles (important on tall images).
