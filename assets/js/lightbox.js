@@ -27,32 +27,34 @@
         border: 1px solid rgba(255,255,255,0.14);
         box-shadow: 0 24px 70px rgba(0,0,0,0.55);
         overflow: hidden;
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) auto;
       }
       .whist-lightbox__media {
         position: relative;
-        flex: 1 1 auto;
-        min-height: 0; /* allow img to shrink within max-height panel */
+        min-height: 0; /* critical: allows the image row to shrink so the caption row is always visible */
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .whist-lightbox__img {
         display: block;
         width: 100%;
-        height: auto;
-        max-height: 100%;
+        height: 100%;
         object-fit: contain;
         background: #0b1220;
       }
       .whist-lightbox__captionbar {
-        flex: 0 0 auto;
         padding: 0.75rem 0.9rem;
         display: flex;
         gap: 0.75rem;
         align-items: center;
         justify-content: space-between;
-        background: rgba(255,255,255,0.92);
-        border-top: 1px solid rgba(15, 23, 42, 0.12);
-        color: #0f172a;
+        /* Low-opacity overlay strip, beneath the photo (outside the photo area) */
+        background: rgba(0, 0, 0, 0.55);
+        border-top: 1px solid rgba(255,255,255,0.12);
+        color: rgba(255,255,255,0.92);
       }
       .whist-lightbox__caption {
         font-size: 0.85rem;
@@ -64,7 +66,7 @@
       .whist-lightbox__caption code {
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         font-size: 0.82rem;
-        color: rgba(15, 23, 42, 0.90);
+        color: rgba(255,255,255,0.88);
         word-break: break-all;
       }
       .whist-lightbox__goto {
@@ -72,13 +74,13 @@
         white-space: nowrap;
       }
       .whist-lightbox__goto.btn {
-        background: rgba(15, 23, 42, 0.06);
-        border-color: rgba(15, 23, 42, 0.18);
-        color: #0f172a;
+        background: rgba(255,255,255,0.12);
+        border-color: rgba(255,255,255,0.22);
+        color: rgba(255,255,255,0.94);
       }
       .whist-lightbox__goto.btn:hover {
-        background: rgba(15, 23, 42, 0.10);
-        border-color: rgba(15, 23, 42, 0.26);
+        background: rgba(255,255,255,0.16);
+        border-color: rgba(255,255,255,0.32);
       }
       .whist-lightbox__close {
         position: absolute;
