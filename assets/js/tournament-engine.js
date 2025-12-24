@@ -4246,8 +4246,23 @@ class TournamentEngine {
     }
 
     getPlayerMajorityWinStreaks(minTricks = 7) {
-        const perPlayer = new Map();
         const tournaments = this.getAllTournamentsUnique('asc');
+        const perPlayer = this.getPlayerMajorityWinStreakStatsForTournaments(tournaments, minTricks, { includeZeroes: false });
+
+        return (perPlayer || [])
+            .map(entry => ({
+                playerId: entry.playerId,
+                playerName: entry.playerName,
+                streak: entry.longest,
+                from: entry.longestFrom,
+                to: entry.longestTo
+            }))
+            .filter(x => x.streak > 0)
+            .sort((a, b) => (b.streak - a.streak) || a.playerName.localeCompare(b.playerName));
+    }
+
+    _computePlayerMajorityWinStreakStateForTournaments(tournaments, minTricks = 7) {
+        const perPlayer = new Map();
 
         const ensure = (playerId) => {
             if (!perPlayer.has(playerId)) {
@@ -4260,7 +4275,10 @@ class TournamentEngine {
             return perPlayer.get(playerId);
         };
 
-        for (const tournament of tournaments) {
+        const list = Array.isArray(tournaments) ? tournaments.slice() : [];
+        list.sort((a, b) => (Number(a?.year) || 0) - (Number(b?.year) || 0));
+
+        for (const tournament of list) {
             if (!tournament || !Number.isFinite(tournament.year) || !Array.isArray(tournament.rounds)) {
                 continue;
             }
@@ -4306,16 +4324,33 @@ class TournamentEngine {
             }
         }
 
-        return Array.from(perPlayer.values())
+        return perPlayer;
+    }
+
+    getPlayerMajorityWinStreakStats(minTricks = 7, options = {}) {
+        const tournaments = this.getAllTournamentsUnique('asc');
+        return this.getPlayerMajorityWinStreakStatsForTournaments(tournaments, minTricks, options);
+    }
+
+    getPlayerMajorityWinStreakStatsForTournaments(tournaments, minTricks = 7, options = {}) {
+        const includeZeroes = Boolean(options && options.includeZeroes);
+        const perPlayer = this._computePlayerMajorityWinStreakStateForTournaments(tournaments, minTricks);
+
+        const out = Array.from(perPlayer.values())
             .map(entry => ({
                 playerId: entry.playerId,
                 playerName: this.getDisplayName(entry.playerId),
-                streak: entry.best.streak,
-                from: entry.best.from,
-                to: entry.best.to
+                longest: entry.best.streak,
+                longestFrom: entry.best.from,
+                longestTo: entry.best.to,
+                current: entry.current.streak,
+                currentFrom: entry.current.from,
+                currentTo: entry.current.to
             }))
-            .filter(x => x.streak > 0)
-            .sort((a, b) => (b.streak - a.streak) || a.playerName.localeCompare(b.playerName));
+            .filter(x => includeZeroes ? true : ((x.longest || 0) > 0 || (x.current || 0) > 0))
+            .sort((a, b) => (b.longest - a.longest) || (b.current - a.current) || a.playerName.localeCompare(b.playerName));
+
+        return out;
     }
 
     getBestTournamentAverages() {

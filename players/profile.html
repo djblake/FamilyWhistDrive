@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/assets/js/footer-nav.js?v=1" defer></script>
+    <script src="/assets/js/footer-nav.js?v=2" defer></script>
     <script src="/assets/js/media.js?v=1" defer></script>
 </head>
 <body>
@@ -313,7 +313,7 @@
         }
     </style>
 
-            <script src="../assets/js/tournament-engine.js?v=cache1"></script>
+            <script src="../assets/js/tournament-engine.js?v=cache2"></script>
     <script src="../assets/js/charts.js?v=24"></script>
     
     <script>
@@ -666,6 +666,26 @@
                 }
             }
             const winRateText = played > 0 ? `${Math.round((wins / played) * 100)}%` : '—';
+
+            // Win streaks: consecutive round wins where tricks >= 7 (includes shared hands). Streak carries across tournaments.
+            let longestWinStreak = '—';
+            let currentWinStreak = '—';
+            try {
+                if (engine && typeof engine.getPlayerMajorityWinStreakStats === 'function') {
+                    const stats = engine.getPlayerMajorityWinStreakStats(7, { includeZeroes: true }) || [];
+                    const rec = stats.find(s => String(s?.playerId || '').toLowerCase() === playerLower) || null;
+                    if (rec) {
+                        longestWinStreak = Number.isFinite(rec.longest) ? String(rec.longest) : String(rec.longest ?? '—');
+                        currentWinStreak = Number.isFinite(rec.current) ? String(rec.current) : String(rec.current ?? '—');
+                    } else if (played > 0) {
+                        // Player played rounds but has no recorded wins at the 7+ threshold.
+                        longestWinStreak = '0';
+                        currentWinStreak = '0';
+                    }
+                }
+            } catch (error) {
+                console.warn('Error computing win streak stats:', error);
+            }
             
             performanceContainer.innerHTML = `
                 <div class="meta-item">
@@ -682,6 +702,14 @@
                         ${winRateText}
                         <span class="meta-subvalue">${played > 0 ? `(${wins}/${played})` : ''}</span>
                     </span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Longest win streak (7+)</span>
+                    <span class="meta-value">${escapeHtml(longestWinStreak)}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Current win streak (7+)</span>
+                    <span class="meta-value">${escapeHtml(currentWinStreak)}</span>
                 </div>
             `;
         }
@@ -1622,6 +1650,8 @@
             border-radius: 50%;
             cursor: zoom-in;
             outline: none;
+            /* Make the circle visible even when we only have initials (no photo) */
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.88), var(--shadow-card);
         }
         .avatar-frame:focus-visible {
             box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.35);
@@ -1637,7 +1667,7 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            box-shadow: var(--shadow-card);
+            box-shadow: none;
         }
 
         #player-avatar-img {
@@ -1648,7 +1678,7 @@
             height: 120px;
             border-radius: 50%;
             object-fit: cover;
-            box-shadow: var(--shadow-card);
+            box-shadow: none;
         }
 
         .avatar-modal {

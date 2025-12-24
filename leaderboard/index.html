@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=block" rel="stylesheet">
-    <script src="/assets/js/footer-nav.js?v=1" defer></script>
+    <script src="/assets/js/footer-nav.js?v=2" defer></script>
 </head>
 <body>
     <header class="header">
@@ -54,6 +54,7 @@
                     <button class="filter-btn" data-ranking="career_stats">Career Wins</button>
                     <button class="filter-btn" data-ranking="recent_form">Recent Form</button>
                     <button class="filter-btn" data-ranking="performance">Performance</button>
+                    <button class="filter-btn" data-ranking="win_streaks">Longest win streak</button>
                 </div>
 
                 <div class="rankings-header">
@@ -171,11 +172,28 @@
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Record insights (all categories together) -->
-                <div class="insights-subsection">
-                    <div class="insights-grid" id="hof-record-insights-grid">
+
+                    <div class="insight-card">
+                        <div class="insight-icon">🔥</div>
+                        <h3>Longest win streak</h3>
+                        <div class="insight-content">
+                            <p id="insight-win-streak-text">Loading win streak leader…</p>
+                            <div class="insight-stat insight-stat--stacked">
+                                <span class="stat-number" id="insight-win-streak-number">—</span>
+                                <div class="insight-stat-meta">
+                                    <span class="stat-label" id="insight-win-streak-label">Round wins in a row (7+ tricks)</span>
+                                    <div class="insight-stat-footnotes">
+                                        <div class="hof-record-footnotes" id="insight-win-streak-footnotes"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Record insights (all categories together) -->
+                    <!-- NOTE: This is intentionally inside the main insights grid so there is no visual break.
+                         We use CSS (display: contents) to make injected children behave like direct grid items. -->
+                    <div id="hof-record-insights-grid">
                         <div class="insight-card">
                             <div class="insight-icon">⏳</div>
                             <h3>Loading</h3>
@@ -311,7 +329,7 @@
         </div>
     </footer>
 
-            <script src="../assets/js/tournament-engine.js?v=cache1"></script>
+            <script src="../assets/js/tournament-engine.js?v=cache2"></script>
     
     <script>
         // Leaderboard specific JavaScript
@@ -324,15 +342,17 @@
         let performanceScoresAllTime = new Map();
         let currentRecentFormScores = new Map();
         let currentPerformanceScores = new Map();
+        let winStreakStatsAllTime = new Map(); // Map<playerId, { longest, current }>
+        let currentWinStreakStats = new Map(); // Map<playerId, { longest, current }>
         let excludeLowSampleSize = true;
         const MIN_TOURNAMENT_SAMPLE_SIZE = 2;
         const YEAR_SCRUBBER_RECENT_COUNT = 5;
         let availableYears = [];
         let latestYear = null;
         let selectedYear = null;
-        let yearSnapshots = new Map(); // Map<year, { players, seedRankings, recentFormScores, performanceScores }>
+        let yearSnapshots = new Map(); // Map<year, { players, seedRankings, recentFormScores, performanceScores, winStreakStats }>
 
-        const rankingTypes = ['overall', 'championships', 'booby', 'career_stats', 'recent_form', 'performance'];
+        const rankingTypes = ['overall', 'championships', 'booby', 'career_stats', 'recent_form', 'performance', 'win_streaks'];
         const validRankingTypes = new Set(rankingTypes);
         const urlParams = new URLSearchParams(window.location.search);
         const initialRankingParam = urlParams.get('tab') || urlParams.get('ranking');
@@ -364,6 +384,15 @@
                 performanceScoresAllTime = typeof tournamentEngine.calculatePerformanceScores === 'function'
                     ? tournamentEngine.calculatePerformanceScores()
                     : new Map();
+
+                // Win streak stats (7+ tricks = a round win). Streaks carry across tournaments.
+                winStreakStatsAllTime = computeWinStreakMapForTournaments(
+                    typeof tournamentEngine.getAllTournamentsUnique === 'function'
+                        ? tournamentEngine.getAllTournamentsUnique('asc')
+                        : [],
+                    7
+                );
+                currentWinStreakStats = winStreakStatsAllTime;
 
                 // Build all year snapshots up-front (fast scrubbing)
                 buildYearSnapshots();
@@ -557,6 +586,52 @@
                         secondMetricText: (secondCount !== null) ? fmtCount(secondCount) : '',
                         thirdMetricText: (thirdCount !== null) ? fmtCount(thirdCount) : ''
                     }));
+                }
+
+                // Longest win streak (7+ tricks) + current streak for the leader.
+                try {
+                    const streakEntries = typeof tournamentEngine.getPlayerMajorityWinStreakStats === 'function'
+                        ? (tournamentEngine.getPlayerMajorityWinStreakStats(7, { includeZeroes: false }) || [])
+                        : [];
+                    const eligible = streakEntries.filter(x => x && (x.longest || 0) > 0);
+                    if (eligible.length > 0) {
+                        eligible.sort((a, b) => (b.longest - a.longest) || (b.current - a.current) || a.playerName.localeCompare(b.playerName));
+                        const leader = eligible[0];
+                        const leaderName = leader.playerId ? tournamentEngine.getDisplayName(leader.playerId) : (leader.playerName || '—');
+                        const p = document.getElementById('insight-win-streak-text');
+                        if (p) {
+                            p.innerHTML = `<strong>${leaderName}</strong> holds the longest win streak.`;
+                        }
+                        setText('insight-win-streak-number', leader.longest || 0);
+                        setText('insight-win-streak-label', 'Round wins in a row (7+ tricks)');
+
+                        // 2nd/3rd by longest streak (ties supported; if 2nd is tied we hide 3rd).
+                        const byLongest = new Map(); // longest -> [playerId]
+                        for (const row of eligible) {
+                            const v = Number(row.longest) || 0;
+                            if (!byLongest.has(v)) byLongest.set(v, []);
+                            byLongest.get(v).push(row.playerId);
+                        }
+                        const valuesSorted = Array.from(byLongest.keys()).sort((a, b) => b - a);
+                        const secondVal = valuesSorted.length > 1 ? valuesSorted[1] : null;
+                        const thirdVal = valuesSorted.length > 2 ? valuesSorted[2] : null;
+                        const secondNames = (secondVal !== null) ? (byLongest.get(secondVal) || []) : [];
+                        const thirdNames = (thirdVal !== null) ? (byLongest.get(thirdVal) || []) : [];
+                        const fmt = (n) => (n === 1) ? '1 win' : `${n} wins`;
+
+                        const footnotes = renderPlacementFootnotesHtml(secondNames, thirdNames, {
+                            secondMetricText: (secondVal !== null) ? fmt(secondVal) : '',
+                            thirdMetricText: (thirdVal !== null) ? fmt(thirdVal) : ''
+                        });
+                        setFootnotesHtml('insight-win-streak-footnotes', footnotes);
+                    } else {
+                        setText('insight-win-streak-text', 'No win streak data available yet.');
+                        setFootnotesHtml('insight-win-streak-footnotes', '');
+                    }
+                } catch (error) {
+                    console.warn('Error rendering longest win streak insight:', error);
+                    setText('insight-win-streak-text', 'Unable to compute win streak leader.');
+                    setFootnotesHtml('insight-win-streak-footnotes', '');
                 }
 
                 // --- Championship history stats
@@ -1582,10 +1657,33 @@
             if (!snap) {
                 currentRecentFormScores = recentFormScoresAllTime;
                 currentPerformanceScores = performanceScoresAllTime;
+                currentWinStreakStats = winStreakStatsAllTime;
                 return;
             }
             currentRecentFormScores = snap.recentFormScores || new Map();
             currentPerformanceScores = snap.performanceScores || new Map();
+            currentWinStreakStats = snap.winStreakStats || winStreakStatsAllTime;
+        }
+
+        function computeWinStreakMapForTournaments(tournaments, minTricks = 7) {
+            try {
+                if (!tournamentEngine || typeof tournamentEngine.getPlayerMajorityWinStreakStatsForTournaments !== 'function') {
+                    return new Map();
+                }
+                const arr = tournamentEngine.getPlayerMajorityWinStreakStatsForTournaments(tournaments, minTricks, { includeZeroes: true }) || [];
+                const map = new Map();
+                for (const row of arr) {
+                    if (!row || !row.playerId) continue;
+                    map.set(row.playerId, {
+                        longest: Number(row.longest) || 0,
+                        current: Number(row.current) || 0
+                    });
+                }
+                return map;
+            } catch (error) {
+                console.warn('Error computing win streak stats:', error);
+                return new Map();
+            }
         }
 
         function buildYearSnapshots() {
@@ -1772,6 +1870,7 @@
                 const tournaments = tournamentsUpToYear.get(year) || [];
                 const recentFormScores = computeRecentFormScoresForTournaments(tournaments, YEAR_SCRUBBER_RECENT_COUNT);
                 const performanceScores = computePerformanceScoresForTournaments(tournaments);
+                const winStreakStats = computeWinStreakMapForTournaments(tournaments, 7);
 
                 let seedRankings = [];
                 if (typeof tournamentEngine.computeOfficialSeedRankingsForTournaments === 'function') {
@@ -1784,7 +1883,7 @@
                     });
                 }
 
-                yearSnapshots.set(year, { players, seedRankings, recentFormScores, performanceScores });
+                yearSnapshots.set(year, { players, seedRankings, recentFormScores, performanceScores, winStreakStats });
             });
         }
 
@@ -2082,6 +2181,21 @@
                     });
             }
 
+            if (rankingType === 'win_streaks') {
+                return players
+                    .map(player => {
+                        const rec = currentWinStreakStats.get(player.name) || { longest: 0, current: 0 };
+                        return { ...player, _winStreakLongest: rec.longest || 0, _winStreakCurrent: rec.current || 0 };
+                    })
+                    .sort((a, b) => {
+                        const dl = (b._winStreakLongest || 0) - (a._winStreakLongest || 0);
+                        if (dl !== 0) return dl;
+                        const dc = (b._winStreakCurrent || 0) - (a._winStreakCurrent || 0);
+                        if (dc !== 0) return dc;
+                        return tournamentEngine.getDisplayName(a.name).localeCompare(tournamentEngine.getDisplayName(b.name));
+                    });
+            }
+
             const playersWithScores = players.map(player => ({
                 ...player,
                 rankingScore: calculateRankingScore(player, rankingType)
@@ -2126,6 +2240,11 @@
                     return 100 - percentile;
                 case 'booby':
                     return player.booby_prizes || 0;
+
+                case 'win_streaks': {
+                    const rec = currentWinStreakStats.get(player.name);
+                    return rec ? (rec.longest || 0) : 0;
+                }
                 
                 default:
                     return 0;
@@ -2160,6 +2279,10 @@
                 booby: {
                     title: 'Booby Leaderboard',
                     desc: 'Number of booby prizes (last-place finishes) earned, plus the share of tournaments where a player finished last'
+                },
+                win_streaks: {
+                    title: 'Longest Win Streaks',
+                    desc: 'Ranked by longest streak of round wins (7+ tricks). Current streak counts consecutive wins since their most recent loss.'
                 }
             };
             
@@ -2269,6 +2392,25 @@
                             <div class="trend-col">${trend}</div>
                         </div>
                     `;
+                } else if (currentRankingType === 'win_streaks') {
+                    const rec = currentWinStreakStats.get(player.name) || { longest: 0, current: 0 };
+                    const longest = Number.isFinite(rec.longest) ? rec.longest : 0;
+                    const current = Number.isFinite(rec.current) ? rec.current : 0;
+                    return `
+                        <div class="ranking-row ${index < 3 ? 'podium-row' : ''}" data-player-id="${player.name}">
+                            <div class="rank-col">
+                                <span class="rank-number">${index + 1}</span>
+                                <span class="rank-medal">${medalIcon}</span>
+                            </div>
+                            <div class="player-col">
+                                <a href="../players/profile.html?player=${encodeURIComponent(player.name)}" class="player-link">
+                                    <span class="player-name">${tournamentEngine.getDisplayName(player.name)}</span>
+                                </a>
+                            </div>
+                            <div class="streak-longest-col">${longest}</div>
+                            <div class="streak-current-col">${current}</div>
+                        </div>
+                    `;
                 } else if (currentRankingType === 'overall') {
                     return `
                         <div class="ranking-row ${index < 3 ? 'podium-row' : ''}" data-player-id="${player.name}">
@@ -2320,7 +2462,7 @@
             const tableHeader = document.querySelector('.rankings-table-header');
             const rankingsTable = document.querySelector('.full-rankings');
 
-            rankingsTable.classList.remove('career-stats', 'performance-stats', 'seed-stats', 'championships-layout', 'booby-stats');
+            rankingsTable.classList.remove('career-stats', 'performance-stats', 'seed-stats', 'championships-layout', 'booby-stats', 'win-streaks');
             
             if (rankingType === 'career_stats') {
                 // Add career-stats class for special layout
@@ -2366,6 +2508,14 @@
                     <div class="podium-col">Top 3</div>
                     <div class="tournaments-col">Tournaments</div>
                     <div class="trend-col">Trend</div>
+                `;
+            } else if (rankingType === 'win_streaks') {
+                rankingsTable.classList.add('win-streaks');
+                tableHeader.innerHTML = `
+                    <div class="rank-col">Rank</div>
+                    <div class="player-col">Player</div>
+                    <div class="streak-longest-col">Longest</div>
+                    <div class="streak-current-col">Current</div>
                 `;
             } else {
                 // Standard layout for other ranking types
@@ -2987,6 +3137,24 @@
             grid-template-columns: 80px 1.5fr 140px 140px 120px 80px;
         }
 
+        /* Win streak tab grid layout */
+        .win-streaks .rankings-table-header {
+            grid-template-columns: 80px 1.6fr 160px 160px;
+        }
+
+        .win-streaks .ranking-row {
+            grid-template-columns: 80px 1.6fr 160px 160px;
+        }
+
+        .ranking-row .streak-longest-col,
+        .ranking-row .streak-current-col {
+            font-variant-numeric: tabular-nums;
+            justify-self: center;
+            text-align: center;
+            color: var(--primary-dark);
+            font-weight: 850;
+        }
+
         .booby-count-col,
         .booby-percent-col {
             text-align: center;
@@ -3098,8 +3266,12 @@
             line-height: 1.25;
         }
 
-        .insights-subsection {
-            margin-top: var(--spacing-2xl);
+        /* Record insights are injected into #hof-record-insights-grid, which is nested inside the main
+           .insights-grid. Make the wrapper disappear so the injected children become grid items too. */
+        @supports (display: contents) {
+            #hof-record-insights-grid {
+                display: contents;
+            }
         }
 
         .insights-subtitle {
@@ -3617,6 +3789,11 @@
             .rankings-table-header,
             .ranking-row {
                 grid-template-columns: 60px 1fr 80px 60px;
+            }
+
+            .win-streaks .rankings-table-header,
+            .win-streaks .ranking-row {
+                grid-template-columns: 60px 1fr 72px 72px;
             }
             
             .tournaments-col,

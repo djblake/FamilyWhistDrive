@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <script src="/assets/js/footer-nav.js?v=1" defer></script>
+    <script src="/assets/js/footer-nav.js?v=2" defer></script>
     <script src="/assets/js/media.js?v=1" defer></script>
     <style>
         .hero-heading {
@@ -689,9 +689,58 @@
                         : raw;
                 }
 
+                function sharedHandFirstInitialFromName(playerName) {
+                    const raw = String(playerName || '').trim();
+                    if (!raw) return '';
+                    const parts = raw.split(/[\/+&]/g).map(x => String(x || '').trim()).filter(Boolean);
+                    if (!parts.length) return '';
+
+                    const ids = parts.map(p => {
+                        return (tournamentEngine && typeof tournamentEngine.getCanonicalPlayerId === 'function')
+                            ? tournamentEngine.getCanonicalPlayerId(p)
+                            : p;
+                    }).filter(Boolean);
+                    if (!ids.length) return '';
+                    ids.sort((a, b) => String(a).localeCompare(String(b)));
+
+                    const firstId = ids[0];
+                    const display = (tournamentEngine && typeof tournamentEngine.getDisplayName === 'function')
+                        ? tournamentEngine.getDisplayName(firstId)
+                        : String(firstId);
+                    const ch = String(display || '').trim().charAt(0);
+                    return ch ? ch.toUpperCase() : '';
+                }
+
+                function sharedHandFirstInitialFromPlayers(partnershipPlayers, fallbackName) {
+                    const ids = Array.isArray(partnershipPlayers) ? partnershipPlayers.map(x => String(x || '').trim()).filter(Boolean) : [];
+                    if (ids.length) {
+                        ids.sort((a, b) => a.localeCompare(b));
+                        const firstId = ids[0];
+                        const display = (tournamentEngine && typeof tournamentEngine.getDisplayName === 'function')
+                            ? tournamentEngine.getDisplayName(firstId)
+                            : String(firstId);
+                        const ch = String(display || '').trim().charAt(0);
+                        return ch ? ch.toUpperCase() : '';
+                    }
+                    return sharedHandFirstInitialFromName(fallbackName);
+                }
+
+                function sharedHandAvatarHtml(partnershipPlayers, fallbackName, sizeClass) {
+                    const initial = sharedHandFirstInitialFromPlayers(partnershipPlayers, fallbackName) || '?';
+                    return `
+                        <div class="avatar-placeholder ${sizeClass}">
+                            <span class="avatar-initial">${encodeHtml(initial)}</span>
+                        </div>
+                    `;
+                }
+
                 function avatarHtml(playerName, displayName, sizeClass) {
                     const key = canonicalAvatarKey(playerName);
-                    const initials = getInitials(String(displayName || ''));
+                    const raw = String(playerName || '').trim();
+                    const isSharedHand = raw.includes('/') || raw.includes('+') || raw.includes('&');
+                    const initials = isSharedHand
+                        ? (sharedHandFirstInitialFromName(raw) || '?')
+                        : getInitials(String(displayName || ''));
                     if (!key) {
                         return `
                             <div class="avatar-placeholder ${sizeClass}">
@@ -855,7 +904,12 @@
                             </td>
                             <td class="player-cell">
                                 ${player.player.includes('/') || player.player.includes('+') || player.player.includes('&')
-                                    ? `<strong>${getDisplayPlayerName(tournament, player.player, tournamentEngine)}</strong>`
+                                    ? `
+                                        <span class="player-cell__wrap">
+                                            ${sharedHandAvatarHtml(player.partnership_players, player.player, 'table')}
+                                            <strong>${getDisplayPlayerName(tournament, player.player, tournamentEngine)}</strong>
+                                        </span>
+                                    `
                                     : `
                                         <span class="player-cell__wrap">
                                             ${avatarHtml(player.player, getDisplayPlayerName(tournament, player.player, tournamentEngine), 'table')}

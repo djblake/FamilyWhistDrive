@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <script src="/assets/js/footer-nav.js?v=1" defer></script>
+    <script src="/assets/js/footer-nav.js?v=2" defer></script>
     <script src="/assets/js/media.js?v=1" defer></script>
     <style>
         .admin-wrap { padding: var(--spacing-3xl) 0; }
@@ -58,6 +58,7 @@
             border-radius: 999px;
             border: 1px solid rgba(15, 23, 42, 0.12);
             background: rgba(15, 23, 42, 0.04);
+            color: #0f172a; /* ensure readable text on light pill backgrounds */
             font-weight: 800;
             font-size: 0.8rem;
         }
@@ -405,7 +406,7 @@
             elValid.textContent = String(valid);
             elInvalid.textContent = String(invalid);
 
-            elList.innerHTML = state.files.slice(0, 200).map(item => {
+            elList.innerHTML = state.files.map(item => {
                 const badge = item.ok ? `<span class="pill ok">OK</span>` : `<span class="pill bad">Bad name</span>`;
                 const meta = item.ok ? `${item.year} • ${item.playerKey}` : `Expected YYYY_Key.jpeg`;
                 return `
@@ -417,7 +418,7 @@
                         ${badge}
                     </div>
                 `;
-            }).join('') + (total > 200 ? `<div class="small">Showing first 200 files…</div>` : '');
+            }).join('') + `<div class="small">Showing ${total} file${total === 1 ? '' : 's'}.</div>`;
         }
 
         function rebuildFromInputs() {
