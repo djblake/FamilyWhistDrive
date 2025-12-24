@@ -11,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="/assets/js/footer-nav.js?v=2" defer></script>
     <script src="/assets/js/media.js?v=1" defer></script>
+    <script src="/assets/js/lightbox.js?v=1" defer></script>
     <style>
         .gallery-hero {
             padding: var(--spacing-3xl) 0;
@@ -58,6 +59,9 @@
         .tournament-photos {
             padding: var(--spacing-3xl) 0;
             background: #ffffff;
+        }
+        .tournament-photos .section-title {
+            color: var(--text-primary-dark);
         }
         .photos-group {
             margin-top: var(--spacing-xl);
@@ -223,7 +227,12 @@
                 for (const key of coverPicks) {
                     const url = await window.WhistMedia.publicUrlForKey(key);
                     if (!url) continue;
-                    items.push(`<a href="${url.replaceAll('"', '&quot;')}" target="_blank" rel="noopener"><img alt="Tournament cover" src="${url.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
+                    // If we have a thumbKey for this cover pick, prefer it for the <img>, but keep href as full.
+                    const match = photos.find(p => String(p?.key || '') === String(key || ''));
+                    const thumbKey = match && match.thumbKey ? String(match.thumbKey) : '';
+                    const thumbUrl = thumbKey ? await window.WhistMedia.publicUrlForKey(thumbKey) : '';
+                    const imgUrl = thumbUrl || url;
+                    items.push(`<a href="${url.replaceAll('"', '&quot;')}" rel="noopener"><img alt="Tournament cover" src="${imgUrl.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
                 }
                 if (items.length) {
                     coverStrip.innerHTML = items.join('');
@@ -256,7 +265,10 @@
                     if (!key) continue;
                     const url = await window.WhistMedia.publicUrlForKey(key);
                     if (!url) continue;
-                    thumbs.push(`<a class="photo-thumb" href="${url.replaceAll('"', '&quot;')}" target="_blank" rel="noopener"><img alt="Tournament photo" src="${url.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
+                    const thumbKey = String(p?.thumbKey || '').trim();
+                    const thumbUrl = thumbKey ? await window.WhistMedia.publicUrlForKey(thumbKey) : '';
+                    const imgUrl = thumbUrl || url;
+                    thumbs.push(`<a class="photo-thumb" href="${url.replaceAll('"', '&quot;')}" rel="noopener"><img alt="Tournament photo" src="${imgUrl.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
                 }
                 if (!thumbs.length) continue;
 
@@ -274,6 +286,12 @@
             }
 
             groupsEl.innerHTML = groupsHtml.join('');
+
+            // Lightbox: bind cover strip + photo thumbs
+            if (window.WhistLightbox && typeof window.WhistLightbox.bindAnchors === 'function') {
+                window.WhistLightbox.bindAnchors(coverStrip ? coverStrip.querySelectorAll('a') : []);
+                window.WhistLightbox.bindAnchors(groupsEl.querySelectorAll('a.photo-thumb'));
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {

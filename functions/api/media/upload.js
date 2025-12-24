@@ -158,28 +158,56 @@ export async function onRequestPost(context) {
     if (!/^\d{4}$/.test(year)) return badRequest('Invalid year');
     if (!uploaderName) return badRequest('Missing uploaderName');
 
+    const variant = String(form.get('variant') || '').trim().toLowerCase(); // '', 'full', 'thumb'
+    const photoId = String(form.get('photoId') || '').trim(); // used to link full + thumb uploads
+    if (photoId && !/^[a-zA-Z0-9_-]{6,80}$/.test(photoId)) return badRequest('Invalid photoId');
+
     const uploaderSlug = safeSlug(uploaderName) || 'uploader';
     const fname = safeFilename(file.name);
-    key = `tournament-photos/${year}/${uploaderSlug}/${ts}_${fname}`;
+    const photoPrefix = photoId || ts;
+    const isThumb = variant === 'thumb' || variant === 'thumbnail' || variant === 'sm';
+    key = `tournament-photos/${year}/${uploaderSlug}/${photoPrefix}_${fname}`;
+    if (isThumb) {
+      key = `tournament-photos/${year}/${uploaderSlug}/${photoPrefix}_${fname.replace(/(\.[a-z0-9]{2,5})$/i, '_thumb$1')}`;
+    }
 
     // update meta file
     const meta = await readTournamentMeta(bucket, year);
-    const exists = meta.photos.some(p => p && p.key === key);
-    if (!exists) {
-      meta.photos.push({
-        key,
-        uploaderName,
-        uploaderSlug,
-        uploadedAt: nowIso,
-        originalName: String(file.name || '').slice(0, 200),
-        coverRank: 0
+    meta.photos = Array.isArray(meta.photos) ? meta.photos : [];
+
+    if (isThumb) {
+      // Thumb upload: link to existing photo entry by photoId (if present)
+      if (photoId) {
+        const entry = meta.photos.find(p => p && p.photoId === photoId);
+        if (entry) {
+          entry.thumbKey = key;
+          meta.updatedAt = nowIso;
+          await bucket.put(buildTournamentMetaKey(year), JSON.stringify(meta, null, 2), {
+            httpMetadata: { contentType: 'application/json' }
+          });
+        }
+      }
+    } else {
+      // Full upload: create entry (if not already present for this photoId/key)
+      const exists = meta.photos.some(p => (photoId && p && p.photoId === photoId) || (p && p.key === key));
+      if (!exists) {
+        meta.photos.push({
+          key,
+          thumbKey: '',
+          photoId: photoId || '',
+          uploaderName,
+          uploaderSlug,
+          uploadedAt: nowIso,
+          originalName: String(file.name || '').slice(0, 200),
+          coverRank: 0
+        });
+      }
+      meta.updatedAt = nowIso;
+
+      await bucket.put(buildTournamentMetaKey(year), JSON.stringify(meta, null, 2), {
+        httpMetadata: { contentType: 'application/json' }
       });
     }
-    meta.updatedAt = nowIso;
-
-    await bucket.put(buildTournamentMetaKey(year), JSON.stringify(meta, null, 2), {
-      httpMetadata: { contentType: 'application/json' }
-    });
   } else if (kind === 'avatar') {
     const playerId = String(form.get('playerId') || '').trim();
     const variant = String(form.get('variant') || '').trim().toLowerCase();

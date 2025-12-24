@@ -11,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="/assets/js/footer-nav.js?v=2" defer></script>
     <script src="/assets/js/media.js?v=1" defer></script>
+    <script src="/assets/js/lightbox.js?v=1" defer></script>
     <style>
         .hero-heading {
             text-align: center;
@@ -1007,7 +1008,11 @@
                 for (const key of coverPicks) {
                     const url = await window.WhistMedia.publicUrlForKey(key);
                     if (!url) continue;
-                    items.push(`<a href="${url.replaceAll('"', '&quot;')}" target="_blank" rel="noopener"><img alt="Tournament cover" src="${url.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
+                    const match = photos.find(p => String(p?.key || '') === String(key || ''));
+                    const thumbKey = match && match.thumbKey ? String(match.thumbKey) : '';
+                    const thumbUrl = thumbKey ? await window.WhistMedia.publicUrlForKey(thumbKey) : '';
+                    const imgUrl = thumbUrl || url;
+                    items.push(`<a href="${url.replaceAll('"', '&quot;')}" rel="noopener"><img alt="Tournament cover" src="${imgUrl.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
                 }
                 if (items.length) {
                     strip.innerHTML = items.join('');
@@ -1048,7 +1053,10 @@
                     if (!key) continue;
                     const url = await window.WhistMedia.publicUrlForKey(key);
                     if (!url) continue;
-                    thumbs.push(`<a class="photo-thumb" href="${url.replaceAll('"', '&quot;')}" target="_blank" rel="noopener"><img alt="Tournament photo" src="${url.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
+                    const thumbKey = String(p?.thumbKey || '').trim();
+                    const thumbUrl = thumbKey ? await window.WhistMedia.publicUrlForKey(thumbKey) : '';
+                    const imgUrl = thumbUrl || url;
+                    thumbs.push(`<a class="photo-thumb" href="${url.replaceAll('"', '&quot;')}" rel="noopener"><img alt="Tournament photo" src="${imgUrl.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
                 }
                 if (!thumbs.length) continue;
 
@@ -1068,6 +1076,12 @@
             if (groupsHtml.length) {
                 groupsWrap.innerHTML = groupsHtml.join('');
                 photosSection.style.display = 'block';
+            }
+
+            // Lightbox: bind cover strip + photo thumbs
+            if (window.WhistLightbox && typeof window.WhistLightbox.bindAnchors === 'function') {
+                window.WhistLightbox.bindAnchors(strip.querySelectorAll('a'));
+                window.WhistLightbox.bindAnchors(groupsWrap.querySelectorAll('a.photo-thumb'));
             }
         }
 
