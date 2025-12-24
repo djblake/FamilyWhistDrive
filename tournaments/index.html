@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <script src="/assets/js/footer-nav.js?v=2" defer></script>
+    <script src="/assets/js/footer-nav.js?v=3" defer></script>
     <script src="/assets/js/media.js?v=1" defer></script>
 </head>
 <body>
@@ -124,11 +124,9 @@
                         <a href="results.html?year=${tournament.year}" class="tournament-item" id="tournament-${tournament.year}">
                             <div class="tournament-year-column">
                                 <div class="tournament-year">${tournament.year}</div>
-                                <div class="tournament-cover" data-cover-year="${tournament.year}">
-                                    <div class="tournament-cover-placeholder">📸</div>
-                                </div>
                             </div>
                             <div class="tournament-content">
+                                <div class="tournament-cover tournament-cover--corner" data-cover-year="${tournament.year}" style="display:none;"></div>
                                 <div class="tournament-header">
                                     <h3 class="tournament-title">${tournament.name}</h3>
                                 </div>
@@ -141,6 +139,7 @@
                                     ${tournamentEngine.getDisplayName(tournament.winner)} claimed victory in this ${tournament.total_players}-player tournament, 
                                     with ${tournamentEngine.getDisplayName(tournament.runner_up)} as runner-up in a competitive field.
                                 </div>
+                                <div class="tournament-story" data-story-year="${tournament.year}" style="display:none;"></div>
                             </div>
                             <div class="tournament-stats">
                                 <div class="stat-box">
@@ -177,6 +176,9 @@
                                 const url = await window.WhistMedia.publicUrlForKey(key);
                                 if (!url) continue;
                                 el.innerHTML = `<img alt="Tournament cover" src="${url.replaceAll('"', '&quot;')}" loading="lazy">`;
+                                el.style.display = 'block';
+                                const content = el.closest && el.closest('.tournament-content');
+                                if (content && content.classList) content.classList.add('has-cover');
                             } catch (_) {
                                 // ignore
                             }
@@ -186,6 +188,45 @@
                 }
 
                 hydrateCoverThumbs();
+
+                function escapeHtml(value) {
+                    return String(value ?? '')
+                        .replaceAll('&', '&amp;')
+                        .replaceAll('<', '&lt;')
+                        .replaceAll('>', '&gt;')
+                        .replaceAll('"', '&quot;')
+                        .replaceAll("'", '&#39;');
+                }
+
+                async function hydrateStories() {
+                    const nodes = Array.from(document.querySelectorAll('[data-story-year]'));
+                    const queue = nodes.slice();
+                    const workers = Array.from({ length: 4 }).map(async () => {
+                        while (queue.length) {
+                            const el = queue.shift();
+                            const year = el ? el.getAttribute('data-story-year') : '';
+                            if (!year) continue;
+                            try {
+                                const res = await fetch(`/api/day-notes?year=${encodeURIComponent(year)}`, { cache: 'no-store' });
+                                if (!res.ok) continue;
+                                const json = await res.json().catch(() => ({}));
+                                const stories = Array.isArray(json?.stories) ? json.stories.slice() : [];
+                                if (!stories.length) continue;
+                                const picked = stories[Math.floor(Math.random() * stories.length)];
+                                const raw = String(picked?.text || '').trim();
+                                if (!raw) continue;
+                                const snippet = raw.length > 220 ? `${raw.slice(0, 220).trim()}…` : raw;
+                                el.innerHTML = `<span class="story-kicker">✨ Story:</span> <span class="story-text">${escapeHtml(snippet)}</span>`;
+                                el.style.display = 'block';
+                            } catch (_) {
+                                // ignore
+                            }
+                        }
+                    });
+                    await Promise.all(workers);
+                }
+
+                hydrateStories();
                 
                 // Handle anchor links for specific tournaments
                 if (window.location.hash) {
@@ -437,6 +478,37 @@
             overflow: hidden;
             min-height: 120px;
         }
+
+        .tournament-content {
+            position: relative;
+        }
+
+        .tournament-content.has-cover {
+            padding-right: 120px; /* only when a cover image exists */
+        }
+
+        .tournament-cover--corner {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            width: 96px;
+            height: 64px;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            background: rgba(15, 23, 42, 0.04);
+            box-shadow: 0 10px 26px rgba(15, 23, 42, 0.10);
+        }
+        .tournament-cover--corner img { width: 100%; height: 100%; object-fit: cover; display:block; }
+
+        .tournament-story {
+            margin-top: 0.65rem;
+            color: var(--text-secondary-dark);
+            font-size: 0.9rem;
+            line-height: 1.25;
+        }
+        .tournament-story .story-kicker { font-weight: 950; color: var(--text-primary-dark); }
+        .tournament-story .story-text { font-weight: 600; }
 
         .tournament-item:hover {
             transform: translateY(-3px);
