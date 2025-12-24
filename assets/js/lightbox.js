@@ -27,15 +27,22 @@
         border: 1px solid rgba(255,255,255,0.14);
         box-shadow: 0 24px 70px rgba(0,0,0,0.55);
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
       }
       .whist-lightbox__media {
         position: relative;
         overflow: hidden;
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .whist-lightbox__img {
         display: block;
-        width: 100%;
+        width: auto;
         height: auto;
+        max-width: 100%;
         max-height: 100%;
         object-fit: contain;
         background: #0b1220;
@@ -56,16 +63,16 @@
       .whist-lightbox__hud[aria-hidden="false"] { display: flex; }
       .whist-lightbox__caption {
         pointer-events: auto;
-        color: rgba(255,255,255,0.92);
-        font-size: 0.9rem;
-        font-weight: 750;
+        color: rgba(255,255,255,0.78);
+        font-size: 0.82rem;
+        font-weight: 650;
         line-height: 1.25;
         text-align: center;
         text-shadow: 0 2px 10px rgba(0,0,0,0.45);
-        padding: 0.35rem 0.6rem;
-        border-radius: 999px;
-        background: rgba(0,0,0,0.35);
-        border: 1px solid rgba(255,255,255,0.14);
+        padding: 0;
+        border-radius: 0;
+        background: transparent;
+        border: 0;
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -226,7 +233,9 @@
 
       if (availableBelow < minBelow) {
         const needed = minBelow - availableBelow;
-        panel.style.marginBottom = `${Math.ceil(needed)}px`;
+        // Note: the lightbox root uses justify-content:center, so bottom margin only yields ~half the visual gap.
+        // Double it so we actually create ~`needed` pixels of breathing room beneath the panel.
+        panel.style.marginBottom = `${Math.ceil(needed * 2)}px`;
         panelRect = panel.getBoundingClientRect();
         availableBelow = window.innerHeight - padBottom - panelRect.bottom;
       }
@@ -237,7 +246,7 @@
 
     // Position once now, and again after the image settles (important on tall images).
     requestAnimationFrame(positionHud);
-    img.onload = () => requestAnimationFrame(positionHud);
+    img.addEventListener('load', () => requestAnimationFrame(positionHud), { once: true });
   };
 
   const normalizeItems = (arr) => {
