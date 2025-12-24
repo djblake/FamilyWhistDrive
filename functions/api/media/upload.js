@@ -168,7 +168,11 @@ export async function onRequestPost(context) {
     const isThumb = variant === 'thumb' || variant === 'thumbnail' || variant === 'sm';
     key = `tournament-photos/${year}/${uploaderSlug}/${photoPrefix}_${fname}`;
     if (isThumb) {
-      key = `tournament-photos/${year}/${uploaderSlug}/${photoPrefix}_${fname.replace(/(\.[a-z0-9]{2,5})$/i, '_thumb$1')}`;
+      // Clients often name the thumbnail file "*_thumb.jpg". We always store thumbs with exactly ONE "_thumb".
+      // So first strip a trailing "_thumb" (if present), then add it back once.
+      const baseName = fname.replace(/_thumb(\.[a-z0-9]{2,5})$/i, '$1');
+      const thumbName = baseName.replace(/(\.[a-z0-9]{2,5})$/i, '_thumb$1');
+      key = `tournament-photos/${year}/${uploaderSlug}/${photoPrefix}_${thumbName}`;
     }
 
     // update meta file

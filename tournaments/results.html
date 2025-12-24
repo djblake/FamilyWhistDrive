@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="/assets/js/footer-nav.js?v=2" defer></script>
     <script src="/assets/js/media.js?v=1" defer></script>
-    <script src="/assets/js/lightbox.js?v=9" defer></script>
+    <script src="/assets/js/lightbox.js?v=10" defer></script>
     <style>
         .hero-heading {
             text-align: center;
@@ -1344,10 +1344,8 @@
 
             const buildCaption = (entry, key) => {
                 const uploader = String(entry?.uploaderName || entry?.uploaderSlug || '').trim();
-                const filename = String(entry?.originalName || '').trim() || String(key || '').split('/').pop();
                 const parts = [];
                 if (uploader) parts.push(`Uploader: ${uploader}`);
-                if (filename) parts.push(`File: ${filename}`);
                 if (key) parts.push(`Key: ${key}`);
                 return parts.join(' • ');
             };
@@ -1357,7 +1355,9 @@
                 const fullUrl = await window.WhistMedia.publicUrlForKey(k);
                 if (!fullUrl) continue;
                 const entry = byKey.get(k);
-                lightboxItems.push({ url: fullUrl, caption: buildCaption(entry, k) });
+                const thumbKey = String(entry?.thumbKey || '').trim();
+                const thumbUrl = thumbKey ? await window.WhistMedia.publicUrlForKey(thumbKey) : '';
+                lightboxItems.push({ url: fullUrl, thumbUrl: thumbUrl || '', caption: buildCaption(entry, k) });
             }
 
             const cells = [];

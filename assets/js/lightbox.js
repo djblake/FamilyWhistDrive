@@ -1,6 +1,7 @@
 (() => {
   const STYLE_ID = 'whist-lightbox-style';
   const ROOT_ID = 'whist-lightbox-root';
+  const fullCache = new Map(); // url -> { loaded: boolean, promise: Promise<void> }
 
   const ensureStyle = () => {
     if (document.getElementById(STYLE_ID)) return;
@@ -53,6 +54,26 @@
         max-height: calc(100vh - (2 * var(--whist-lightbox-pad)));
         object-fit: contain;
         background: #0b1220;
+      }
+      .whist-lightbox__loading {
+        position: absolute;
+        right: 10px;
+        bottom: 10px;
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        border: 2px solid rgba(255,255,255,0.28);
+        border-top-color: rgba(255,255,255,0.86);
+        animation: whistLightboxSpin 0.9s linear infinite;
+        background: rgba(0,0,0,0.18);
+        box-shadow: 0 8px 22px rgba(0,0,0,0.35);
+        display: none;
+        pointer-events: none;
+      }
+      .whist-lightbox__loading[data-show="1"] { display: block; }
+      @keyframes whistLightboxSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
       }
       /* HUD sits outside the photo boundaries, near bottom of the viewport */
       .whist-lightbox__hud {
@@ -170,6 +191,7 @@
         <button type="button" class="btn btn-secondary whist-lightbox__close" aria-label="Close">Close</button>
         <div class="whist-lightbox__media">
           <img class="whist-lightbox__img" alt="Tournament photo">
+          <div class="whist-lightbox__loading" aria-hidden="true"></div>
           <div class="whist-lightbox__nav" aria-hidden="true">
             <button type="button" class="whist-lightbox__btn whist-lightbox__prev" aria-label="Previous photo">‹</button>
             <button type="button" class="whist-lightbox__btn whist-lightbox__next" aria-label="Next photo">›</button>
@@ -190,9 +212,41 @@
   let goToHref = '';
   let goToLabel = 'Go to gallery';
 
+  const ensurePreload = (url) => {
+    const u = String(url || '').trim();
+    if (!u) return { loaded: false, promise: Promise.resolve() };
+    const existing = fullCache.get(u);
+    if (existing) return existing;
+    const img = new Image();
+    const entry = {
+      loaded: false,
+      promise: new Promise((resolve) => {
+        img.onload = () => {
+          entry.loaded = true;
+          resolve();
+        };
+        img.onerror = () => resolve(); // best-effort
+      })
+    };
+    fullCache.set(u, entry);
+    img.src = u;
+    return entry;
+  };
+
+  const prefetchAround = () => {
+    if (!items.length) return;
+    const nextIdx = (idx + 1) % items.length;
+    const prevIdx = (idx - 1 + items.length) % items.length;
+    const n = items[nextIdx];
+    const p = items[prevIdx];
+    if (n && n.url) ensurePreload(n.url);
+    if (p && p.url) ensurePreload(p.url);
+  };
+
   const render = () => {
     const root = ensureDom();
     const img = root.querySelector('.whist-lightbox__img');
+    const spinner = root.querySelector('.whist-lightbox__loading');
     const btnPrev = root.querySelector('.whist-lightbox__prev');
     const btnNext = root.querySelector('.whist-lightbox__next');
     const panel = root.querySelector('.whist-lightbox__panel');
@@ -206,8 +260,36 @@
     btnNext.style.display = hasMany ? 'inline-flex' : 'none';
 
     const cur = items[idx] || null;
-    const url = cur && cur.url ? cur.url : '';
-    img.src = url;
+    const fullUrl = cur && cur.url ? String(cur.url) : '';
+    const thumbUrl = cur && cur.thumbUrl ? String(cur.thumbUrl) : '';
+    const token = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    img.dataset.swapToken = token;
+
+    // 1) Move immediately by showing thumb (or previous cached full if already loaded).
+    const fullEntry = fullUrl ? ensurePreload(fullUrl) : null;
+    const fullLoaded = Boolean(fullEntry && fullEntry.loaded);
+    const startUrl = fullLoaded ? fullUrl : (thumbUrl || fullUrl);
+    if (startUrl && img.getAttribute('src') !== startUrl) {
+      img.src = startUrl;
+    }
+
+    // 2) Show spinner while waiting for the full-res image.
+    const loadingFull = Boolean(fullUrl && !fullLoaded);
+    if (spinner) spinner.dataset.show = loadingFull ? '1' : '0';
+
+    // 3) When full finishes, swap in-place (only if still on same photo).
+    if (fullEntry && !fullEntry.loaded) {
+      fullEntry.promise.then(() => {
+        if (img.dataset.swapToken !== token) return;
+        if (fullUrl && img.getAttribute('src') !== fullUrl) {
+          img.src = fullUrl;
+        }
+        if (spinner) spinner.dataset.show = '0';
+      });
+    }
+
+    // 4) Prefetch adjacent full-size images for snappier arrow presses.
+    prefetchAround();
     btnPrev.disabled = !hasMany;
     btnNext.disabled = !hasMany;
 
@@ -259,10 +341,10 @@
     for (const it of raw) {
       if (typeof it === 'string') {
         const u = String(it || '').trim();
-        if (u) out.push({ url: u, caption: '' });
+        if (u) out.push({ url: u, thumbUrl: '', caption: '' });
       } else if (it && typeof it === 'object') {
         const u = String(it.url || '').trim();
-        if (u) out.push({ url: u, caption: String(it.caption || '') });
+        if (u) out.push({ url: u, thumbUrl: String(it.thumbUrl || ''), caption: String(it.caption || '') });
       }
     }
     return out;
@@ -311,9 +393,14 @@
   const bindAnchors = (anchors, options = {}) => {
     const list = Array.from(anchors || []).filter(a => a && a.getAttribute);
     const links = list
-      .map(a => ({ a, href: a.getAttribute('href') || '', caption: buildCaptionFromDataset(a.dataset) }))
+      .map(a => {
+        const href = a.getAttribute('href') || '';
+        const img = a.querySelector ? a.querySelector('img') : null;
+        const thumb = img ? (img.currentSrc || img.getAttribute('src') || '') : '';
+        return { a, href, thumb, caption: buildCaptionFromDataset(a.dataset) };
+      })
       .filter(x => x.href && x.href !== '#');
-    const nextItems = links.map(x => ({ url: x.href, caption: x.caption || '' }));
+    const nextItems = links.map(x => ({ url: x.href, thumbUrl: x.thumb && x.thumb !== x.href ? x.thumb : '', caption: x.caption || '' }));
     if (!nextItems.length) return;
 
     links.forEach((x, i) => {
