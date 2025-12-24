@@ -147,14 +147,38 @@
                 <!-- Photo Upload Section -->
                 <div class="photo-section">
                     <h3>Scorecard Verification</h3>
-                    <div class="photo-upload-info">
-                        <p>📸 Original scorecard photos can be uploaded to:</p>
-                        <code id="photo-path">tournaments/YEAR/PLAYER/</code>
-                        <p>Photos will automatically appear here for verification against the digital scorecard above.</p>
+                    <div class="verification-status" id="scorecard-scan-status" style="margin-top:0.5rem; color:#475569; font-weight:700;">
+                        Original scorecard scan: checking…
                     </div>
-                    <div id="player-scorecard-scan" style="margin-top: 0.75rem;"></div>
-                    <div id="scorecard-photos">
-                        <!-- Photos will be loaded here if available -->
+                    <div class="verification-actions" id="scorecard-scan-actions" style="margin-top:0.75rem; display:none; gap:0.75rem; flex-wrap:wrap;">
+                        <button class="btn btn-secondary" id="btn-toggle-player-scan" type="button">Show scan</button>
+                        <a class="btn btn-secondary" id="btn-open-player-scan" href="#" target="_blank" rel="noopener" style="display:none;">Open full size</a>
+                    </div>
+
+                    <div class="verification-grid" id="scorecard-verification-grid" style="margin-top:1rem;">
+                        <div class="verification-pane">
+                            <div class="scan-frame" id="player-scan-frame">
+                                <div class="scan-empty" id="player-scan-empty">No scan uploaded.</div>
+                                <img id="player-scan-img" alt="Original scorecard scan" style="display:none;">
+                            </div>
+                        </div>
+                        <div class="verification-pane">
+                            <h4 class="verification-subtitle" style="margin:0 0 0.75rem; color:#1f2937;">Digital replica (compact)</h4>
+                            <div class="compact-table-container">
+                                <table class="compact-table" id="scorecard-compact-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Round</th>
+                                            <th>Trump</th>
+                                            <th>Table</th>
+                                            <th>Tricks</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="scorecard-compact-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -176,7 +200,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
             <script src="../assets/js/tournament-engine.js?v=cache1"></script>
             <script src="../assets/js/charts.js?v=20"></script>
-    <script src="../assets/js/photo-gallery.js"></script>
     <script>
         // Normalize hand sharing partnership display format
         function normalizeHandSharingDisplay(playerName) {
@@ -433,7 +456,6 @@
 
                 // Update page elements
                 document.getElementById('page-title').textContent = `${params.player} - ${params.year} Tournament Scorecard`;
-                document.getElementById('photo-path').textContent = `tournaments/${params.year}/${params.player.toLowerCase().replace(/\s+/g, '-')}/`;
 
                 // Load tournament data
                 engine = new TournamentEngine();
@@ -503,9 +525,6 @@
                 // Generate scorecard
                 await generatePlayerScorecard(tournament, playerStanding, params, engine);
 
-                // Try to load photos
-                await loadScorecardPhotos(params.year, params.player.toLowerCase().replace(/\s+/g, '-'));
-
                 // Hide loading, show content
                 document.getElementById('loading-section').style.display = 'none';
                 document.getElementById('scorecard-content').style.display = 'block';
@@ -539,10 +558,11 @@
             const displayName = displayIdentity.displayName || playerName;
             const playerNameEl = document.getElementById('player-name');
 
-            // Try to show a single “original scorecard scan” link if present in R2:
-            // - Single player: YYYY_Key.jpg
-            // - Shared hand: YYYY_Key1_Key2.jpg (underscore-delimited Keys)
-            renderPlayerScorecardScanLink(params.year, displayIdentity.canonicalIds);
+            // Verification UI (scan + compact digital replica)
+            // Scan key is stored in R2 as: player-scorecards/{year}/{year}_{key}.jpg
+            // - Single player: key
+            // - Shared hand: key1_key2 (underscore-delimited Keys)
+            // We render after playerRounds is computed (later).
 
             const escapeHtmlText = (value) => String(value ?? '')
                 .replaceAll('&', '&amp;')
@@ -665,19 +685,62 @@
 
             // Generate scorecard table
             generateScorecardTable(playerRounds, params.year);
+
+            // Render scorecard verification UI (inline scan + compact table).
+            renderScorecardVerification(params.year, displayIdentity.canonicalIds, playerRounds);
             
             // Create rank progression chart (use canonical identifier for highlighting)
             createRankProgressionChart(tournament, canonicalChartIdentifier, displayName, 0, engine);
         }
 
-        function renderPlayerScorecardScanLink(year, canonicalIds) {
-            const wrap = document.getElementById('player-scorecard-scan');
-            if (!wrap) return;
-            wrap.innerHTML = '';
+        function renderScorecardVerification(year, canonicalIds, playerRounds) {
+            const statusEl = document.getElementById('scorecard-scan-status');
+            const actionsEl = document.getElementById('scorecard-scan-actions');
+            const btnToggle = document.getElementById('btn-toggle-player-scan');
+            const btnOpen = document.getElementById('btn-open-player-scan');
+            const emptyEl = document.getElementById('player-scan-empty');
+            const imgEl = document.getElementById('player-scan-img');
+            const compactBody = document.getElementById('scorecard-compact-body');
+
+            if (compactBody) {
+                const rows = Array.isArray(playerRounds) ? playerRounds : [];
+                const esc = (value) => String(value ?? '')
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#39;');
+                compactBody.innerHTML = rows.map(r => {
+                    const trumpSymbol = getTrumpSymbol(r.trump);
+                    const suitClass = String(r.trump || '').toLowerCase();
+                    return `
+                        <tr>
+                            <td>${esc(r.round)}</td>
+                            <td><span class="trump-symbol ${esc(suitClass)}">${esc(trumpSymbol)}</span></td>
+                            <td>${esc(r.table)}</td>
+                            <td style="text-align:right; font-weight:700;">${esc(r.tricks)}</td>
+                            <td style="text-align:right; font-weight:800;">${esc(r.cumulativeTotal)}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            if (!statusEl || !actionsEl || !btnToggle || !emptyEl || !imgEl) {
+                return;
+            }
 
             const ids = Array.isArray(canonicalIds) ? canonicalIds.filter(Boolean) : [];
-            if (!year || ids.length === 0) return;
-            if (!(window.WhistMedia && typeof window.WhistMedia.playerScorecardUrl === 'function')) return;
+            const y = String(year || '').trim();
+            if (!/^\d{4}$/.test(y) || ids.length === 0) {
+                statusEl.textContent = 'Original scorecard scan: unavailable';
+                actionsEl.style.display = 'none';
+                return;
+            }
+            if (!(window.WhistMedia && typeof window.WhistMedia.playerScorecardUrl === 'function')) {
+                statusEl.textContent = 'Original scorecard scan: unavailable';
+                actionsEl.style.display = 'none';
+                return;
+            }
 
             const unique = Array.from(new Set(ids.map(x => String(x).trim()).filter(Boolean)));
             const candidates = [];
@@ -690,59 +753,65 @@
                 if (sorted !== asGiven) candidates.push(sorted);
             }
 
-            const note = document.createElement('div');
-            note.style.color = '#475569';
-            note.style.fontSize = '0.9rem';
-            note.style.marginBottom = '0.4rem';
-            note.textContent = 'Original scorecard scan (if uploaded):';
+            let foundUrl = '';
+            let scanVisible = false;
 
-            const link = document.createElement('a');
-            link.className = 'btn btn-secondary';
-            link.style.display = 'inline-flex';
-            link.style.alignItems = 'center';
-            link.style.gap = '0.5rem';
-            link.target = '_blank';
-            link.rel = 'noopener';
-            link.href = '#';
-            link.textContent = 'View original scan';
+            const setVisible = (visible) => {
+                scanVisible = Boolean(visible);
+                if (!foundUrl) return;
+                if (scanVisible) {
+                    emptyEl.style.display = 'none';
+                    imgEl.style.display = 'block';
+                    btnToggle.textContent = 'Hide scan';
+                    if (!imgEl.src) {
+                        imgEl.src = foundUrl;
+                    }
+                } else {
+                    imgEl.style.display = 'none';
+                    emptyEl.style.display = 'block';
+                    btnToggle.textContent = 'Show scan';
+                }
+            };
 
-            const meta = document.createElement('div');
-            meta.style.color = '#64748b';
-            meta.style.fontSize = '0.85rem';
-            meta.style.marginTop = '0.35rem';
-            meta.textContent = `Expected file: ${year}_${candidates[0]}.jpeg`;
-
-            const muted = document.createElement('div');
-            muted.style.color = '#64748b';
-            muted.style.fontSize = '0.85rem';
-            muted.style.fontStyle = 'italic';
-            muted.textContent = 'No original scan uploaded yet.';
-
-            wrap.appendChild(note);
-            wrap.appendChild(link);
-            wrap.appendChild(meta);
+            btnToggle.addEventListener('click', () => setVisible(!scanVisible));
 
             const tryCandidate = async (idx) => {
                 if (idx >= candidates.length) {
-                    // Hide the button if none load.
-                    link.style.display = 'none';
-                    meta.style.display = 'none';
-                    wrap.appendChild(muted);
+                    statusEl.textContent = 'Original scorecard scan: not available';
+                    actionsEl.style.display = 'none';
+                    emptyEl.textContent = 'No scan uploaded.';
+                    imgEl.style.display = 'none';
+                    imgEl.src = '';
+                    emptyEl.style.display = 'block';
                     return;
                 }
                 const key = candidates[idx];
-                const url = await window.WhistMedia.playerScorecardUrl(year, key);
+                const url = await window.WhistMedia.playerScorecardUrl(y, key);
                 if (!url) return tryCandidate(idx + 1);
 
-                // Use image load test (avoids CORS issues vs fetch/HEAD).
-                const img = new Image();
-                img.onload = () => {
-                    link.href = url;
-                    meta.textContent = `Stored as: player-scorecards/${year}/${year}_${key}.jpg`;
+                const probeUrl = `${url}${url.includes('?') ? '&' : '?'}probe=${Date.now()}`;
+                const probe = new Image();
+                probe.onload = () => {
+                    foundUrl = url;
+                    statusEl.textContent = 'Original scorecard scan: available';
+                    actionsEl.style.display = 'flex';
+                    if (btnOpen) {
+                        btnOpen.href = url;
+                        btnOpen.style.display = 'inline-flex';
+                    }
+                    emptyEl.textContent = 'Scan hidden (click “Show scan”).';
+                    setVisible(false);
                 };
-                img.onerror = () => tryCandidate(idx + 1);
-                img.src = `${url}${url.includes('?') ? '&' : '?'}probe=${Date.now()}`;
+                probe.onerror = () => tryCandidate(idx + 1);
+                probe.src = probeUrl;
             };
+
+            statusEl.textContent = 'Original scorecard scan: checking…';
+            actionsEl.style.display = 'none';
+            emptyEl.textContent = 'Checking for scan…';
+            emptyEl.style.display = 'block';
+            imgEl.style.display = 'none';
+            imgEl.src = '';
 
             tryCandidate(0);
         }
@@ -1137,21 +1206,6 @@
             return symbols[suit] || '🎴';
         }
 
-        async function loadScorecardPhotos(year, playerSlug) {
-            try {
-                const gallery = new PhotoGallery();
-                const photosPath = `tournaments/${year}/${playerSlug}`;
-                
-                // Try to load photos from the player's folder
-                await gallery.loadPlayerScorecardPhotos(year, playerSlug);
-                gallery.createScorecardPhotosHTML(photosPath, '#scorecard-photos');
-            } catch (error) {
-                console.log('No scorecard photos found for this player');
-                document.getElementById('scorecard-photos').innerHTML = 
-                    '<p style="color: #666; font-style: italic;">No scorecard photos uploaded yet.</p>';
-            }
-        }
-
         function showError(message) {
             document.getElementById('loading-section').style.display = 'none';
             document.getElementById('error-section').style.display = 'block';
@@ -1466,26 +1520,61 @@
             color: #1f2937 !important; /* Ensure all section titles are dark */
         }
 
-        .photo-upload-info {
-            background: #f8f9fa; /* Light gray background */
+        /* Verification split view */
+        .verification-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: var(--spacing-xl);
+            align-items: start;
+        }
+        @media (max-width: 980px) {
+            .verification-grid { grid-template-columns: 1fr; }
+        }
+        .scan-frame {
+            border-radius: 16px;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            background: rgba(15, 23, 42, 0.03);
+            overflow: hidden;
+        }
+        .scan-empty {
             padding: var(--spacing-lg);
-            border-radius: var(--border-radius);
-            margin-bottom: var(--spacing-xl);
-            color: #1f2937; /* Dark text for readability */
+            text-align: center;
+            color: #64748b;
+            font-style: italic;
         }
-
-        .photo-upload-info p {
-            color: #1f2937; /* Ensure paragraph text is dark */
-            margin-bottom: var(--spacing-sm);
+        #player-scan-img {
+            width: 100%;
+            height: auto;
+            display: block;
+            background: white;
         }
-
-        .photo-upload-info code {
-            background: #2d3748; /* Dark background */
-            color: #fbbf24; /* Gold/yellow text for good contrast */
-            padding: var(--spacing-xs) var(--spacing-sm);
-            border-radius: var(--border-radius-sm);
-            font-family: monospace;
-            font-weight: 600;
+        .compact-table-container {
+            overflow-x: auto;
+            border-radius: 14px;
+            border: 1px solid rgba(15, 23, 42, 0.10);
+        }
+        .compact-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            color: #1f2937;
+        }
+        .compact-table th {
+            text-align: left;
+            padding: 0.6rem 0.75rem;
+            background: rgba(15, 23, 42, 0.04);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.10);
+            font-weight: 900;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #334155;
+        }
+        .compact-table td {
+            padding: 0.55rem 0.75rem;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            font-weight: 650;
+            font-size: 0.95rem;
         }
 
         /* Scorecard Photo Gallery Styles */

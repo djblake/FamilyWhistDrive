@@ -329,6 +329,35 @@ The backend will:
 - store `coverPicks` (max 3)
 - update each photo’s `coverRank` (1–3)
 
+## Deleting media (advanced)
+
+There are two ways to delete uploaded media:
+
+### Option A: Cloudflare dashboard (recommended)
+
+Use Cloudflare R2 → your bucket → browse objects → delete.
+
+### Option B: Admin API (power users)
+
+An admin-only endpoint is available:
+
+- `POST /api/media/delete`
+- Requires: `Authorization: Bearer <WHIST_ADMIN_TOKEN>`
+- JSON body: `{ "key": "..." }`
+
+Example:
+
+```bash
+curl -sS -X POST "https://rustonwhistdrive.pages.dev/api/media/delete" \
+  -H "Authorization: Bearer $WHIST_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{ "key": "tournament-photos/2025/sarah/1734800000000_IMG_1234.jpg" }'
+```
+
+Notes:
+- Allowed key prefixes: `avatars/`, `scorecards/`, `player-scorecards/`, `tournament-photos/`
+- When deleting a tournament photo, the year’s `_meta.json` is automatically updated (removes the photo + prunes cover picks).
+
 ## Remaining product work (what to implement next)
 The section above (“Status checklist”) is the authoritative remaining-work list.
 

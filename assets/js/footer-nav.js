@@ -18,7 +18,6 @@
     </div>
     <div class="footer-section">
       <h4>Admin</h4>
-      <p><a href="/update-data.html">Update data</a></p>
       <p><a href="/admin/">Admin tools</a></p>
     </div>
   `.trim();
