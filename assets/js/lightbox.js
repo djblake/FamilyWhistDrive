@@ -19,7 +19,10 @@
       }
       .whist-lightbox[aria-hidden="false"] { display: flex; }
       .whist-lightbox__panel {
-        width: min(1040px, 96vw);
+        /* Shrink-wrap to the photo size, but never exceed the viewport */
+        width: auto;
+        height: auto;
+        max-width: 96vw;
         max-height: 92vh;
         position: relative;
         border-radius: 18px;
@@ -33,8 +36,11 @@
       .whist-lightbox__media {
         position: relative;
         overflow: hidden;
-        flex: 1 1 auto;
-        display: flex;
+        /* Make the media box shrink to the image, while still respecting the panel max size */
+        flex: 0 0 auto;
+        max-width: 96vw;
+        max-height: 92vh;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
       }
