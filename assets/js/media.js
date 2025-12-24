@@ -38,6 +38,21 @@
     return base ? joinUrl(base, key) : '';
   }
 
+  function avatarKey(playerId, variant = 'large') {
+    const id = String(playerId || '').trim();
+    const v = String(variant || 'large').toLowerCase();
+    if (!id) return '';
+    if (v === 'small' || v === 'sm' || v === 'thumb' || v === 'thumbnail') {
+      return `avatars/${id}_sm.jpg`;
+    }
+    return `avatars/${id}.jpg`;
+  }
+
+  async function avatarUrl(playerId, variant = 'large') {
+    const key = avatarKey(playerId, variant);
+    return key ? await publicUrlForKey(key) : '';
+  }
+
   function scorecardScanKey(year, round, table) {
     return `scorecards/${year}/r${Number(round)}/t${Number(table)}.jpg`;
   }
@@ -81,6 +96,8 @@
   window.WhistMedia = {
     getPublicBaseUrl,
     publicUrlForKey,
+    avatarKey,
+    avatarUrl,
     scorecardScanKey,
     scorecardScanUrl,
     playerScorecardKey,

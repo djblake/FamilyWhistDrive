@@ -44,6 +44,7 @@ export async function onRequestPost(context) {
   }
 
   const playerId = String(form.get('playerId') || '').trim();
+  const variant = String(form.get('variant') || '').trim().toLowerCase();
   const file = form.get('file');
   if (!playerId) return badRequest('Missing playerId');
   if (!/^[a-zA-Z0-9_-]{1,120}$/.test(playerId)) return badRequest('Invalid playerId');
@@ -52,8 +53,12 @@ export async function onRequestPost(context) {
   const ext = extFromFile(file);
   if (!ext) return badRequest('Unsupported file type (jpg/png/webp)');
 
-  // Store as .jpg for simplicity. (If a PNG/WebP is uploaded, it is still stored as bytes; clients should prefer uploading jpg.)
-  const key = `avatars/${playerId}.jpg`;
+  // Store as .jpg for simplicity.
+  // Variants:
+  // - large (default): avatars/{playerId}.jpg
+  // - small: avatars/{playerId}_sm.jpg
+  const isSmall = variant === 'small' || variant === 'sm' || variant === 'thumb' || variant === 'thumbnail';
+  const key = isSmall ? `avatars/${playerId}_sm.jpg` : `avatars/${playerId}.jpg`;
 
   await bucket.put(key, file.stream(), {
     httpMetadata: { contentType: 'image/jpeg' },

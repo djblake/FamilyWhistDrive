@@ -356,41 +356,54 @@
             if (!avatarState.ready || !avatarState.img) return alert('Choose an image first.');
 
             const stage = 260;
-            const outSize = 512;
             const scale = avatarState.baseScale * avatarState.zoom;
             const dw = avatarState.img.naturalWidth * scale;
             const dh = avatarState.img.naturalHeight * scale;
             const dx = (stage - dw) / 2 + avatarState.tx;
             const dy = (stage - dh) / 2 + avatarState.ty;
 
-            const canvas = document.createElement('canvas');
-            canvas.width = outSize;
-            canvas.height = outSize;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, outSize, outSize);
-            const factor = outSize / stage;
-            ctx.drawImage(avatarState.img, dx * factor, dy * factor, dw * factor, dh * factor);
+            const renderJpeg = async (outSize) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = outSize;
+                canvas.height = outSize;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, outSize, outSize);
+                const factor = outSize / stage;
+                ctx.drawImage(avatarState.img, dx * factor, dy * factor, dw * factor, dh * factor);
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+                return blob;
+            };
 
-            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
-            if (!blob) return alert('Failed to encode JPEG.');
+            const largeSize = 512;
+            const smallSize = 96;
+            const largeBlob = await renderJpeg(largeSize);
+            const smallBlob = await renderJpeg(smallSize);
+            if (!largeBlob || !smallBlob) return alert('Failed to encode JPEG.');
 
-            const fd = new FormData();
-            fd.set('playerId', playerId);
-            fd.set('file', new File([blob], `${playerId}.jpg`, { type: 'image/jpeg' }));
-
-            logTo(elAvatarLog, `Uploading avatar for ${playerId}...`);
-            const res = await fetch('/api/media/avatar', {
-                method: 'POST',
-                body: fd
-            });
-            const json = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                logTo(elAvatarLog, `FAIL: ${json?.error || res.status}`);
-                return;
+            async function postVariant(variant, blob) {
+                const fd = new FormData();
+                fd.set('playerId', playerId);
+                fd.set('variant', variant);
+                fd.set('file', new File([blob], `${playerId}.jpg`, { type: 'image/jpeg' }));
+                const res = await fetch('/api/media/avatar', { method: 'POST', body: fd });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    throw new Error(json?.error || `HTTP ${res.status}`);
+                }
+                return json;
             }
-            logTo(elAvatarLog, `OK: ${json.key}`);
-            elAvatarUrl.textContent = json.url || json.key;
+
+            logTo(elAvatarLog, `Uploading avatar (large + small) for ${playerId}...`);
+            try {
+                const largeRes = await postVariant('large', largeBlob);
+                logTo(elAvatarLog, `OK: ${largeRes.key}`);
+                const smallRes = await postVariant('small', smallBlob);
+                logTo(elAvatarLog, `OK: ${smallRes.key}`);
+                elAvatarUrl.textContent = largeRes.url || largeRes.key;
+            } catch (e) {
+                logTo(elAvatarLog, `FAIL: ${e?.message || e}`);
+            }
         }
 
         function resetAvatar() {

@@ -39,11 +39,13 @@
             <div class="container">
                 <div class="player-profile">
                     <div class="player-avatar">
-                        <div class="avatar-placeholder">
-                            <div class="avatar-icon" id="player-icon">🎯</div>
-                            <div class="avatar-initial" id="player-initial">--</div>
+                        <div class="avatar-frame" id="player-avatar-frame" role="button" tabindex="0" aria-label="Open avatar">
+                            <div class="avatar-placeholder">
+                                <div class="avatar-icon" id="player-icon">🎯</div>
+                                <div class="avatar-initial" id="player-initial">--</div>
+                            </div>
+                            <img id="player-avatar-img" alt="" style="display:none;">
                         </div>
-                        <img id="player-avatar-img" alt="" style="display:none;">
                         <div style="margin-top: 0.75rem; display:flex; justify-content:center;">
                             <a class="btn btn-secondary" id="upload-avatar-link" href="../upload/avatar.html" style="display:none;">Add / change avatar</a>
                         </div>
@@ -217,6 +219,14 @@
         </div>
     </footer>
 
+    <!-- Avatar lightbox -->
+    <div id="avatar-modal" class="avatar-modal" style="display:none;">
+        <div class="avatar-modal__content" role="dialog" aria-modal="true" aria-label="Avatar">
+            <button type="button" class="avatar-modal__close btn btn-secondary" id="avatar-modal-close">Close</button>
+            <img id="avatar-modal-img" alt="Avatar" />
+        </div>
+    </div>
+
     <style>
         .trump-stats-list {
             background: white;
@@ -329,14 +339,14 @@
                 const imgEl = document.getElementById('player-avatar-img');
                 const placeholder = document.querySelector('.player-avatar .avatar-placeholder');
                 if (!imgEl || !placeholder) return;
-                if (!(window.WhistMedia && typeof window.WhistMedia.publicUrlForKey === 'function')) return;
+                if (!(window.WhistMedia && typeof window.WhistMedia.avatarUrl === 'function')) return;
 
                 const key = (engine && typeof engine.getCanonicalPlayerId === 'function')
                     ? engine.getCanonicalPlayerId(playerNameOrKey)
                     : String(playerNameOrKey || '').trim();
                 if (!key) return;
 
-                const url = await window.WhistMedia.publicUrlForKey(`avatars/${key}.jpg`);
+                const url = await window.WhistMedia.avatarUrl(key, 'large');
                 if (!url) return;
 
                 const ok = await new Promise((resolve) => {
@@ -354,6 +364,43 @@
             } catch (_) {
                 // ignore
             }
+        }
+
+        function wireAvatarOverlay() {
+            const frame = document.getElementById('player-avatar-frame');
+            const imgEl = document.getElementById('player-avatar-img');
+            const modal = document.getElementById('avatar-modal');
+            const modalImg = document.getElementById('avatar-modal-img');
+            const modalClose = document.getElementById('avatar-modal-close');
+            if (!frame || !imgEl || !modal || !modalImg || !modalClose) return;
+
+            const open = () => {
+                const src = imgEl.getAttribute('src') || '';
+                if (!src) return;
+                modalImg.setAttribute('src', src);
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            };
+            const close = () => {
+                modal.style.display = 'none';
+                modalImg.removeAttribute('src');
+                document.body.style.overflow = '';
+            };
+
+            frame.addEventListener('click', open);
+            frame.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    open();
+                }
+            });
+            modalClose.addEventListener('click', close);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) close();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') close();
+            });
         }
 
         // Load player profile data
@@ -446,6 +493,7 @@
                 // Avatar: try to load from R2 (avatars/{Key}.jpg). Fallback keeps the placeholder.
                 hydrateProfileAvatar(tournamentEngine, player.name);
                 hydrateAvatarUploadLink(tournamentEngine, player.name);
+                wireAvatarOverlay();
                 
                 // Get player statistics - include tournaments where player appears individually OR in shared hands
                 const playerTournaments = tournaments.filter(t => {
@@ -1560,6 +1608,23 @@
         .player-avatar {
             position: relative;
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 180px;
+        }
+
+        .avatar-frame {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto var(--spacing-md);
+            border-radius: 50%;
+            cursor: zoom-in;
+            outline: none;
+        }
+        .avatar-frame:focus-visible {
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.35);
         }
 
         .avatar-placeholder {
@@ -1572,7 +1637,6 @@
             align-items: center;
             justify-content: center;
             position: relative;
-            margin-bottom: var(--spacing-md);
             box-shadow: var(--shadow-card);
         }
 
@@ -1585,6 +1649,42 @@
             border-radius: 50%;
             object-fit: cover;
             box-shadow: var(--shadow-card);
+        }
+
+        .avatar-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.72);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+            z-index: 9999;
+        }
+        .avatar-modal__content {
+            width: min(720px, 92vw);
+            max-height: 92vh;
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 18px;
+            padding: 1rem;
+            box-shadow: 0 24px 70px rgba(0,0,0,0.55);
+            position: relative;
+        }
+        .avatar-modal__close {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            z-index: 2;
+        }
+        #avatar-modal-img {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: calc(92vh - 4rem);
+            object-fit: contain;
+            border-radius: 14px;
+            background: white;
         }
 
         .avatar-icon {

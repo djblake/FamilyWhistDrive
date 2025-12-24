@@ -182,11 +182,13 @@ export async function onRequestPost(context) {
     });
   } else if (kind === 'avatar') {
     const playerId = String(form.get('playerId') || '').trim();
+    const variant = String(form.get('variant') || '').trim().toLowerCase();
     if (!playerId) return badRequest('Missing playerId');
     if (!/^[a-zA-Z0-9_-]{1,64}$/.test(playerId)) return badRequest('Invalid playerId');
 
     // Standardize avatars to .jpg to simplify rendering.
-    key = `avatars/${playerId}.jpg`;
+    const isSmall = variant === 'small' || variant === 'sm' || variant === 'thumb' || variant === 'thumbnail';
+    key = isSmall ? `avatars/${playerId}_sm.jpg` : `avatars/${playerId}.jpg`;
     contentType = 'image/jpeg';
   } else {
     return badRequest('Unsupported kind');

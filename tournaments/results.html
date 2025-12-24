@@ -659,6 +659,15 @@
                 function getInitials(name) {
                     return name.split(' ').map(word => word[0]).join('');
                 }
+
+                function encodeHtml(value) {
+                    return String(value ?? '')
+                        .replaceAll('&', '&amp;')
+                        .replaceAll('<', '&lt;')
+                        .replaceAll('>', '&gt;')
+                        .replaceAll('"', '&quot;')
+                        .replaceAll("'", '&#39;');
+                }
                 
                 // Helper function to create player link (handles shared hands)
                 function createPlayerLink(playerName, displayName, cssClass = 'player-name-link') {
@@ -669,6 +678,85 @@
                         return `<a href="../players/profile.html?player=${encodeURIComponent(playerName)}" class="${cssClass}">${displayName}</a>`;
                     }
                 }
+
+                function canonicalAvatarKey(playerName) {
+                    const raw = String(playerName || '').trim();
+                    if (!raw) return '';
+                    const isSharedHand = raw.includes('/') || raw.includes('+') || raw.includes('&');
+                    if (isSharedHand) return '';
+                    return (tournamentEngine && typeof tournamentEngine.getCanonicalPlayerId === 'function')
+                        ? tournamentEngine.getCanonicalPlayerId(raw)
+                        : raw;
+                }
+
+                function avatarHtml(playerName, displayName, sizeClass) {
+                    const key = canonicalAvatarKey(playerName);
+                    const initials = getInitials(String(displayName || ''));
+                    if (!key) {
+                        return `
+                            <div class="avatar-placeholder ${sizeClass}">
+                                <span class="avatar-initial">${initials}</span>
+                            </div>
+                        `;
+                    }
+                    return `
+                        <div class="avatar-placeholder ${sizeClass}" data-player-key="${encodeHtml(key)}">
+                            <img alt="" loading="lazy" style="display:none;">
+                            <span class="avatar-initial">${initials}</span>
+                        </div>
+                    `;
+                }
+
+                async function hydrateAvatars(root = document) {
+                    const waitForMedia = async (timeoutMs = 2500) => {
+                        const start = Date.now();
+                        while (!(window.WhistMedia && typeof window.WhistMedia.avatarUrl === 'function')) {
+                            if (Date.now() - start > timeoutMs) return false;
+                            await new Promise(r => setTimeout(r, 50));
+                        }
+                        return true;
+                    };
+                    const ready = await waitForMedia();
+                    if (!ready) return;
+
+                    const nodes = Array.from(root.querySelectorAll('.avatar-placeholder[data-player-key]'));
+                    const probeUrl = async (url) => {
+                        return await new Promise((resolve) => {
+                            const probe = new Image();
+                            probe.onload = () => resolve(true);
+                            probe.onerror = () => resolve(false);
+                            probe.src = `${url}${url.includes('?') ? '&' : '?'}probe=${Date.now()}`;
+                        });
+                    };
+
+                    const queue = nodes.slice();
+                    const workers = Array.from({ length: 6 }).map(async () => {
+                        while (queue.length) {
+                            const el = queue.shift();
+                            if (!el) continue;
+                            const key = (el.getAttribute('data-player-key') || '').trim();
+                            if (!key) continue;
+                            const imgEl = el.querySelector('img');
+                            const initialsEl = el.querySelector('.avatar-initial');
+                            if (!imgEl || !initialsEl) continue;
+
+                            const candidates = [
+                                await window.WhistMedia.avatarUrl(key, 'small'),
+                                await window.WhistMedia.avatarUrl(key, 'large')
+                            ].filter(Boolean);
+
+                            for (const url of candidates) {
+                                const ok = await probeUrl(url);
+                                if (!ok) continue;
+                                imgEl.setAttribute('src', url);
+                                imgEl.style.display = 'block';
+                                initialsEl.style.display = 'none';
+                                break;
+                            }
+                        }
+                    });
+                    await Promise.all(workers);
+                }
                 
         const podiumHTML = `
                     <div class="spacer-left"></div>
@@ -676,9 +764,7 @@
                         <div class="podium-place second">
                             <div class="podium-player">
                                 <div class="podium-avatar">
-                                    <div class="avatar-placeholder small">
-                                        <span class="avatar-initial">${getInitials(getDisplayPlayerName(tournament, tournament.final_standings[1].player, tournamentEngine))}</span>
-                                    </div>
+                                    ${avatarHtml(tournament.final_standings[1].player, getDisplayPlayerName(tournament, tournament.final_standings[1].player, tournamentEngine), 'small')}
                                 </div>
                                 <h3 class="podium-name">
                                     ${createPlayerLink(tournament.final_standings[1].player, getDisplayPlayerName(tournament, tournament.final_standings[1].player, tournamentEngine), 'player-name-link')}
@@ -694,9 +780,7 @@
                         <div class="podium-place first">
                             <div class="podium-player">
                                 <div class="podium-avatar">
-                                    <div class="avatar-placeholder large">
-                                        <span class="avatar-initial">${getInitials(getDisplayPlayerName(tournament, tournament.final_standings[0].player, tournamentEngine))}</span>
-                                    </div>
+                                    ${avatarHtml(tournament.final_standings[0].player, getDisplayPlayerName(tournament, tournament.final_standings[0].player, tournamentEngine), 'large')}
                                     <div class="champion-crown">👑</div>
                                 </div>
                                 <h3 class="podium-name">
@@ -714,9 +798,7 @@
                         <div class="podium-place third">
                             <div class="podium-player">
                                 <div class="podium-avatar">
-                                    <div class="avatar-placeholder small">
-                                        <span class="avatar-initial">${getInitials(getDisplayPlayerName(tournament, thirdPlace.player, tournamentEngine))}</span>
-                                    </div>
+                                    ${avatarHtml(thirdPlace.player, getDisplayPlayerName(tournament, thirdPlace.player, tournamentEngine), 'small')}
                                 </div>
                                 <h3 class="podium-name">
                                     ${createPlayerLink(thirdPlace.player, getDisplayPlayerName(tournament, thirdPlace.player, tournamentEngine), 'player-name-link')}
@@ -736,9 +818,7 @@
                         <div class="podium-place booby">
                             <div class="podium-player">
                                 <div class="podium-avatar">
-                                    <div class="avatar-placeholder tiny">
-                                        <span class="avatar-initial">${getInitials(getDisplayPlayerName(tournament, lastPlace.player, tournamentEngine))}</span>
-                                    </div>
+                                    ${avatarHtml(lastPlace.player, getDisplayPlayerName(tournament, lastPlace.player, tournamentEngine), 'tiny')}
                                 </div>
                                 <h3 class="podium-name">
                                     ${createPlayerLink(lastPlace.player, getDisplayPlayerName(tournament, lastPlace.player, tournamentEngine), 'player-name-link')}
@@ -754,6 +834,7 @@
                     ` : ''}
                 `;
                 document.getElementById('summary-grid').innerHTML = podiumHTML;
+                await hydrateAvatars(document.getElementById('summary-grid'));
                 renderTieBreakMessage(tournament, tournamentEngine);
                 
                 // Debug: Check what's actually in final standings
@@ -817,11 +898,16 @@
                                 ${isLastPlace && tournament.final_standings.length > 3 ? '<span class="medal">🎭</span>' : ''}
                             </td>
                             <td class="player-cell">
-                                ${player.player.includes('/') || player.player.includes('+') || player.player.includes('&') ? 
-                                    `<strong>${getDisplayPlayerName(tournament, player.player, tournamentEngine)}</strong>` :
-                                    `<a href="../players/profile.html?player=${encodeURIComponent(player.player)}" class="player-name-link">
-                                        <strong>${getDisplayPlayerName(tournament, player.player, tournamentEngine)}</strong>
-                                    </a>`
+                                ${player.player.includes('/') || player.player.includes('+') || player.player.includes('&')
+                                    ? `<strong>${getDisplayPlayerName(tournament, player.player, tournamentEngine)}</strong>`
+                                    : `
+                                        <span class="player-cell__wrap">
+                                            ${avatarHtml(player.player, getDisplayPlayerName(tournament, player.player, tournamentEngine), 'table')}
+                                            <a href="../players/profile.html?player=${encodeURIComponent(player.player)}" class="player-name-link">
+                                                <strong>${getDisplayPlayerName(tournament, player.player, tournamentEngine)}</strong>
+                                            </a>
+                                        </span>
+                                    `
                                 }
                             </td>
                             <td class="tricks-cell">${player.total_tricks}</td>
@@ -838,6 +924,7 @@
                 }).join('');
                 
                 document.getElementById('rankings-tbody').innerHTML = rankingsHTML;
+                await hydrateAvatars(document.getElementById('rankings-table'));
                 
 
                 
@@ -1239,6 +1326,14 @@
             justify-content: center;
             font-weight: 900;
             font-family: var(--font-primary);
+            overflow: hidden;
+        }
+
+        .avatar-placeholder img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
 
         .avatar-placeholder.large {
@@ -1257,6 +1352,18 @@
             width: 60px;
             height: 60px;
             font-size: 1rem;
+        }
+
+        .avatar-placeholder.table {
+            width: 36px;
+            height: 36px;
+            font-size: 0.95rem;
+        }
+
+        .player-cell__wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
         }
 
         .champion-crown {
@@ -1525,7 +1632,8 @@
 
         .chart-description {
             font-size: 1rem;
-            color: #6b7280;
+            color: rgba(255, 255, 255, 0.88);
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
             margin-bottom: var(--spacing-xl);
             text-align: center;
         }

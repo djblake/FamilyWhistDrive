@@ -760,15 +760,32 @@
                 scanVisible = Boolean(visible);
                 if (!foundUrl) return;
                 if (scanVisible) {
-                    emptyEl.style.display = 'none';
+                    // IMPORTANT: do not rely on imgEl.src truthiness.
+                    // If src attribute is missing/empty, imgEl.src resolves to the current page URL (truthy),
+                    // which prevents us from ever setting the real image URL.
+                    emptyEl.style.display = 'block';
+                    emptyEl.textContent = 'Loading scan…';
                     imgEl.style.display = 'block';
                     btnToggle.textContent = 'Hide scan';
-                    if (!imgEl.src) {
-                        imgEl.src = foundUrl;
-                    }
+
+                    imgEl.onload = () => {
+                        emptyEl.style.display = 'none';
+                    };
+                    imgEl.onerror = () => {
+                        imgEl.style.display = 'none';
+                        emptyEl.style.display = 'block';
+                        emptyEl.textContent = 'Failed to load scan inline. Use “Open full size”.';
+                        scanVisible = false;
+                        btnToggle.textContent = 'Show scan';
+                    };
+
+                    // Always set the src attribute with a cache buster (helps after uploads / CDN caching).
+                    const inlineUrl = `${foundUrl}${foundUrl.includes('?') ? '&' : '?'}v=${Date.now()}`;
+                    imgEl.setAttribute('src', inlineUrl);
                 } else {
                     imgEl.style.display = 'none';
                     emptyEl.style.display = 'block';
+                    emptyEl.textContent = 'Scan hidden (click “Show scan”).';
                     btnToggle.textContent = 'Show scan';
                 }
             };
@@ -781,7 +798,7 @@
                     actionsEl.style.display = 'none';
                     emptyEl.textContent = 'No scan uploaded.';
                     imgEl.style.display = 'none';
-                    imgEl.src = '';
+                    imgEl.removeAttribute('src');
                     emptyEl.style.display = 'block';
                     return;
                 }
@@ -811,7 +828,7 @@
             emptyEl.textContent = 'Checking for scan…';
             emptyEl.style.display = 'block';
             imgEl.style.display = 'none';
-            imgEl.src = '';
+            imgEl.removeAttribute('src');
 
             tryCandidate(0);
         }
