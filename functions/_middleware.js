@@ -8,6 +8,26 @@ function htmlResponse(html, { status = 200 } = {}) {
   });
 }
 
+function isAllowedMediaKey(key) {
+  const k = String(key || '');
+  if (!k) return false;
+  if (k.includes('..')) return false;
+  if (k.startsWith('/')) return false;
+  return (
+    k.startsWith('avatars/') ||
+    k.startsWith('tournament-photos/') ||
+    k.startsWith('scorecards/') ||
+    k.startsWith('player-scorecards/')
+  );
+}
+
+function cacheControlForMediaKey(key) {
+  const k = String(key || '');
+  // Avatars can change, so keep caching shorter.
+  if (k.startsWith('avatars/')) return 'public, max-age=600';
+  return 'public, max-age=31536000, immutable';
+}
+
 function parseCookies(cookieHeader) {
   const out = {};
   const raw = String(cookieHeader || '');
@@ -133,6 +153,36 @@ export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
   const path = url.pathname || '/';
+
+  // Same-origin media gateway: /media/<key> -> R2 WHIST_MEDIA
+  if (path.startsWith('/media/')) {
+    const method = String(request.method || 'GET').toUpperCase();
+    if (method !== 'GET' && method !== 'HEAD') {
+      return new Response('Method Not Allowed', { status: 405 });
+    }
+
+    const bucket = env && env.WHIST_MEDIA;
+    if (!bucket) return new Response('Not configured', { status: 501 });
+
+    const key = String(path.slice('/media/'.length) || '').replace(/^\/+/, '');
+    if (!isAllowedMediaKey(key)) return new Response('Not Found', { status: 404 });
+
+    const obj = await bucket.get(key);
+    if (!obj) return new Response('Not Found', { status: 404 });
+
+    const headers = new Headers();
+    const ct = obj.httpMetadata && obj.httpMetadata.contentType ? String(obj.httpMetadata.contentType) : 'application/octet-stream';
+    headers.set('Content-Type', ct);
+    headers.set('Cache-Control', cacheControlForMediaKey(key));
+    if (obj.httpEtag) headers.set('ETag', obj.httpEtag);
+
+    const inm = request.headers.get('If-None-Match');
+    if (inm && obj.httpEtag && inm === obj.httpEtag) {
+      return new Response(null, { status: 304, headers });
+    }
+
+    return new Response(method === 'HEAD' ? null : obj.body, { status: 200, headers });
+  }
 
   // Only protect /admin/* paths.
   if (!path.startsWith('/admin/')) {
