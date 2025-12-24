@@ -27,28 +27,32 @@
         border: 1px solid rgba(255,255,255,0.14);
         box-shadow: 0 24px 70px rgba(0,0,0,0.55);
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .whist-lightbox__media {
+        position: relative;
+        flex: 1 1 auto;
+        min-height: 0; /* allow img to shrink within max-height panel */
       }
       .whist-lightbox__img {
         display: block;
         width: 100%;
         height: auto;
-        max-height: 92vh;
+        max-height: 100%;
         object-fit: contain;
         background: #0b1220;
       }
       .whist-lightbox__captionbar {
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        padding: 0.65rem 0.75rem;
+        flex: 0 0 auto;
+        padding: 0.75rem 0.9rem;
         display: flex;
         gap: 0.75rem;
         align-items: center;
         justify-content: space-between;
-        background: linear-gradient(180deg, rgba(0,0,0,0.00) 0%, rgba(0,0,0,0.55) 38%, rgba(0,0,0,0.72) 100%);
+        background: rgba(255,255,255,0.06);
+        border-top: 1px solid rgba(255,255,255,0.12);
         color: rgba(255,255,255,0.92);
-        z-index: 2;
       }
       .whist-lightbox__caption {
         font-size: 0.85rem;
@@ -130,14 +134,16 @@
     root.innerHTML = `
       <div class="whist-lightbox__panel" role="document">
         <button type="button" class="btn btn-secondary whist-lightbox__close" aria-label="Close">Close</button>
-        <img class="whist-lightbox__img" alt="Tournament photo">
+        <div class="whist-lightbox__media">
+          <img class="whist-lightbox__img" alt="Tournament photo">
+          <div class="whist-lightbox__nav" aria-hidden="true">
+            <button type="button" class="whist-lightbox__btn whist-lightbox__prev" aria-label="Previous photo">‹</button>
+            <button type="button" class="whist-lightbox__btn whist-lightbox__next" aria-label="Next photo">›</button>
+          </div>
+        </div>
         <div class="whist-lightbox__captionbar">
           <div class="whist-lightbox__caption" aria-live="polite"></div>
           <a class="btn btn-secondary whist-lightbox__goto" href="#" style="display:none;">Go to gallery</a>
-        </div>
-        <div class="whist-lightbox__nav" aria-hidden="true">
-          <button type="button" class="whist-lightbox__btn whist-lightbox__prev" aria-label="Previous photo">‹</button>
-          <button type="button" class="whist-lightbox__btn whist-lightbox__next" aria-label="Next photo">›</button>
         </div>
       </div>
     `;
