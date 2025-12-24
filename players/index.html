@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="/assets/js/footer-nav.js?v=1" defer></script>
+    <script src="/assets/js/media.js?v=1" defer></script>
 </head>
 <body>
     <header class="header">
@@ -251,6 +252,9 @@
                 const initials = player.name.split(' ').map(n => n[0]).join('');
                 const careerTricks = Math.floor(parseFloat(player.total_tricks) || 0).toLocaleString();
                 const profileHref = `profile.html?player=${encodeURIComponent(player.name)}`;
+                const playerKey = (typeof tournamentEngine?.getCanonicalPlayerId === 'function')
+                    ? tournamentEngine.getCanonicalPlayerId(player.name)
+                    : player.name;
                 
                 return `
                     <tr class="player-row ${player.championships > 0 ? 'champion' : ''}">
@@ -259,7 +263,8 @@
                         </td>
                         <td class="player-cell">
                             <div class="player-info">
-                                <div class="player-avatar">
+                                <div class="player-avatar" data-player-key="${escapeHtml(playerKey)}">
+                                    <img alt="" loading="lazy" style="display:none;">
                                     <span class="avatar-initials">${initials}</span>
                                 </div>
                                 <div class="player-details">
@@ -301,6 +306,53 @@
             }).join('');
             
             tbody.innerHTML = playersHTML;
+            hydrateAvatars();
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        async function hydrateAvatars() {
+            if (!(window.WhistMedia && typeof window.WhistMedia.publicUrlForKey === 'function')) return;
+            const nodes = Array.from(document.querySelectorAll('.player-avatar[data-player-key]'));
+            const queue = nodes.slice();
+            const workers = Array.from({ length: 6 }).map(async () => {
+                while (queue.length) {
+                    const el = queue.shift();
+                    if (!el) continue;
+                    const key = (el.getAttribute('data-player-key') || '').trim();
+                    if (!key) continue;
+                    const imgEl = el.querySelector('img');
+                    const initialsEl = el.querySelector('.avatar-initials');
+                    if (!imgEl || !initialsEl) continue;
+
+                    try {
+                        const url = await window.WhistMedia.publicUrlForKey(`avatars/${key}.jpg`);
+                        if (!url) continue;
+
+                        await new Promise((resolve) => {
+                            const probe = new Image();
+                            probe.onload = () => resolve(true);
+                            probe.onerror = () => resolve(false);
+                            probe.src = `${url}${url.includes('?') ? '&' : '?'}probe=${Date.now()}`;
+                        }).then((ok) => {
+                            if (!ok) return;
+                            imgEl.src = url;
+                            imgEl.style.display = 'block';
+                            initialsEl.style.display = 'none';
+                        });
+                    } catch (_) {
+                        // ignore
+                    }
+                }
+            });
+            await Promise.all(workers);
         }
         
         function updateSummaryStats() {
@@ -638,6 +690,14 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .player-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
 
         .avatar-initials {

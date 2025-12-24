@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="/assets/js/footer-nav.js?v=1" defer></script>
+    <script src="/assets/js/media.js?v=1" defer></script>
 </head>
 <body>
     <header class="header">
@@ -123,6 +124,9 @@
                         <a href="results.html?year=${tournament.year}" class="tournament-item" id="tournament-${tournament.year}">
                             <div class="tournament-year-column">
                                 <div class="tournament-year">${tournament.year}</div>
+                                <div class="tournament-cover" data-cover-year="${tournament.year}">
+                                    <div class="tournament-cover-placeholder">📸</div>
+                                </div>
                             </div>
                             <div class="tournament-content">
                                 <div class="tournament-header">
@@ -153,6 +157,35 @@
                 }).join('');
                 
                 document.getElementById('tournaments-grid').innerHTML = tournamentsHTML;
+
+                // Load cover thumbnails (top cover pick) from R2 meta.
+                async function hydrateCoverThumbs() {
+                    if (!(window.WhistMedia && typeof window.WhistMedia.getTournamentMeta === 'function')) return;
+                    if (!(window.WhistMedia && typeof window.WhistMedia.publicUrlForKey === 'function')) return;
+
+                    const covers = Array.from(document.querySelectorAll('[data-cover-year]'));
+                    const queue = covers.slice();
+                    const workers = Array.from({ length: 4 }).map(async () => {
+                        while (queue.length) {
+                            const el = queue.shift();
+                            const year = el ? el.getAttribute('data-cover-year') : '';
+                            if (!year) continue;
+                            try {
+                                const meta = await window.WhistMedia.getTournamentMeta(year);
+                                const key = meta && Array.isArray(meta.coverPicks) && meta.coverPicks.length ? String(meta.coverPicks[0] || '') : '';
+                                if (!key) continue;
+                                const url = await window.WhistMedia.publicUrlForKey(key);
+                                if (!url) continue;
+                                el.innerHTML = `<img alt="Tournament cover" src="${url.replaceAll('"', '&quot;')}" loading="lazy">`;
+                            } catch (_) {
+                                // ignore
+                            }
+                        }
+                    });
+                    await Promise.all(workers);
+                }
+
+                hydrateCoverThumbs();
                 
                 // Handle anchor links for specific tournaments
                 if (window.location.hash) {
@@ -511,6 +544,33 @@
             font-family: var(--font-primary);
             line-height: 1;
             color: #1f2937;
+        }
+
+        .tournament-cover {
+            width: 92px;
+            height: 64px;
+            border-radius: 14px;
+            border: 1px solid rgba(15, 23, 42, 0.14);
+            background: rgba(15, 23, 42, 0.06);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 0.75rem;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+        }
+
+        .tournament-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .tournament-cover-placeholder {
+            font-weight: 900;
+            color: rgba(15, 23, 42, 0.55);
+            font-size: 0.9rem;
         }
 
         .tournament-content {

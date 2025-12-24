@@ -29,6 +29,22 @@
         el.innerHTML = NAV_HTML;
       }
     }
+
+    // Add a visible admin uploader link in the footer bottom.
+    try {
+      const footerP = document.querySelector('.footer .footer-bottom p');
+      if (footerP && !footerP.querySelector('[data-admin-uploader-link]')) {
+        const sep = document.createTextNode(' | ');
+        const a = document.createElement('a');
+        a.href = '/admin/media-upload.html';
+        a.textContent = 'Media uploads';
+        a.setAttribute('data-admin-uploader-link', 'true');
+        footerP.appendChild(sep);
+        footerP.appendChild(a);
+      }
+    } catch (_) {
+      // ignore
+    }
   };
 
   if (document.readyState === 'loading') {

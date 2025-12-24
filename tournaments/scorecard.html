@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="/assets/js/footer-nav.js?v=1" defer></script>
+    <script src="/assets/js/media.js?v=1" defer></script>
 </head>
 <body>
     <header class="header">
@@ -115,6 +116,7 @@
                                     <th>Round</th>
                                     <th>Trump</th>
                                     <th>Table</th>
+                                    <th>Scan</th>
                                     <th>Partner</th>
                                     <th>Our Tricks</th>
                                     <th>Their Tricks</th>
@@ -150,6 +152,7 @@
                         <code id="photo-path">tournaments/YEAR/PLAYER/</code>
                         <p>Photos will automatically appear here for verification against the digital scorecard above.</p>
                     </div>
+                    <div id="player-scorecard-scan" style="margin-top: 0.75rem;"></div>
                     <div id="scorecard-photos">
                         <!-- Photos will be loaded here if available -->
                     </div>
@@ -536,6 +539,11 @@
             const displayName = displayIdentity.displayName || playerName;
             const playerNameEl = document.getElementById('player-name');
 
+            // Try to show a single “original scorecard scan” link if present in R2:
+            // - Single player: YYYY_Key.jpg
+            // - Shared hand: YYYY_Key1_Key2.jpg (underscore-delimited Keys)
+            renderPlayerScorecardScanLink(params.year, displayIdentity.canonicalIds);
+
             const escapeHtmlText = (value) => String(value ?? '')
                 .replaceAll('&', '&amp;')
                 .replaceAll('<', '&lt;')
@@ -660,6 +668,83 @@
             
             // Create rank progression chart (use canonical identifier for highlighting)
             createRankProgressionChart(tournament, canonicalChartIdentifier, displayName, 0, engine);
+        }
+
+        function renderPlayerScorecardScanLink(year, canonicalIds) {
+            const wrap = document.getElementById('player-scorecard-scan');
+            if (!wrap) return;
+            wrap.innerHTML = '';
+
+            const ids = Array.isArray(canonicalIds) ? canonicalIds.filter(Boolean) : [];
+            if (!year || ids.length === 0) return;
+            if (!(window.WhistMedia && typeof window.WhistMedia.playerScorecardUrl === 'function')) return;
+
+            const unique = Array.from(new Set(ids.map(x => String(x).trim()).filter(Boolean)));
+            const candidates = [];
+            if (unique.length === 1) {
+                candidates.push(unique[0]);
+            } else {
+                const asGiven = unique.join('_');
+                const sorted = unique.slice().sort((a, b) => a.localeCompare(b)).join('_');
+                candidates.push(asGiven);
+                if (sorted !== asGiven) candidates.push(sorted);
+            }
+
+            const note = document.createElement('div');
+            note.style.color = '#475569';
+            note.style.fontSize = '0.9rem';
+            note.style.marginBottom = '0.4rem';
+            note.textContent = 'Original scorecard scan (if uploaded):';
+
+            const link = document.createElement('a');
+            link.className = 'btn btn-secondary';
+            link.style.display = 'inline-flex';
+            link.style.alignItems = 'center';
+            link.style.gap = '0.5rem';
+            link.target = '_blank';
+            link.rel = 'noopener';
+            link.href = '#';
+            link.textContent = 'View original scan';
+
+            const meta = document.createElement('div');
+            meta.style.color = '#64748b';
+            meta.style.fontSize = '0.85rem';
+            meta.style.marginTop = '0.35rem';
+            meta.textContent = `Expected file: ${year}_${candidates[0]}.jpeg`;
+
+            const muted = document.createElement('div');
+            muted.style.color = '#64748b';
+            muted.style.fontSize = '0.85rem';
+            muted.style.fontStyle = 'italic';
+            muted.textContent = 'No original scan uploaded yet.';
+
+            wrap.appendChild(note);
+            wrap.appendChild(link);
+            wrap.appendChild(meta);
+
+            const tryCandidate = async (idx) => {
+                if (idx >= candidates.length) {
+                    // Hide the button if none load.
+                    link.style.display = 'none';
+                    meta.style.display = 'none';
+                    wrap.appendChild(muted);
+                    return;
+                }
+                const key = candidates[idx];
+                const url = await window.WhistMedia.playerScorecardUrl(year, key);
+                if (!url) return tryCandidate(idx + 1);
+
+                // Use image load test (avoids CORS issues vs fetch/HEAD).
+                const img = new Image();
+                img.onload = () => {
+                    link.href = url;
+                    meta.textContent = `Stored as: player-scorecards/${year}/${key}.jpg`;
+                };
+                img.onerror = () => tryCandidate(idx + 1);
+                img.src = `${url}${url.includes('?') ? '&' : '?'}probe=${Date.now()}`;
+            };
+
+            tryCandidate(0);
         }
 
         function getPlayerRounds(tournament, playerName, engine) {
@@ -910,6 +995,9 @@
                             <span class="trump-symbol ${round.trump.toLowerCase()}">${trumpSymbol}</span>
                         </td>
                         <td class="table-number">${round.table}</td>
+                        <td class="scan-cell">
+                            <a href="#" class="scan-btn" data-year="${escapeHtmlAttribute(yearParam)}" data-round="${escapeHtmlAttribute(round.round)}" data-table="${escapeHtmlAttribute(round.table)}" aria-label="View original scan for round ${escapeHtmlAttribute(round.round)} table ${escapeHtmlAttribute(round.table)}">📷</a>
+                        </td>
                         <td class="partner-name">
                             ${Array.isArray(round.partnerDetails) && round.partnerDetails.length > 0
                                 ? round.partnerDetails.map(partner => 
@@ -943,6 +1031,52 @@
             }).join('');
 
             tbody.innerHTML = html;
+
+            // Round/table scan link handler (lazy probe + graceful fallback).
+            if (tbody && !tbody.dataset.scanLinkInit) {
+                tbody.dataset.scanLinkInit = 'true';
+                tbody.addEventListener('click', async (e) => {
+                    const a = e.target && e.target.closest ? e.target.closest('.scan-btn') : null;
+                    if (!a) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    if (!(window.WhistMedia && typeof window.WhistMedia.scorecardScanUrl === 'function')) {
+                        alert('Scan viewer is not available (media config not loaded).');
+                        return;
+                    }
+
+                    const year = a.getAttribute('data-year') || '';
+                    const round = a.getAttribute('data-round') || '';
+                    const table = a.getAttribute('data-table') || '';
+                    if (!year || !round || !table) return;
+
+                    a.textContent = '⏳';
+                    a.setAttribute('aria-busy', 'true');
+
+                    try {
+                        const url = await window.WhistMedia.scorecardScanUrl(year, round, table);
+                        if (!url) throw new Error('No media base URL configured');
+
+                        const img = new Image();
+                        img.onload = () => {
+                            a.textContent = '📷';
+                            a.removeAttribute('aria-busy');
+                            window.open(url, '_blank', 'noopener');
+                        };
+                        img.onerror = () => {
+                            a.textContent = '📷';
+                            a.removeAttribute('aria-busy');
+                            alert(`No scan uploaded yet for ${year} round ${round}, table ${table}.`);
+                        };
+                        img.src = `${url}${url.includes('?') ? '&' : '?'}probe=${Date.now()}`;
+                    } catch (err) {
+                        a.textContent = '📷';
+                        a.removeAttribute('aria-busy');
+                        alert(err && err.message ? err.message : 'Unable to load scan.');
+                    }
+                });
+            }
 
             // Click-to-toggle tooltip (useful on touch devices / when hover tooltips are disabled).
             if (tbody && !tbody.dataset.inconsistencyTooltipInit) {
@@ -1629,6 +1763,30 @@
         .opponents-names .player-name-link:hover {
             color: var(--primary-color);
             background-color: rgba(79, 70, 229, 0.1);
+        }
+
+        .scan-cell {
+            text-align: center;
+        }
+
+        .scan-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.14);
+            background: rgba(255, 255, 255, 0.85);
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .scan-btn:hover {
+            border-color: rgba(15, 23, 42, 0.22);
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(-1px);
         }
 
         /* Header: "See player profile" CTA */

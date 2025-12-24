@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="/assets/js/footer-nav.js?v=1" defer></script>
+    <script src="/assets/js/media.js?v=1" defer></script>
     <style>
         .hero-heading {
             text-align: center;
@@ -99,6 +100,94 @@
             color: #f8fafc;
             text-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
         }
+
+        .cover-strip {
+            margin-top: 1.25rem;
+            display: none;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .cover-strip a {
+            width: 160px;
+            height: 100px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            background: rgba(255, 255, 255, 0.14);
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
+            display: inline-block;
+        }
+
+        .cover-strip a img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .tournament-photos {
+            padding: var(--spacing-3xl) 0;
+            background: #ffffff;
+        }
+
+        .tournament-photos .section-title {
+            color: var(--text-primary-dark);
+        }
+
+        .photos-group {
+            margin-top: var(--spacing-xl);
+            background: #ffffff;
+            border-radius: var(--border-radius-lg);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+        }
+
+        .photos-group-header {
+            padding: var(--spacing-lg) var(--spacing-xl);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: baseline;
+        }
+
+        .photos-group-title {
+            font-weight: 950;
+            color: var(--text-primary-dark);
+            font-size: 1.05rem;
+        }
+
+        .photos-group-meta {
+            color: var(--text-secondary-dark);
+            font-weight: 800;
+            font-size: 0.9rem;
+        }
+
+        .photos-grid {
+            padding: var(--spacing-lg) var(--spacing-xl);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 0.85rem;
+        }
+
+        .photo-thumb {
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            background: rgba(15, 23, 42, 0.04);
+            aspect-ratio: 16 / 10;
+            display: block;
+        }
+
+        .photo-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -135,6 +224,7 @@
                     </div>
                     <div class="hero-stats" id="tournament-stats"></div>
                     <p class="hero-comment" id="tournament-comment" style="display: none;"></p>
+                    <div class="cover-strip" id="tournament-cover-strip" aria-label="Tournament cover photos"></div>
                 </div>
             </div>
         </section>
@@ -174,6 +264,17 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </section>
+
+        <section class="tournament-photos" id="tournament-photos" style="display:none;">
+            <div class="container">
+                <h2 class="section-title">
+                    <span class="title-icon">📸</span>
+                    Tournament Photos
+                </h2>
+                <p class="section-subtitle" style="color: var(--text-secondary-dark);">Grouped by uploader. Upload more via the “Media uploads” link in the footer.</p>
+                <div id="tournament-photos-groups"></div>
             </div>
         </section>
 
@@ -538,6 +639,9 @@
 
                 renderHeroStats(stats);
                 renderTournamentComment(tournamentComment);
+
+                // Cover picks + photo gallery (from R2 meta).
+                await renderTournamentPhotosFromR2(year);
                 
                 // Generate podium-style tournament summary
                 const thirdPlace = tournament.final_standings.length >= 3 ? tournament.final_standings[2] : null;
@@ -747,6 +851,78 @@
                 displayTournamentError(errorMessage, year);
             }
         });
+
+        async function renderTournamentPhotosFromR2(year) {
+            const strip = document.getElementById('tournament-cover-strip');
+            const photosSection = document.getElementById('tournament-photos');
+            const groupsWrap = document.getElementById('tournament-photos-groups');
+            if (!strip || !photosSection || !groupsWrap) return;
+            if (!(window.WhistMedia && typeof window.WhistMedia.getTournamentMeta === 'function')) return;
+            if (!(window.WhistMedia && typeof window.WhistMedia.publicUrlForKey === 'function')) return;
+
+            const meta = await window.WhistMedia.getTournamentMeta(year);
+            if (!meta) return;
+
+            const photos = Array.isArray(meta.photos) ? meta.photos.slice() : [];
+            const coverPicks = Array.isArray(meta.coverPicks) ? meta.coverPicks.slice(0, 3) : [];
+
+            // Render cover strip (if any).
+            if (coverPicks.length) {
+                const items = [];
+                for (const key of coverPicks) {
+                    const url = await window.WhistMedia.publicUrlForKey(key);
+                    if (!url) continue;
+                    items.push(`<a href="${url.replaceAll('"', '&quot;')}" target="_blank" rel="noopener"><img alt="Tournament cover" src="${url.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
+                }
+                if (items.length) {
+                    strip.innerHTML = items.join('');
+                    strip.style.display = 'flex';
+                }
+            }
+
+            // Render grouped gallery (if any).
+            if (!photos.length) return;
+
+            const byUploader = new Map();
+            for (const p of photos) {
+                const uploader = String(p?.uploaderName || p?.uploaderSlug || 'Unknown').trim() || 'Unknown';
+                if (!byUploader.has(uploader)) byUploader.set(uploader, []);
+                byUploader.get(uploader).push(p);
+            }
+
+            const uploaderNames = Array.from(byUploader.keys()).sort((a, b) => a.localeCompare(b));
+            const groupsHtml = [];
+            for (const uploader of uploaderNames) {
+                const list = byUploader.get(uploader) || [];
+                list.sort((a, b) => String(b?.uploadedAt || '').localeCompare(String(a?.uploadedAt || '')));
+                const thumbs = [];
+                for (const p of list) {
+                    const key = String(p?.key || '');
+                    if (!key) continue;
+                    const url = await window.WhistMedia.publicUrlForKey(key);
+                    if (!url) continue;
+                    thumbs.push(`<a class="photo-thumb" href="${url.replaceAll('"', '&quot;')}" target="_blank" rel="noopener"><img alt="Tournament photo" src="${url.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
+                }
+                if (!thumbs.length) continue;
+
+                groupsHtml.push(`
+                    <div class="photos-group">
+                        <div class="photos-group-header">
+                            <div class="photos-group-title">${escapeHtml(uploader)}</div>
+                            <div class="photos-group-meta">${thumbs.length} photo${thumbs.length === 1 ? '' : 's'}</div>
+                        </div>
+                        <div class="photos-grid">
+                            ${thumbs.join('')}
+                        </div>
+                    </div>
+                `);
+            }
+
+            if (groupsHtml.length) {
+                groupsWrap.innerHTML = groupsHtml.join('');
+                photosSection.style.display = 'block';
+            }
+        }
 
         function createTournamentRankChart(tournament, tournamentEngine) {
             try {

@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Uploads | Ruston Family Whist Drive</title>
+    <meta name="description" content="Upload tournament photos, player scorecards, and avatars to the media library.">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="/assets/js/footer-nav.js?v=1" defer></script>
+    <script src="/assets/js/media.js?v=1" defer></script>
+    <style>
+        .admin-wrap { padding: var(--spacing-3xl) 0; }
+        .admin-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            box-shadow: var(--shadow-card);
+        }
+        .admin-grid { display: grid; grid-template-columns: 1fr; gap: var(--spacing-xl); }
+        .admin-title { font-size: 1.5rem; margin-bottom: 0.25rem; color: var(--text-primary-dark); font-weight: 900; }
+        .admin-sub { color: var(--text-secondary-dark); margin-bottom: var(--spacing-lg); }
+        .row { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+        .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        @media (max-width: 720px) { .row-2 { grid-template-columns: 1fr; } }
+        label { font-weight: 800; color: var(--text-primary-dark); font-size: 0.9rem; }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 0.75rem 0.9rem;
+            border-radius: 12px;
+            border: 1px solid rgba(15, 23, 42, 0.18);
+            font-size: 0.95rem;
+        }
+        input[type="file"] { width: 100%; }
+        .btn-row { display:flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem; }
+        .small { font-size: 0.85rem; color: var(--text-secondary-dark); }
+        .log {
+            margin-top: var(--spacing-md);
+            padding: var(--spacing-md);
+            background: rgba(15, 23, 42, 0.04);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.85rem;
+            color: var(--text-primary-dark);
+            max-height: 280px;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+        .pill {
+            display:inline-flex;
+            align-items:center;
+            gap: 0.4rem;
+            padding: 0.2rem 0.65rem;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            background: rgba(15, 23, 42, 0.04);
+            font-weight: 800;
+            font-size: 0.8rem;
+        }
+        .pill.ok { border-color: rgba(34, 197, 94, 0.25); background: rgba(34, 197, 94, 0.08); }
+        .pill.bad { border-color: rgba(239, 68, 68, 0.25); background: rgba(239, 68, 68, 0.08); }
+        .file-list { margin-top: 0.75rem; display:grid; gap: 0.4rem; }
+        .file-row { display:flex; gap: 0.6rem; align-items:center; justify-content: space-between; padding: 0.45rem 0.6rem; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 10px; }
+        .file-name { font-weight: 750; color: var(--text-primary-dark); overflow:hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-meta { color: var(--text-secondary-dark); font-size: 0.85rem; white-space: nowrap; }
+        .divider { height: 1px; background: rgba(15, 23, 42, 0.08); margin: 1rem 0; }
+
+        .cover-preview-row { display:flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.75rem; }
+        .cover-preview {
+            width: 120px;
+            height: 80px;
+            border-radius: 12px;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            background: rgba(15, 23, 42, 0.04);
+            overflow: hidden;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            color: var(--text-secondary-dark);
+            font-weight: 800;
+            font-size: 0.8rem;
+        }
+        .cover-preview img { width: 100%; height: 100%; object-fit: cover; display:block; }
+
+        .avatar-crop-wrap { display: grid; grid-template-columns: 260px 1fr; gap: 1rem; align-items: start; }
+        @media (max-width: 920px) { .avatar-crop-wrap { grid-template-columns: 1fr; } }
+        .avatar-stage {
+            width: 260px;
+            height: 260px;
+            border-radius: 16px;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            background: rgba(15, 23, 42, 0.04);
+            position: relative;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+        }
+        .avatar-stage img {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            will-change: transform;
+            pointer-events: none;
+        }
+        .avatar-circle {
+            position:absolute;
+            inset: 12px;
+            border-radius: 999px;
+            box-shadow: 0 0 0 999px rgba(0,0,0,0.20) inset;
+            border: 2px solid rgba(255,255,255,0.9);
+            pointer-events: none;
+        }
+        .range { width: 100%; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
+                    <h1 class="site-title">Ruston Family Whist Drive</h1>
+                    <p class="site-subtitle">Admin • Media Uploads</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="../" class="nav-link">Home</a>
+                    <a href="../tournaments/" class="nav-link">Tournaments</a>
+                    <a href="../tables/" class="nav-link">Tables</a>
+                    <a href="../players/" class="nav-link">Players</a>
+                    <a href="../leaderboard/" class="nav-link">Hall of Fame</a>
+                    <a href="../stats/" class="nav-link">Statistics</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="admin-wrap">
+            <div class="container">
+                <div class="admin-grid">
+                    <div class="admin-card">
+                        <div class="admin-title">Media uploads (R2)</div>
+                        <div class="admin-sub">Uploads are authenticated. Views are public. Keep the upload token private.</div>
+
+                        <div class="row">
+                            <label for="upload-token">Upload token</label>
+                            <input id="upload-token" type="password" placeholder="WHIST_UPLOAD_TOKEN (Bearer)" autocomplete="off">
+                            <div class="small">This is stored only in your browser (localStorage) so you don’t need to retype it every time.</div>
+                            <div id="token-status"></div>
+                        </div>
+                    </div>
+
+                    <div class="admin-card">
+                        <div class="admin-title">Bulk upload player scorecards</div>
+                        <div class="admin-sub">
+                            File naming convention: <strong>YYYY_Key.jpeg</strong> where <strong>Key</strong> is from the Players sheet (shared hands join Keys with <code>_</code>).<br/>
+                            Example: <code>1993_David_SteveBlake.jpeg</code> → stored as <code>player-scorecards/1993/David_SteveBlake.jpg</code>.
+                        </div>
+
+                        <div class="row">
+                            <label for="bulk-scorecards">Select files (multi-select)</label>
+                            <input id="bulk-scorecards" type="file" multiple accept=".jpg,.jpeg,image/jpeg">
+                            <div class="small">Tip: to upload a whole folder structure, use the folder picker below (Chrome/Edge support).</div>
+                        </div>
+
+                        <div class="row" style="margin-top:0.75rem;">
+                            <label for="bulk-scorecards-folder">Or select the whole Scorecards/ folder (recursive)</label>
+                            <input id="bulk-scorecards-folder" type="file" webkitdirectory directory multiple accept=".jpg,.jpeg,image/jpeg">
+                            <div class="small">This will include all files in subfolders (e.g. year folders). Filenames are still parsed as <code>YYYY_Key.jpeg</code>.</div>
+                        </div>
+
+                        <div class="btn-row">
+                            <button class="btn btn-primary" id="btn-upload-scorecards" type="button">Upload selected scorecards</button>
+                            <button class="btn btn-secondary" id="btn-clear" type="button">Clear</button>
+                        </div>
+
+                        <div class="small" style="margin-top:0.75rem;">
+                            Parsed files: <span class="pill" id="parsed-count">0</span>
+                            Valid: <span class="pill ok" id="valid-count">0</span>
+                            Invalid: <span class="pill bad" id="invalid-count">0</span>
+                        </div>
+
+                        <div class="file-list" id="file-list"></div>
+                        <div class="log" id="log" aria-live="polite"></div>
+                    </div>
+
+                    <div class="admin-card">
+                        <div class="admin-title">Upload round/table scans</div>
+                        <div class="admin-sub">Uploads a scan to <code>scorecards/YYYY/r{round}/t{table}.jpg</code> for per-table verification.</div>
+
+                        <div class="row-2">
+                            <div class="row">
+                                <label for="scan-year">Year</label>
+                                <input id="scan-year" type="text" placeholder="1993">
+                            </div>
+                            <div class="row">
+                                <label for="scan-round">Round</label>
+                                <input id="scan-round" type="text" placeholder="1">
+                            </div>
+                        </div>
+                        <div class="row-2" style="margin-top:0.75rem;">
+                            <div class="row">
+                                <label for="scan-table">Table</label>
+                                <input id="scan-table" type="text" placeholder="3">
+                            </div>
+                            <div class="row">
+                                <label for="scan-file">JPEG file</label>
+                                <input id="scan-file" type="file" accept=".jpg,.jpeg,image/jpeg">
+                            </div>
+                        </div>
+
+                        <div class="btn-row">
+                            <button class="btn btn-primary" id="btn-upload-scan" type="button">Upload round/table scan</button>
+                        </div>
+
+                        <div class="log" id="scan-log" aria-live="polite"></div>
+                    </div>
+
+                    <div class="admin-card">
+                        <div class="admin-title">Tournament-day photos + cover picks</div>
+                        <div class="admin-sub">Upload photos, then select up to 3 cover picks for that year.</div>
+
+                        <div class="row-2">
+                            <div class="row">
+                                <label for="photo-year">Year</label>
+                                <input id="photo-year" type="text" placeholder="2025">
+                            </div>
+                            <div class="row">
+                                <label for="photo-uploader">Uploader name</label>
+                                <input id="photo-uploader" type="text" placeholder="Sarah">
+                            </div>
+                        </div>
+                        <div class="row" style="margin-top:0.75rem;">
+                            <label for="photo-files">Photos (multi-select)</label>
+                            <input id="photo-files" type="file" multiple accept=".jpg,.jpeg,.png,.webp,image/*">
+                        </div>
+                        <div class="btn-row">
+                            <button class="btn btn-primary" id="btn-upload-photos" type="button">Upload photos</button>
+                            <button class="btn btn-secondary" id="btn-load-meta" type="button">Refresh list</button>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="row-2">
+                            <div class="row">
+                                <label for="cover-1">Cover pick #1</label>
+                                <select id="cover-1"></select>
+                            </div>
+                            <div class="row">
+                                <label for="cover-2">Cover pick #2</label>
+                                <select id="cover-2"></select>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-top:0.75rem;">
+                            <label for="cover-3">Cover pick #3</label>
+                            <select id="cover-3"></select>
+                        </div>
+                        <div class="btn-row">
+                            <button class="btn btn-primary" id="btn-save-covers" type="button">Save cover picks</button>
+                        </div>
+
+                        <div class="cover-preview-row">
+                            <div class="cover-preview" id="cover-prev-1">Cover 1</div>
+                            <div class="cover-preview" id="cover-prev-2">Cover 2</div>
+                            <div class="cover-preview" id="cover-prev-3">Cover 3</div>
+                        </div>
+
+                        <div class="log" id="photos-log" aria-live="polite"></div>
+                    </div>
+
+                    <div class="admin-card">
+                        <div class="admin-title">Upload avatar (with crop)</div>
+                        <div class="admin-sub">Choose a photo, position it, then upload a circular-friendly crop.</div>
+
+                        <div class="row-2">
+                            <div class="row">
+                                <label for="avatar-player">Player Key</label>
+                                <input id="avatar-player" type="text" placeholder="SteveBlake">
+                            </div>
+                            <div class="row">
+                                <label for="avatar-file">Image file</label>
+                                <input id="avatar-file" type="file" accept=".jpg,.jpeg,.png,.webp,image/*">
+                            </div>
+                        </div>
+
+                        <div class="avatar-crop-wrap" style="margin-top: 1rem;">
+                            <div>
+                                <div class="avatar-stage" id="avatar-stage">
+                                    <img id="avatar-img" alt="" style="display:none;">
+                                    <div class="avatar-circle"></div>
+                                </div>
+                                <div class="small" style="margin-top:0.5rem;">Drag to reposition. Use zoom slider.</div>
+                                <input class="range" id="avatar-zoom" type="range" min="1" max="3" step="0.01" value="1">
+                            </div>
+                            <div class="row">
+                                <div class="small">Preview URL (after upload):</div>
+                                <code id="avatar-url" style="display:block; padding:0.5rem 0.6rem; border:1px solid rgba(15,23,42,0.10); border-radius:12px; background: rgba(15,23,42,0.04); color: var(--text-primary-dark); overflow:auto;">—</code>
+                                <div class="btn-row">
+                                    <button class="btn btn-primary" id="btn-upload-avatar" type="button">Upload avatar</button>
+                                    <button class="btn btn-secondary" id="btn-reset-avatar" type="button">Reset</button>
+                                </div>
+                                <div class="log" id="avatar-log" aria-live="polite"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div data-footer-nav></div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const TOKEN_KEY = 'whist_upload_token';
+        const elToken = document.getElementById('upload-token');
+        const elTokenStatus = document.getElementById('token-status');
+        const elInput = document.getElementById('bulk-scorecards');
+        const elFolder = document.getElementById('bulk-scorecards-folder');
+        const elList = document.getElementById('file-list');
+        const elLog = document.getElementById('log');
+        const elParsed = document.getElementById('parsed-count');
+        const elValid = document.getElementById('valid-count');
+        const elInvalid = document.getElementById('invalid-count');
+        const elScanYear = document.getElementById('scan-year');
+        const elScanRound = document.getElementById('scan-round');
+        const elScanTable = document.getElementById('scan-table');
+        const elScanFile = document.getElementById('scan-file');
+        const elScanLog = document.getElementById('scan-log');
+        const elPhotoYear = document.getElementById('photo-year');
+        const elPhotoUploader = document.getElementById('photo-uploader');
+        const elPhotoFiles = document.getElementById('photo-files');
+        const elPhotosLog = document.getElementById('photos-log');
+        const elCover1 = document.getElementById('cover-1');
+        const elCover2 = document.getElementById('cover-2');
+        const elCover3 = document.getElementById('cover-3');
+        const elCoverPrev1 = document.getElementById('cover-prev-1');
+        const elCoverPrev2 = document.getElementById('cover-prev-2');
+        const elCoverPrev3 = document.getElementById('cover-prev-3');
+        const elAvatarPlayer = document.getElementById('avatar-player');
+        const elAvatarFile = document.getElementById('avatar-file');
+        const elAvatarStage = document.getElementById('avatar-stage');
+        const elAvatarImg = document.getElementById('avatar-img');
+        const elAvatarZoom = document.getElementById('avatar-zoom');
+        const elAvatarUrl = document.getElementById('avatar-url');
+        const elAvatarLog = document.getElementById('avatar-log');
+
+        const state = { files: [] };
+
+        function log(line) {
+            const now = new Date().toISOString().slice(11, 19);
+            elLog.textContent = `${elLog.textContent}${elLog.textContent ? '\\n' : ''}[${now}] ${line}`;
+            elLog.scrollTop = elLog.scrollHeight;
+        }
+
+        function logTo(el, line) {
+            const now = new Date().toISOString().slice(11, 19);
+            el.textContent = `${el.textContent}${el.textContent ? '\\n' : ''}[${now}] ${line}`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function getToken() {
+            return (elToken.value || '').trim();
+        }
+
+        function setToken(token) {
+            elToken.value = token || '';
+            try { localStorage.setItem(TOKEN_KEY, token || ''); } catch (_) {}
+            renderTokenStatus();
+        }
+
+        function renderTokenStatus() {
+            const t = getToken();
+            if (!t) {
+                elTokenStatus.innerHTML = `<span class="pill bad">Token not set</span>`;
+                return;
+            }
+            elTokenStatus.innerHTML = `<span class="pill ok">Token set</span>`;
+        }
+
+        function parseFilename(name) {
+            const m = String(name || '').trim().match(/^(\d{4})_([a-zA-Z0-9_-]{1,120})\.jpe?g$/i);
+            if (!m) return null;
+            return { year: m[1], playerKey: m[2] };
+        }
+
+        function renderList() {
+            const total = state.files.length;
+            const valid = state.files.filter(f => f.ok).length;
+            const invalid = total - valid;
+            elParsed.textContent = String(total);
+            elValid.textContent = String(valid);
+            elInvalid.textContent = String(invalid);
+
+            elList.innerHTML = state.files.slice(0, 200).map(item => {
+                const badge = item.ok ? `<span class="pill ok">OK</span>` : `<span class="pill bad">Bad name</span>`;
+                const meta = item.ok ? `${item.year} • ${item.playerKey}` : `Expected YYYY_Key.jpeg`;
+                return `
+                    <div class="file-row">
+                        <div style="min-width:0;">
+                            <div class="file-name">${item.displayName}</div>
+                            <div class="file-meta">${meta}</div>
+                        </div>
+                        ${badge}
+                    </div>
+                `;
+            }).join('') + (total > 200 ? `<div class="small">Showing first 200 files…</div>` : '');
+        }
+
+        function rebuildFromInputs() {
+            const files = [
+                ...Array.from(elInput.files || []),
+                ...Array.from(elFolder.files || [])
+            ];
+
+            // De-dupe by relative path if available, else by name+size.
+            const seen = new Set();
+            const uniq = [];
+            for (const f of files) {
+                const rel = String(f.webkitRelativePath || '').trim();
+                const key = rel ? `rel:${rel}` : `name:${f.name}|size:${f.size}`;
+                if (seen.has(key)) continue;
+                seen.add(key);
+                uniq.push(f);
+            }
+
+            state.files = uniq.map(file => {
+                const parsed = parseFilename(file.name);
+                const rel = String(file.webkitRelativePath || '').trim();
+                return {
+                    file,
+                    name: file.name,
+                    displayName: rel || file.name,
+                    ok: Boolean(parsed),
+                    year: parsed ? parsed.year : null,
+                    playerKey: parsed ? parsed.playerKey : null
+                };
+            });
+            renderList();
+            log(`Selected ${state.files.length} file(s).`);
+        }
+
+        async function uploadOne(item, token) {
+            const fd = new FormData();
+            fd.set('kind', 'player-scorecard');
+            // Still send these explicitly for safety (they are derived from filename).
+            fd.set('year', item.year);
+            fd.set('playerKey', item.playerKey);
+            fd.set('file', item.file, item.file.name);
+
+            const res = await fetch('/api/media/upload', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: fd
+            });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(json?.error || `Upload failed (${res.status})`);
+            }
+            return json;
+        }
+
+        async function uploadAll() {
+            const token = getToken();
+            if (!token) {
+                alert('Please enter the upload token first.');
+                return;
+            }
+            try { localStorage.setItem(TOKEN_KEY, token); } catch (_) {}
+
+            const toUpload = state.files.filter(f => f.ok);
+            const invalid = state.files.filter(f => !f.ok);
+            if (invalid.length) {
+                log(`Skipping ${invalid.length} invalid file(s).`);
+            }
+            if (!toUpload.length) {
+                log('Nothing to upload.');
+                return;
+            }
+
+            log(`Uploading ${toUpload.length} scorecard(s)…`);
+            let ok = 0;
+            let fail = 0;
+
+            for (let i = 0; i < toUpload.length; i++) {
+                const item = toUpload[i];
+                const label = `${item.name} (${item.year} • ${item.playerKey})`;
+                try {
+                    const out = await uploadOne(item, token);
+                    ok++;
+                    log(`OK ${i + 1}/${toUpload.length}: ${label} → ${out.key}`);
+                } catch (e) {
+                    fail++;
+                    log(`FAIL ${i + 1}/${toUpload.length}: ${label} → ${e.message || e}`);
+                }
+            }
+
+            log(`Done. Success: ${ok}. Failed: ${fail}.`);
+        }
+
+        async function uploadRoundTableScan() {
+            const token = getToken();
+            if (!token) return alert('Please enter the upload token first.');
+            const year = String(elScanYear.value || '').trim();
+            const round = String(elScanRound.value || '').trim();
+            const table = String(elScanTable.value || '').trim();
+            const file = elScanFile.files && elScanFile.files[0] ? elScanFile.files[0] : null;
+            if (!year || !round || !table || !file) {
+                return alert('Please fill year/round/table and choose a JPEG file.');
+            }
+            const fd = new FormData();
+            fd.set('kind', 'scorecard');
+            fd.set('year', year);
+            fd.set('round', round);
+            fd.set('table', table);
+            fd.set('file', file, file.name);
+            logTo(elScanLog, `Uploading scan for ${year} r${round} t${table}...`);
+            const res = await fetch('/api/media/upload', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: fd });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                logTo(elScanLog, `FAIL: ${json?.error || res.status}`);
+                return;
+            }
+            logTo(elScanLog, `OK: ${json.key}`);
+        }
+
+        async function uploadTournamentPhotos() {
+            const token = getToken();
+            if (!token) return alert('Please enter the upload token first.');
+            const year = String(elPhotoYear.value || '').trim();
+            const uploaderName = String(elPhotoUploader.value || '').trim();
+            const files = Array.from(elPhotoFiles.files || []);
+            if (!year || !uploaderName || files.length === 0) {
+                return alert('Please fill year/uploader name and choose files.');
+            }
+            logTo(elPhotosLog, `Uploading ${files.length} photo(s) for ${year} as "${uploaderName}"...`);
+            let ok = 0;
+            let fail = 0;
+            for (let i = 0; i < files.length; i++) {
+                const f = files[i];
+                const fd = new FormData();
+                fd.set('kind', 'tournament-photo');
+                fd.set('year', year);
+                fd.set('uploaderName', uploaderName);
+                fd.set('file', f, f.name);
+                const res = await fetch('/api/media/upload', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: fd });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    fail++;
+                    logTo(elPhotosLog, `FAIL ${i + 1}/${files.length}: ${f.name} → ${json?.error || res.status}`);
+                    continue;
+                }
+                ok++;
+                logTo(elPhotosLog, `OK ${i + 1}/${files.length}: ${f.name} → ${json.key}`);
+            }
+            logTo(elPhotosLog, `Done. Success: ${ok}. Failed: ${fail}.`);
+            await loadTournamentMetaAndPopulate();
+        }
+
+        function setSelectOptions(selectEl, options, selected) {
+            const sel = String(selected || '');
+            selectEl.innerHTML = `<option value="">— none —</option>` + options.map(o => {
+                const key = String(o.key);
+                const label = String(o.label);
+                const isSel = key === sel ? ' selected' : '';
+                return `<option value="${key.replaceAll('"', '&quot;')}"${isSel}>${label}</option>`;
+            }).join('');
+        }
+
+        async function loadTournamentMetaAndPopulate() {
+            const year = String(elPhotoYear.value || '').trim();
+            if (!year) return alert('Enter a year first.');
+            logTo(elPhotosLog, `Loading meta for ${year}...`);
+            const meta = (window.WhistMedia && typeof window.WhistMedia.getTournamentMeta === 'function')
+                ? await window.WhistMedia.getTournamentMeta(year)
+                : null;
+            if (!meta) {
+                logTo(elPhotosLog, `No meta found for ${year} yet (upload photos first).`);
+                const empty = [];
+                setSelectOptions(elCover1, empty, '');
+                setSelectOptions(elCover2, empty, '');
+                setSelectOptions(elCover3, empty, '');
+                renderCoverPreviews([]);
+                return;
+            }
+            const photos = Array.isArray(meta.photos) ? meta.photos.slice() : [];
+            photos.sort((a, b) => String(b?.uploadedAt || '').localeCompare(String(a?.uploadedAt || '')));
+
+            const options = photos.map(p => {
+                const key = String(p?.key || '');
+                const uploader = String(p?.uploaderName || p?.uploaderSlug || '');
+                const label = uploader ? `${uploader} — ${key}` : key;
+                return { key, label };
+            }).filter(x => x.key);
+
+            const coverPicks = Array.isArray(meta.coverPicks) ? meta.coverPicks.slice(0, 3) : [];
+            setSelectOptions(elCover1, options, coverPicks[0] || '');
+            setSelectOptions(elCover2, options, coverPicks[1] || '');
+            setSelectOptions(elCover3, options, coverPicks[2] || '');
+            renderCoverPreviews(coverPicks);
+            logTo(elPhotosLog, `Loaded ${photos.length} photo(s). Current cover picks: ${coverPicks.length ? coverPicks.join(' | ') : 'none'}`);
+        }
+
+        async function renderCoverPreviews(coverKeys) {
+            const keys = Array.isArray(coverKeys) ? coverKeys : [];
+            const boxes = [elCoverPrev1, elCoverPrev2, elCoverPrev3];
+            for (let i = 0; i < boxes.length; i++) {
+                const box = boxes[i];
+                const key = keys[i] || '';
+                box.innerHTML = i === 0 ? 'Cover 1' : (i === 1 ? 'Cover 2' : 'Cover 3');
+                if (!key) continue;
+                const url = (window.WhistMedia && typeof window.WhistMedia.publicUrlForKey === 'function')
+                    ? await window.WhistMedia.publicUrlForKey(key)
+                    : '';
+                if (!url) {
+                    box.textContent = 'No base URL set';
+                    continue;
+                }
+                box.innerHTML = `<img alt="cover ${i + 1}" src="${url.replaceAll('"', '&quot;')}" />`;
+            }
+        }
+
+        async function saveCoverPicks() {
+            const token = getToken();
+            if (!token) return alert('Please enter the upload token first.');
+            const year = String(elPhotoYear.value || '').trim();
+            if (!year) return alert('Enter a year first.');
+            const picks = [elCover1.value, elCover2.value, elCover3.value].map(v => String(v || '').trim()).filter(Boolean);
+            logTo(elPhotosLog, `Saving cover picks for ${year}...`);
+            const res = await fetch('/api/media/tournament-meta', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ year, coverPicks: picks })
+            });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                logTo(elPhotosLog, `FAIL: ${json?.error || res.status}`);
+                return;
+            }
+            logTo(elPhotosLog, `OK: cover picks saved (${(json.coverPicks || []).length})`);
+            await loadTournamentMetaAndPopulate();
+        }
+
+        // Avatar crop state
+        const avatarState = {
+            img: null,
+            ready: false,
+            baseScale: 1,
+            zoom: 1,
+            tx: 0,
+            ty: 0,
+            dragging: false,
+            dragStartX: 0,
+            dragStartY: 0,
+            startTx: 0,
+            startTy: 0
+        };
+
+        function updateAvatarTransform() {
+            if (!avatarState.ready || !avatarState.img) return;
+            const scale = avatarState.baseScale * avatarState.zoom;
+            elAvatarImg.style.display = 'block';
+            elAvatarImg.style.transform = `translate(calc(-50% + ${avatarState.tx}px), calc(-50% + ${avatarState.ty}px)) scale(${scale})`;
+        }
+
+        function loadAvatarFile(file) {
+            elAvatarUrl.textContent = '—';
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => {
+                avatarState.img = img;
+                avatarState.ready = true;
+                avatarState.tx = 0;
+                avatarState.ty = 0;
+                avatarState.zoom = 1;
+                elAvatarZoom.value = '1';
+
+                const stage = 260;
+                const scaleToCover = Math.max(stage / img.naturalWidth, stage / img.naturalHeight);
+                avatarState.baseScale = scaleToCover;
+
+                elAvatarImg.src = url;
+                updateAvatarTransform();
+                logTo(elAvatarLog, `Loaded image ${file.name} (${img.naturalWidth}x${img.naturalHeight})`);
+            };
+            img.onerror = () => {
+                avatarState.ready = false;
+                avatarState.img = null;
+                logTo(elAvatarLog, `Failed to load image.`);
+            };
+            img.src = url;
+        }
+
+        function avatarPointerDown(e) {
+            if (!avatarState.ready) return;
+            avatarState.dragging = true;
+            avatarState.dragStartX = e.clientX;
+            avatarState.dragStartY = e.clientY;
+            avatarState.startTx = avatarState.tx;
+            avatarState.startTy = avatarState.ty;
+            elAvatarStage.setPointerCapture(e.pointerId);
+        }
+        function avatarPointerMove(e) {
+            if (!avatarState.dragging) return;
+            const dx = e.clientX - avatarState.dragStartX;
+            const dy = e.clientY - avatarState.dragStartY;
+            avatarState.tx = avatarState.startTx + dx;
+            avatarState.ty = avatarState.startTy + dy;
+            updateAvatarTransform();
+        }
+        function avatarPointerUp(e) {
+            avatarState.dragging = false;
+            try { elAvatarStage.releasePointerCapture(e.pointerId); } catch (_) {}
+        }
+
+        async function uploadAvatarCropped() {
+            const token = getToken();
+            if (!token) return alert('Please enter the upload token first.');
+            const playerId = String(elAvatarPlayer.value || '').trim();
+            if (!playerId) return alert('Enter a Player Key first.');
+            if (!avatarState.ready || !avatarState.img) return alert('Choose an image first.');
+
+            const stage = 260;
+            const outSize = 512;
+            const scale = avatarState.baseScale * avatarState.zoom;
+            const dw = avatarState.img.naturalWidth * scale;
+            const dh = avatarState.img.naturalHeight * scale;
+            const dx = (stage - dw) / 2 + avatarState.tx;
+            const dy = (stage - dh) / 2 + avatarState.ty;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = outSize;
+            canvas.height = outSize;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, outSize, outSize);
+            const factor = outSize / stage;
+            ctx.drawImage(avatarState.img, dx * factor, dy * factor, dw * factor, dh * factor);
+
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+            if (!blob) return alert('Failed to encode JPEG.');
+
+            const fd = new FormData();
+            fd.set('playerId', playerId);
+            fd.set('file', new File([blob], `${playerId}.jpg`, { type: 'image/jpeg' }));
+
+            logTo(elAvatarLog, `Uploading avatar for ${playerId}...`);
+            const res = await fetch('/api/media/avatar', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: fd
+            });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                logTo(elAvatarLog, `FAIL: ${json?.error || res.status}`);
+                return;
+            }
+            logTo(elAvatarLog, `OK: ${json.key}`);
+            elAvatarUrl.textContent = json.url || json.key;
+        }
+
+        function resetAvatar() {
+            avatarState.ready = false;
+            avatarState.img = null;
+            avatarState.tx = 0;
+            avatarState.ty = 0;
+            avatarState.zoom = 1;
+            avatarState.baseScale = 1;
+            elAvatarImg.style.display = 'none';
+            elAvatarImg.src = '';
+            elAvatarFile.value = '';
+            elAvatarZoom.value = '1';
+            elAvatarUrl.textContent = '—';
+        }
+
+        document.getElementById('btn-upload-scorecards').addEventListener('click', uploadAll);
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            elInput.value = '';
+            elFolder.value = '';
+            state.files = [];
+            elList.innerHTML = '';
+            elLog.textContent = '';
+            elScanLog.textContent = '';
+            elPhotosLog.textContent = '';
+            elAvatarLog.textContent = '';
+            renderList();
+        });
+        elInput.addEventListener('change', rebuildFromInputs);
+        elFolder.addEventListener('change', rebuildFromInputs);
+        elToken.addEventListener('change', () => setToken(getToken()));
+        document.getElementById('btn-upload-scan').addEventListener('click', () => uploadRoundTableScan().catch(e => logTo(elScanLog, `FAIL: ${e.message || e}`)));
+        document.getElementById('btn-upload-photos').addEventListener('click', () => uploadTournamentPhotos().catch(e => logTo(elPhotosLog, `FAIL: ${e.message || e}`)));
+        document.getElementById('btn-load-meta').addEventListener('click', () => loadTournamentMetaAndPopulate().catch(e => logTo(elPhotosLog, `FAIL: ${e.message || e}`)));
+        document.getElementById('btn-save-covers').addEventListener('click', () => saveCoverPicks().catch(e => logTo(elPhotosLog, `FAIL: ${e.message || e}`)));
+
+        elCover1.addEventListener('change', () => renderCoverPreviews([elCover1.value, elCover2.value, elCover3.value]));
+        elCover2.addEventListener('change', () => renderCoverPreviews([elCover1.value, elCover2.value, elCover3.value]));
+        elCover3.addEventListener('change', () => renderCoverPreviews([elCover1.value, elCover2.value, elCover3.value]));
+
+        elAvatarFile.addEventListener('change', () => {
+            const f = elAvatarFile.files && elAvatarFile.files[0] ? elAvatarFile.files[0] : null;
+            loadAvatarFile(f);
+        });
+        elAvatarZoom.addEventListener('input', () => {
+            avatarState.zoom = Number(elAvatarZoom.value || 1);
+            updateAvatarTransform();
+        });
+        elAvatarStage.addEventListener('pointerdown', avatarPointerDown);
+        elAvatarStage.addEventListener('pointermove', avatarPointerMove);
+        elAvatarStage.addEventListener('pointerup', avatarPointerUp);
+        elAvatarStage.addEventListener('pointercancel', avatarPointerUp);
+        document.getElementById('btn-upload-avatar').addEventListener('click', () => uploadAvatarCropped().catch(e => logTo(elAvatarLog, `FAIL: ${e.message || e}`)));
+        document.getElementById('btn-reset-avatar').addEventListener('click', resetAvatar);
+
+        // Load token from localStorage
+        try {
+            const t = localStorage.getItem(TOKEN_KEY) || '';
+            if (t) elToken.value = t;
+        } catch (_) {}
+        renderTokenStatus();
+        renderList();
+    </script>
+</body>
+</html>
+
+
+

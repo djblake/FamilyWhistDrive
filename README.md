@@ -162,6 +162,33 @@ If you want “press refresh and everyone sees it immediately” on Cloudflare P
 - `POST /api/admin/cache/stats` (stores stats cache; requires `Authorization: Bearer <WHIST_ADMIN_TOKEN>`)\n
 The site uses a **versioned URL strategy**: clients fetch the manifest (no-store) to get the latest `rawHash`, then fetch `raw/stats` with that hash so browsers can cache the JSON aggressively without missing updates.
 
+## 📸 Media uploads (R2) + admin tools
+
+The site supports **self-serve uploads** for:
+
+- Tournament-day photos (grouped by uploader, with up to 3 “cover picks” per year)
+- Player scorecard scans (bulk upload from a folder)
+- Player avatars
+
+Media is stored in **Cloudflare R2** (public read; authenticated upload). Admin pages under `/admin/` are protected by a password gate.
+
+### Runbook
+
+See:
+
+- `docs/photo-media-r2-runbook.md`
+
+### Required Cloudflare bindings / env vars
+
+In Cloudflare Pages → Project → Settings:
+
+- **R2 binding**:
+  - `WHIST_MEDIA` → R2 bucket (recommended bucket name: `whist-media`)
+- **Environment variables / secrets**:
+  - `WHIST_MEDIA_PUBLIC_BASE_URL` (public base URL that serves `/<key>` paths)
+  - `WHIST_UPLOAD_TOKEN` (secret Bearer token used by upload endpoints)
+  - `WHIST_ADMIN_PASSWORD` (secret password that gates `/admin/*` pages)
+
 ### Developer mode (bypass cache)
 
 For development/troubleshooting, you can enable a browser-local developer mode that forces pages to load directly from Google Sheets (skipping KV/static caches):

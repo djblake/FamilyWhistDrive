@@ -11,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/assets/js/footer-nav.js?v=1" defer></script>
+    <script src="/assets/js/media.js?v=1" defer></script>
 </head>
 <body>
     <header class="header">
@@ -42,6 +43,7 @@
                             <div class="avatar-icon" id="player-icon">🎯</div>
                             <div class="avatar-initial" id="player-initial">--</div>
                         </div>
+                        <img id="player-avatar-img" alt="" style="display:none;">
                         <div class="champion-badge" id="champion-badge" style="display: none;">Champion</div>
                         <div class="family-tree-link family-tree-link--avatar">
                             <a href="../families/" class="family-tree-btn" id="family-tree-btn">
@@ -308,6 +310,38 @@
             return urlParams.get('player');
         }
 
+        async function hydrateProfileAvatar(engine, playerNameOrKey) {
+            try {
+                const imgEl = document.getElementById('player-avatar-img');
+                const placeholder = document.querySelector('.player-avatar .avatar-placeholder');
+                if (!imgEl || !placeholder) return;
+                if (!(window.WhistMedia && typeof window.WhistMedia.publicUrlForKey === 'function')) return;
+
+                const key = (engine && typeof engine.getCanonicalPlayerId === 'function')
+                    ? engine.getCanonicalPlayerId(playerNameOrKey)
+                    : String(playerNameOrKey || '').trim();
+                if (!key) return;
+
+                const url = await window.WhistMedia.publicUrlForKey(`avatars/${key}.jpg`);
+                if (!url) return;
+
+                const ok = await new Promise((resolve) => {
+                    const probe = new Image();
+                    probe.onload = () => resolve(true);
+                    probe.onerror = () => resolve(false);
+                    probe.src = `${url}${url.includes('?') ? '&' : '?'}probe=${Date.now()}`;
+                });
+                if (!ok) return;
+
+                imgEl.src = url;
+                imgEl.style.display = 'block';
+                placeholder.style.opacity = '0';
+                placeholder.style.pointerEvents = 'none';
+            } catch (_) {
+                // ignore
+            }
+        }
+
         // Load player profile data
         document.addEventListener('DOMContentLoaded', async function() {
             const playerName = getPlayerFromURL();
@@ -394,6 +428,9 @@
                 // Update player information - use full name for profile display
                 document.getElementById('player-name').textContent = fullName;
                 document.getElementById('player-initial').textContent = player.name.split(' ').map(n => n[0]).join('');
+
+                // Avatar: try to load from R2 (avatars/{Key}.jpg). Fallback keeps the placeholder.
+                hydrateProfileAvatar(tournamentEngine, player.name);
                 
                 // Get player statistics - include tournaments where player appears individually OR in shared hands
                 const playerTournaments = tournaments.filter(t => {
@@ -1521,6 +1558,17 @@
             justify-content: center;
             position: relative;
             margin-bottom: var(--spacing-md);
+            box-shadow: var(--shadow-card);
+        }
+
+        #player-avatar-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
             box-shadow: var(--shadow-card);
         }
 

@@ -1,7 +1,7 @@
-export function requireAdmin(request, env) {
-  const expected = env && env.WHIST_ADMIN_TOKEN ? String(env.WHIST_ADMIN_TOKEN) : '';
+function requireToken(request, env, envKey) {
+  const expected = env && env[envKey] ? String(env[envKey]) : '';
   if (!expected) {
-    return { ok: false, status: 501, message: 'WHIST_ADMIN_TOKEN not configured' };
+    return { ok: false, status: 501, message: `${envKey} not configured` };
   }
 
   const auth = request.headers.get('authorization') || '';
@@ -11,6 +11,17 @@ export function requireAdmin(request, env) {
 
   return { ok: false, status: 401, message: 'Unauthorized' };
 }
+
+export function requireAdmin(request, env) {
+  return requireToken(request, env, 'WHIST_ADMIN_TOKEN');
+}
+
+export function requireUploader(request, env) {
+  return requireToken(request, env, 'WHIST_UPLOAD_TOKEN');
+}
+
+
+
 
 
 

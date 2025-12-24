@@ -770,7 +770,7 @@
                     <button type="button" class="see-more-btn" id="partnership-see-more-btn">See more</button>
                 </div>
             `;
-
+            
             const tbody = document.getElementById('partnership-table-body');
             const moreWrap = document.getElementById('partnership-see-more-wrap');
             const moreMeta = document.getElementById('partnership-see-more-meta');
@@ -1191,12 +1191,12 @@
                         <div class="family-panel-header">
                             <div class="family-panel-title">${escapeHtml(f.family_name)} Family</div>
                             <div class="family-panel-subtitle">${s.membersCount} members • ${s.honoraryCount} honorary</div>
-                        </div>
+                            </div>
                         <div class="family-panel-stats">
                             <div class="family-panel-stat">
                                 <div class="k">Avg tricks/round</div>
                                 <div class="v">${s.avgTricksPerRound.toFixed(2)}</div>
-                            </div>
+                                </div>
                             <div class="family-panel-stat">
                                 <div class="k">Champs</div>
                                 <div class="v">${s.champs}</div>
@@ -1204,24 +1204,24 @@
                             <div class="family-panel-stat">
                                 <div class="k">Tournaments</div>
                                 <div class="v">${s.totalTournaments.toLocaleString()}</div>
-                            </div>
+                                </div>
                             <div class="family-panel-stat">
                                 <div class="k">Medals</div>
                                 <div class="v">${s.medals.toLocaleString()}</div>
-                            </div>
-                        </div>
+                                </div>
+                                </div>
 
                         <div class="family-panel-list">
                             <div class="family-panel-list-title">Members</div>
                             <div class="family-chip-row">${chipList(f.members)}</div>
-                        </div>
+                                </div>
 
                         <div class="family-panel-list">
                             <div class="family-panel-list-title">Honorary members</div>
                             <div class="family-chip-row">${chipList(f.honorary)}</div>
-                        </div>
-                    </div>
-                `;
+                            </div>
+                </div>
+            `;
             }).join('');
 
             container.innerHTML = `
