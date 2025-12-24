@@ -668,6 +668,11 @@
                         .replaceAll('"', '&quot;')
                         .replaceAll("'", '&#39;');
                 }
+
+                // Backwards-compatible alias (some sections still call escapeHtml).
+                function escapeHtml(value) {
+                    return encodeHtml(value);
+                }
                 
                 // Helper function to create player link (handles shared hands)
                 function createPlayerLink(playerName, displayName, cssClass = 'player-name-link') {
