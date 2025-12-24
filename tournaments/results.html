@@ -1383,7 +1383,7 @@
                     if (!author) return setStatus(statusEl, 'Please enter your name.');
                     if (text.length < 5) return setStatus(statusEl, 'Please write a longer story.');
                     if (!pw) return setStatus(statusEl, 'Family password required.');
-                    const res = await fetch('/api/day-notes', {
+                    const res = await fetch(`/api/day-notes?year=${encodeURIComponent(y)}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ year: y, type: 'story', author, text, password: pw })
@@ -1414,7 +1414,7 @@
                     if (text.length < 2) return setStatus(statusEl, 'Please enter a quote.');
                     if (!author) return setStatus(statusEl, 'Please enter your name.');
                     if (!pw) return setStatus(statusEl, 'Family password required.');
-                    const res = await fetch('/api/day-notes', {
+                    const res = await fetch(`/api/day-notes?year=${encodeURIComponent(y)}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ year: y, type: 'quote', author, saidBy, text, password: pw })

@@ -141,10 +141,9 @@ export async function onRequest(context) {
   const bucket = env && env.WHIST_MEDIA;
   if (!bucket) return jsonResponse({ error: 'R2 binding WHIST_MEDIA not configured' }, { status: 501 });
 
-  const year = String(url.searchParams.get('year') || '').trim();
-  if (!/^\d{4}$/.test(year)) return badRequest('Invalid year');
-
   if (method === 'GET') {
+    const year = String(url.searchParams.get('year') || '').trim();
+    if (!/^\d{4}$/.test(year)) return badRequest('Invalid year');
     const notes = await readNotes(bucket, year);
     return jsonResponse({
       ok: true,
@@ -165,6 +164,10 @@ export async function onRequest(context) {
   } catch (_) {
     return badRequest('Expected JSON body');
   }
+
+  const yearFromQuery = String(url.searchParams.get('year') || '').trim();
+  const year = yearFromQuery || String(body?.year || '').trim();
+  if (!/^\d{4}$/.test(year)) return badRequest('Invalid year');
 
   const action = String(body?.action || 'add').trim().toLowerCase();
 
