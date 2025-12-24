@@ -267,10 +267,11 @@
                                     <img
                                         alt=""
                                         loading="lazy"
-                                        style="display:none;"
+                                        decoding="async"
+                                        style="opacity:0; transition: opacity 0.15s ease;"
                                         src="/media/avatars/${escapeHtml(playerKey)}_sm.jpg"
-                                        onload="this.style.display='block'; const s=this.parentElement && this.parentElement.querySelector && this.parentElement.querySelector('.avatar-initials'); if(s) s.style.display='none';"
-                                        onerror="if(!this.dataset.fallback){this.dataset.fallback='1'; this.src='/media/avatars/${escapeHtml(playerKey)}.jpg'; return;} this.style.display='none';"
+                                        onload="this.style.opacity='1'; const s=this.parentElement && this.parentElement.querySelector && this.parentElement.querySelector('.avatar-initials'); if(s) s.style.display='none';"
+                                        onerror="if(!this.dataset.fallback){this.dataset.fallback='1'; this.src='/media/avatars/${escapeHtml(playerKey)}.jpg'; return;} this.style.opacity='0'; const s=this.parentElement && this.parentElement.querySelector && this.parentElement.querySelector('.avatar-initials'); if(s) s.style.display='block';"
                                     >
                                     <span class="avatar-initials">${initials}</span>
                                 </div>
