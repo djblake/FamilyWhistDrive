@@ -48,7 +48,9 @@
   }
 
   function playerScorecardKey(year, playerId) {
-    return `player-scorecards/${String(year)}/${String(playerId)}.jpg`;
+    const y = String(year);
+    const id = String(playerId);
+    return `player-scorecards/${y}/${y}_${id}.jpg`;
   }
 
   async function playerScorecardUrl(year, playerId) {

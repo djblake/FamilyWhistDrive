@@ -28,7 +28,7 @@ function extFromFile(file) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const auth = requireUploader(request, env);
+  const auth = await requireUploader(request, env);
   if (!auth.ok) return jsonResponse({ error: auth.message }, { status: auth.status });
 
   const bucket = env && env.WHIST_MEDIA;
@@ -61,7 +61,7 @@ export async function onRequestPost(context) {
   });
 
   const publicBaseUrl = env && env.WHIST_MEDIA_PUBLIC_BASE_URL ? String(env.WHIST_MEDIA_PUBLIC_BASE_URL) : '';
-  const url = publicBaseUrl ? `${publicBaseUrl.replace(/\\/+$/, '')}/${key}` : null;
+  const url = publicBaseUrl ? `${publicBaseUrl.replace(/\/+$/, '')}/${key}` : null;
   return jsonResponse({ ok: true, key, url });
 }
 

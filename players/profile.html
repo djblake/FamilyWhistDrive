@@ -44,6 +44,9 @@
                             <div class="avatar-initial" id="player-initial">--</div>
                         </div>
                         <img id="player-avatar-img" alt="" style="display:none;">
+                        <div style="margin-top: 0.75rem; display:flex; justify-content:center;">
+                            <a class="btn btn-secondary" id="upload-avatar-link" href="../upload/avatar.html" style="display:none;">Add / change avatar</a>
+                        </div>
                         <div class="champion-badge" id="champion-badge" style="display: none;">Champion</div>
                         <div class="family-tree-link family-tree-link--avatar">
                             <a href="../families/" class="family-tree-btn" id="family-tree-btn">
@@ -310,6 +313,17 @@
             return urlParams.get('player');
         }
 
+        function hydrateAvatarUploadLink(engine, playerNameOrKey) {
+            const el = document.getElementById('upload-avatar-link');
+            if (!el) return;
+            const key = (engine && typeof engine.getCanonicalPlayerId === 'function')
+                ? engine.getCanonicalPlayerId(playerNameOrKey)
+                : String(playerNameOrKey || '').trim();
+            if (!key) return;
+            el.href = `../upload/avatar.html?playerId=${encodeURIComponent(key)}`;
+            el.style.display = 'inline-flex';
+        }
+
         async function hydrateProfileAvatar(engine, playerNameOrKey) {
             try {
                 const imgEl = document.getElementById('player-avatar-img');
@@ -431,6 +445,7 @@
 
                 // Avatar: try to load from R2 (avatars/{Key}.jpg). Fallback keeps the placeholder.
                 hydrateProfileAvatar(tournamentEngine, player.name);
+                hydrateAvatarUploadLink(tournamentEngine, player.name);
                 
                 // Get player statistics - include tournaments where player appears individually OR in shared hands
                 const playerTournaments = tournaments.filter(t => {

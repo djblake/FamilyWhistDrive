@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Photos | Ruston Family Whist Drive</title>
+    <meta name="description" content="Tournament photo gallery.">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="/assets/js/footer-nav.js?v=1" defer></script>
+    <script src="/assets/js/media.js?v=1" defer></script>
+    <style>
+        .gallery-hero {
+            padding: var(--spacing-3xl) 0;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--primary-dark) 100%);
+            color: var(--text-primary);
+        }
+        .gallery-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2rem, 6vw, 3.25rem);
+            margin: 0;
+            text-align: center;
+            text-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+        }
+        .gallery-sub {
+            margin-top: 0.75rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.85);
+        }
+        .gallery-actions {
+            margin-top: 1.25rem;
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .cover-strip {
+            margin-top: 1.25rem;
+            display: none;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .cover-strip a {
+            width: 180px;
+            height: 110px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            background: rgba(255, 255, 255, 0.14);
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22);
+            display: inline-block;
+        }
+        .cover-strip a img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+        .tournament-photos {
+            padding: var(--spacing-3xl) 0;
+            background: #ffffff;
+        }
+        .photos-group {
+            margin-top: var(--spacing-xl);
+            background: #ffffff;
+            border-radius: var(--border-radius-lg);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+        }
+        .photos-group-header {
+            padding: var(--spacing-lg) var(--spacing-xl);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: baseline;
+        }
+        .photos-group-title {
+            font-weight: 950;
+            color: var(--text-primary-dark);
+            font-size: 1.05rem;
+        }
+        .photos-group-meta {
+            color: var(--text-secondary-dark);
+            font-weight: 800;
+            font-size: 0.9rem;
+        }
+        .photos-grid {
+            padding: var(--spacing-lg) var(--spacing-xl);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 0.85rem;
+        }
+        .photo-thumb {
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            background: rgba(15, 23, 42, 0.04);
+            aspect-ratio: 16 / 10;
+            display: block;
+        }
+        .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .empty-state {
+            margin-top: var(--spacing-xl);
+            padding: var(--spacing-xl);
+            border-radius: var(--border-radius-lg);
+            border: 1px dashed rgba(15, 23, 42, 0.20);
+            background: rgba(15, 23, 42, 0.03);
+            text-align: center;
+            color: var(--text-secondary-dark);
+        }
+        .empty-state strong { display:block; color: var(--text-primary-dark); margin-bottom: 0.25rem; }
+        .empty-state a { font-weight: 900; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
+                    <h1 class="site-title">Ruston Family Whist Drive</h1>
+                    <p class="site-subtitle">Tournament Photos</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="../" class="nav-link">Home</a>
+                    <a href="./" class="nav-link">Tournaments</a>
+                    <a href="../players/" class="nav-link">Players</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="gallery-hero">
+            <div class="container">
+                <h1 class="gallery-title" id="gallery-title">Tournament Photos</h1>
+                <p class="gallery-sub" id="gallery-sub">Loading…</p>
+                <div class="gallery-actions">
+                    <a class="btn btn-secondary" id="back-to-results" href="./">Back to results</a>
+                    <a class="btn btn-primary" id="upload-photos" href="../upload/tournament-photos.html">Upload photos</a>
+                </div>
+                <div class="cover-strip" id="cover-strip" aria-label="Tournament cover photos"></div>
+            </div>
+        </section>
+
+        <section class="tournament-photos">
+            <div class="container">
+                <h2 class="section-title"><span class="title-icon">📸</span>All photos</h2>
+                <div id="empty" class="empty-state" style="display:none;"></div>
+                <div id="groups"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div data-footer-nav></div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        function getYear() {
+            const url = new URL(window.location.href);
+            return String(url.searchParams.get('year') || '').trim();
+        }
+
+        async function render() {
+            const year = getYear();
+            const titleEl = document.getElementById('gallery-title');
+            const subEl = document.getElementById('gallery-sub');
+            const backEl = document.getElementById('back-to-results');
+            const uploadEl = document.getElementById('upload-photos');
+            const coverStrip = document.getElementById('cover-strip');
+            const emptyEl = document.getElementById('empty');
+            const groupsEl = document.getElementById('groups');
+
+            if (!year || !/^\d{4}$/.test(year)) {
+                titleEl.textContent = 'Tournament Photos';
+                subEl.textContent = 'Missing tournament year.';
+                emptyEl.style.display = 'block';
+                emptyEl.innerHTML = `<strong>Missing year</strong>Open this page like <code>photos.html?year=2025</code>.`;
+                return;
+            }
+
+            titleEl.textContent = `${year} Tournament Photos`;
+            subEl.textContent = 'Family uploads and tournament memories.';
+            backEl.href = `results.html?year=${encodeURIComponent(year)}`;
+            uploadEl.href = `../upload/tournament-photos.html?year=${encodeURIComponent(year)}`;
+
+            if (!(window.WhistMedia && typeof window.WhistMedia.getTournamentMeta === 'function')) {
+                emptyEl.style.display = 'block';
+                emptyEl.innerHTML = `<strong>Gallery not available</strong>Media config wasn’t loaded.`;
+                return;
+            }
+            if (!(window.WhistMedia && typeof window.WhistMedia.publicUrlForKey === 'function')) {
+                emptyEl.style.display = 'block';
+                emptyEl.innerHTML = `<strong>Gallery not available</strong>Media URL helper wasn’t loaded.`;
+                return;
+            }
+
+            const meta = await window.WhistMedia.getTournamentMeta(year);
+            const photos = Array.isArray(meta?.photos) ? meta.photos.slice() : [];
+            const coverPicks = Array.isArray(meta?.coverPicks) ? meta.coverPicks.slice(0, 3) : [];
+
+            // Cover strip (if any)
+            if (coverPicks.length) {
+                const items = [];
+                for (const key of coverPicks) {
+                    const url = await window.WhistMedia.publicUrlForKey(key);
+                    if (!url) continue;
+                    items.push(`<a href="${url.replaceAll('"', '&quot;')}" target="_blank" rel="noopener"><img alt="Tournament cover" src="${url.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
+                }
+                if (items.length) {
+                    coverStrip.innerHTML = items.join('');
+                    coverStrip.style.display = 'flex';
+                }
+            }
+
+            if (!photos.length) {
+                emptyEl.style.display = 'block';
+                emptyEl.innerHTML = `<strong>There are no photos uploaded for this event yet!</strong><a href="${uploadEl.href.replaceAll('"','&quot;')}">Upload some →</a>`;
+                return;
+            }
+
+            // Grouped gallery
+            const byUploader = new Map();
+            for (const p of photos) {
+                const uploader = String(p?.uploaderName || p?.uploaderSlug || 'Unknown').trim() || 'Unknown';
+                if (!byUploader.has(uploader)) byUploader.set(uploader, []);
+                byUploader.get(uploader).push(p);
+            }
+
+            const uploaderNames = Array.from(byUploader.keys()).sort((a, b) => a.localeCompare(b));
+            const groupsHtml = [];
+            for (const uploader of uploaderNames) {
+                const list = byUploader.get(uploader) || [];
+                list.sort((a, b) => String(b?.uploadedAt || '').localeCompare(String(a?.uploadedAt || '')));
+                const thumbs = [];
+                for (const p of list) {
+                    const key = String(p?.key || '');
+                    if (!key) continue;
+                    const url = await window.WhistMedia.publicUrlForKey(key);
+                    if (!url) continue;
+                    thumbs.push(`<a class="photo-thumb" href="${url.replaceAll('"', '&quot;')}" target="_blank" rel="noopener"><img alt="Tournament photo" src="${url.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
+                }
+                if (!thumbs.length) continue;
+
+                groupsHtml.push(`
+                    <div class="photos-group">
+                        <div class="photos-group-header">
+                            <div class="photos-group-title">${escapeHtml(uploader)}</div>
+                            <div class="photos-group-meta">${thumbs.length} photo${thumbs.length === 1 ? '' : 's'}</div>
+                        </div>
+                        <div class="photos-grid">
+                            ${thumbs.join('')}
+                        </div>
+                    </div>
+                `);
+            }
+
+            groupsEl.innerHTML = groupsHtml.join('');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            render().catch(() => {
+                const emptyEl = document.getElementById('empty');
+                if (emptyEl) {
+                    emptyEl.style.display = 'block';
+                    emptyEl.innerHTML = `<strong>Unable to load photos</strong>Please try again later.`;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
+

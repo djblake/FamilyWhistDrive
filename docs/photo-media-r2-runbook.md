@@ -45,6 +45,7 @@ This document is the **single source of truth** for setting up and operating pho
   - [ ] `WHIST_MEDIA_PUBLIC_BASE_URL` (public base URL that serves `/<key>`)
   - [ ] `WHIST_UPLOAD_TOKEN` (secret; Bearer token for uploads + cover pick updates)
   - [ ] `WHIST_ADMIN_PASSWORD` (secret; gates `/admin/*` pages)
+  - [ ] `WHIST_FAMILY_PASSWORD` (secret; used by public upload pages to create a short-lived signed cookie)
 
 ### UI wiring (site features)
 
@@ -141,7 +142,7 @@ Important: current server code expects an image upload and **stores it as** `ava
 
 Bulk-import-friendly storage:
 
-`player-scorecards/{year}/{playerKey}.jpg`
+`player-scorecards/{year}/{year}_{playerKey}.jpg`
 
 The upload endpoint supports parsing the original filename format:
 
@@ -150,7 +151,7 @@ The upload endpoint supports parsing the original filename format:
 
 Example:
 - Local file: `1993_David_SteveBlake.jpeg`
-- Stored key: `player-scorecards/1993/David_SteveBlake.jpg`
+- Stored key: `player-scorecards/1993/1993_David_SteveBlake.jpg`
 
 #### Bulk upload from a year-folder structure
 

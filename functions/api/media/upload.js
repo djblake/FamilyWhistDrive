@@ -89,7 +89,7 @@ async function readTournamentMeta(bucket, year) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const auth = requireUploader(request, env);
+  const auth = await requireUploader(request, env);
   if (!auth.ok) return jsonResponse({ error: auth.message }, { status: auth.status });
 
   const bucket = env && env.WHIST_MEDIA;
@@ -148,7 +148,9 @@ export async function onRequestPost(context) {
 
     // We store all player scorecards as .jpg. Require JPEG input to avoid mismatches.
     if (ext !== 'jpg') return badRequest('Player scorecards must be JPEG (.jpg/.jpeg)');
-    key = `player-scorecards/${year}/${playerKey}.jpg`;
+    // Include the year in the stored filename so downloads preserve the year context.
+    // Example: player-scorecards/1993/1993_David_SteveBlake.jpg
+    key = `player-scorecards/${year}/${year}_${playerKey}.jpg`;
     contentType = 'image/jpeg';
   } else if (kind === 'tournament-photo') {
     const year = String(form.get('year') || '').trim();
@@ -200,7 +202,7 @@ export async function onRequestPost(context) {
   });
 
   const publicBaseUrl = env && env.WHIST_MEDIA_PUBLIC_BASE_URL ? String(env.WHIST_MEDIA_PUBLIC_BASE_URL) : '';
-  const url = publicBaseUrl ? `${publicBaseUrl.replace(/\\/+$/, '')}/${key}` : null;
+  const url = publicBaseUrl ? `${publicBaseUrl.replace(/\/+$/, '')}/${key}` : null;
   return jsonResponse({ ok: true, key, url });
 }
 

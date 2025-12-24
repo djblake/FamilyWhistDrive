@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Avatar | Ruston Family Whist Drive</title>
+    <meta name="description" content="Upload your player avatar photo.">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="/assets/js/footer-nav.js?v=1" defer></script>
+    <script src="/assets/js/media.js?v=1" defer></script>
+    <style>
+        .upload-wrap { padding: var(--spacing-3xl) 0; }
+        .upload-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            box-shadow: var(--shadow-card);
+        }
+        .upload-title { font-size: 1.6rem; margin-bottom: 0.25rem; color: var(--text-primary-dark); font-weight: 950; }
+        .upload-sub { color: var(--text-secondary-dark); margin-bottom: var(--spacing-lg); }
+        .row { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+        .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        @media (max-width: 720px) { .row-2 { grid-template-columns: 1fr; } }
+        label { font-weight: 800; color: var(--text-primary-dark); font-size: 0.9rem; }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 0.75rem 0.9rem;
+            border-radius: 12px;
+            border: 1px solid rgba(15, 23, 42, 0.18);
+            font-size: 0.95rem;
+        }
+        input[readonly] { background: rgba(15, 23, 42, 0.04); }
+        input[type="file"] { width: 100%; }
+        .btn-row { display:flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem; align-items: center; }
+        .small { font-size: 0.85rem; color: var(--text-secondary-dark); }
+        .log {
+            margin-top: var(--spacing-md);
+            padding: var(--spacing-md);
+            background: rgba(15, 23, 42, 0.04);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.85rem;
+            color: var(--text-primary-dark);
+            max-height: 240px;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+        .pill {
+            display:inline-flex;
+            align-items:center;
+            gap: 0.4rem;
+            padding: 0.2rem 0.65rem;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            background: rgba(15, 23, 42, 0.04);
+            font-weight: 800;
+            font-size: 0.8rem;
+        }
+        .pill.ok { border-color: rgba(34, 197, 94, 0.25); background: rgba(34, 197, 94, 0.08); }
+        .pill.bad { border-color: rgba(239, 68, 68, 0.25); background: rgba(239, 68, 68, 0.08); }
+
+        .avatar-crop-wrap { display: grid; grid-template-columns: 260px 1fr; gap: 1rem; align-items: start; margin-top: 1rem; }
+        @media (max-width: 920px) { .avatar-crop-wrap { grid-template-columns: 1fr; } }
+        .avatar-stage {
+            width: 260px;
+            height: 260px;
+            border-radius: 16px;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            background: rgba(15, 23, 42, 0.04);
+            position: relative;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+        }
+        .avatar-stage img {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            will-change: transform;
+            pointer-events: none;
+        }
+        .avatar-circle {
+            position:absolute;
+            inset: 12px;
+            border-radius: 999px;
+            box-shadow: 0 0 0 999px rgba(0,0,0,0.20) inset;
+            border: 2px solid rgba(255,255,255,0.9);
+            pointer-events: none;
+        }
+        .range { width: 100%; }
+        .hint-links { display:flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.25rem; }
+        .hint-links a { font-weight: 800; }
+        .code {
+            display:block;
+            padding:0.5rem 0.6rem;
+            border:1px solid rgba(15,23,42,0.10);
+            border-radius:12px;
+            background: rgba(15,23,42,0.04);
+            color: var(--text-primary-dark);
+            overflow:auto;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
+                    <h1 class="site-title">Ruston Family Whist Drive</h1>
+                    <p class="site-subtitle">Upload • Avatar</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="../" class="nav-link">Home</a>
+                    <a href="../tournaments/" class="nav-link">Tournaments</a>
+                    <a href="../players/" class="nav-link">Players</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="upload-wrap">
+            <div class="container">
+                <div class="upload-card">
+                    <div class="upload-title">Upload an avatar</div>
+                    <div class="upload-sub">Choose a photo, position it, then upload a circular-friendly crop. (Requires the family password.)</div>
+
+                    <div class="row">
+                        <label for="family-password">Family password</label>
+                        <input id="family-password" type="password" placeholder="Family password" autocomplete="current-password">
+                        <div class="btn-row">
+                            <button class="btn btn-primary" id="btn-unlock" type="button">Unlock uploads</button>
+                            <button class="btn btn-secondary" id="btn-lock" type="button" style="display:none;">Lock</button>
+                        </div>
+                        <div class="small">This creates a short-lived login cookie (no password is stored).</div>
+                        <div id="auth-status"></div>
+                    </div>
+
+                    <div class="row-2" style="margin-top: 1rem;">
+                        <div class="row">
+                            <label for="player-id">Player ID</label>
+                            <input id="player-id" type="text" placeholder="paul_ruston">
+                            <div class="hint-links">
+                                <a id="back-to-profile" href="../players/" style="display:none;">← Back to profile</a>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <label for="avatar-file">Image file</label>
+                            <input id="avatar-file" type="file" accept=".jpg,.jpeg,.png,.webp,image/*">
+                            <div class="small">Tip: pick a face-forward photo. You can drag and zoom before upload.</div>
+                        </div>
+                    </div>
+
+                    <div class="avatar-crop-wrap">
+                        <div>
+                            <div class="avatar-stage" id="avatar-stage">
+                                <img id="avatar-img" alt="" style="display:none;">
+                                <div class="avatar-circle"></div>
+                            </div>
+                            <div class="small" style="margin-top:0.5rem;">Drag to reposition. Use zoom slider.</div>
+                            <input class="range" id="avatar-zoom" type="range" min="1" max="3" step="0.01" value="1">
+                        </div>
+                        <div class="row">
+                            <div class="small">Preview URL (after upload):</div>
+                            <code id="avatar-url" class="code">—</code>
+                            <div class="btn-row">
+                                <button class="btn btn-primary" id="btn-upload-avatar" type="button">Upload avatar</button>
+                                <button class="btn btn-secondary" id="btn-reset-avatar" type="button">Reset</button>
+                            </div>
+                            <div class="log" id="avatar-log" aria-live="polite"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div data-footer-nav></div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const elPw = document.getElementById('family-password');
+        const elAuthStatus = document.getElementById('auth-status');
+        const elBtnUnlock = document.getElementById('btn-unlock');
+        const elBtnLock = document.getElementById('btn-lock');
+        const elPlayerId = document.getElementById('player-id');
+        const elBack = document.getElementById('back-to-profile');
+        const elAvatarFile = document.getElementById('avatar-file');
+        const elAvatarStage = document.getElementById('avatar-stage');
+        const elAvatarImg = document.getElementById('avatar-img');
+        const elAvatarZoom = document.getElementById('avatar-zoom');
+        const elAvatarUrl = document.getElementById('avatar-url');
+        const elAvatarLog = document.getElementById('avatar-log');
+
+        function logTo(el, line) {
+            const now = new Date().toISOString().slice(11, 19);
+            el.textContent = `${el.textContent}${el.textContent ? '\\n' : ''}[${now}] ${line}`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function setAuthStatus({ ok, message }) {
+            if (!elAuthStatus) return;
+            if (ok) {
+                elAuthStatus.innerHTML = `<span class="pill ok">Unlocked</span>`;
+            } else {
+                const msg = message ? ` ${String(message).replaceAll('<', '&lt;').replaceAll('>', '&gt;')}` : '';
+                elAuthStatus.innerHTML = `<span class="pill bad">Locked</span>${msg ? `<span class="small">${msg}</span>` : ''}`;
+            }
+            if (elBtnLock) elBtnLock.style.display = ok ? 'inline-flex' : 'none';
+        }
+
+        async function refreshAuthStatus() {
+            try {
+                const res = await fetch('/api/family/status', { cache: 'no-store' });
+                if (res.ok) {
+                    setAuthStatus({ ok: true });
+                    return true;
+                }
+            } catch (_) {}
+            setAuthStatus({ ok: false });
+            return false;
+        }
+
+        async function unlockUploads() {
+            const password = String(elPw.value || '').trim();
+            if (!password) return alert('Please enter the family password.');
+            const res = await fetch('/api/family/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                setAuthStatus({ ok: false, message: json?.error || res.status });
+                return;
+            }
+            elPw.value = '';
+            await refreshAuthStatus();
+        }
+
+        async function lockUploads() {
+            await fetch('/api/family/logout', { method: 'POST' }).catch(() => {});
+            await refreshAuthStatus();
+        }
+
+        function getPrefill() {
+            const url = new URL(window.location.href);
+            const playerId = String(url.searchParams.get('playerId') || '').trim();
+            return { playerId };
+        }
+
+        function applyPrefill() {
+            const { playerId } = getPrefill();
+            if (playerId) {
+                elPlayerId.value = playerId;
+                elPlayerId.setAttribute('readonly', 'readonly');
+                elBack.href = `../players/profile.html?player=${encodeURIComponent(playerId)}`;
+                elBack.style.display = 'inline';
+            }
+        }
+
+        // Avatar crop state
+        const avatarState = {
+            img: null,
+            ready: false,
+            baseScale: 1,
+            zoom: 1,
+            tx: 0,
+            ty: 0,
+            dragging: false,
+            dragStartX: 0,
+            dragStartY: 0,
+            startTx: 0,
+            startTy: 0
+        };
+
+        function updateAvatarTransform() {
+            if (!avatarState.ready || !avatarState.img) return;
+            const scale = avatarState.baseScale * avatarState.zoom;
+            elAvatarImg.style.display = 'block';
+            elAvatarImg.style.transform = `translate(calc(-50% + ${avatarState.tx}px), calc(-50% + ${avatarState.ty}px)) scale(${scale})`;
+        }
+
+        function loadAvatarFile(file) {
+            elAvatarUrl.textContent = '—';
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => {
+                avatarState.img = img;
+                avatarState.ready = true;
+                avatarState.tx = 0;
+                avatarState.ty = 0;
+                avatarState.zoom = 1;
+                elAvatarZoom.value = '1';
+
+                const stage = 260;
+                const scaleToCover = Math.max(stage / img.naturalWidth, stage / img.naturalHeight);
+                avatarState.baseScale = scaleToCover;
+
+                elAvatarImg.src = url;
+                updateAvatarTransform();
+                logTo(elAvatarLog, `Loaded image ${file.name} (${img.naturalWidth}x${img.naturalHeight})`);
+            };
+            img.onerror = () => {
+                avatarState.ready = false;
+                avatarState.img = null;
+                logTo(elAvatarLog, `Failed to load image.`);
+            };
+            img.src = url;
+        }
+
+        function avatarPointerDown(e) {
+            if (!avatarState.ready) return;
+            avatarState.dragging = true;
+            avatarState.dragStartX = e.clientX;
+            avatarState.dragStartY = e.clientY;
+            avatarState.startTx = avatarState.tx;
+            avatarState.startTy = avatarState.ty;
+            elAvatarStage.setPointerCapture(e.pointerId);
+        }
+        function avatarPointerMove(e) {
+            if (!avatarState.dragging) return;
+            const dx = e.clientX - avatarState.dragStartX;
+            const dy = e.clientY - avatarState.dragStartY;
+            avatarState.tx = avatarState.startTx + dx;
+            avatarState.ty = avatarState.startTy + dy;
+            updateAvatarTransform();
+        }
+        function avatarPointerUp(e) {
+            avatarState.dragging = false;
+            try { elAvatarStage.releasePointerCapture(e.pointerId); } catch (_) {}
+        }
+
+        async function uploadAvatarCropped() {
+            const authed = await refreshAuthStatus();
+            if (!authed) return alert('Please unlock uploads with the family password first.');
+            const playerId = String(elPlayerId.value || '').trim();
+            if (!playerId) return alert('Enter your Player ID first.');
+            if (!/^[a-zA-Z0-9_-]{1,120}$/.test(playerId)) return alert('Player ID must be letters/numbers/_/-.');
+            if (!avatarState.ready || !avatarState.img) return alert('Choose an image first.');
+
+            const stage = 260;
+            const outSize = 512;
+            const scale = avatarState.baseScale * avatarState.zoom;
+            const dw = avatarState.img.naturalWidth * scale;
+            const dh = avatarState.img.naturalHeight * scale;
+            const dx = (stage - dw) / 2 + avatarState.tx;
+            const dy = (stage - dh) / 2 + avatarState.ty;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = outSize;
+            canvas.height = outSize;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, outSize, outSize);
+            const factor = outSize / stage;
+            ctx.drawImage(avatarState.img, dx * factor, dy * factor, dw * factor, dh * factor);
+
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+            if (!blob) return alert('Failed to encode JPEG.');
+
+            const fd = new FormData();
+            fd.set('playerId', playerId);
+            fd.set('file', new File([blob], `${playerId}.jpg`, { type: 'image/jpeg' }));
+
+            logTo(elAvatarLog, `Uploading avatar for ${playerId}...`);
+            const res = await fetch('/api/media/avatar', {
+                method: 'POST',
+                body: fd
+            });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                logTo(elAvatarLog, `FAIL: ${json?.error || res.status}`);
+                return;
+            }
+            logTo(elAvatarLog, `OK: ${json.key}`);
+            elAvatarUrl.textContent = json.url || json.key;
+        }
+
+        function resetAvatar() {
+            avatarState.ready = false;
+            avatarState.img = null;
+            avatarState.tx = 0;
+            avatarState.ty = 0;
+            avatarState.zoom = 1;
+            avatarState.baseScale = 1;
+            elAvatarImg.style.display = 'none';
+            elAvatarImg.src = '';
+            elAvatarFile.value = '';
+            elAvatarZoom.value = '1';
+            elAvatarUrl.textContent = '—';
+        }
+
+        // init
+        applyPrefill();
+        elBtnUnlock.addEventListener('click', () => unlockUploads().catch(e => alert(e?.message || e)));
+        elBtnLock.addEventListener('click', () => lockUploads().catch(() => {}));
+        elAvatarFile.addEventListener('change', () => {
+            const f = elAvatarFile.files && elAvatarFile.files[0] ? elAvatarFile.files[0] : null;
+            loadAvatarFile(f);
+        });
+        elAvatarZoom.addEventListener('input', () => {
+            avatarState.zoom = Number(elAvatarZoom.value || 1);
+            updateAvatarTransform();
+        });
+        elAvatarStage.addEventListener('pointerdown', avatarPointerDown);
+        elAvatarStage.addEventListener('pointermove', avatarPointerMove);
+        elAvatarStage.addEventListener('pointerup', avatarPointerUp);
+        elAvatarStage.addEventListener('pointercancel', avatarPointerUp);
+        document.getElementById('btn-upload-avatar').addEventListener('click', () => uploadAvatarCropped().catch(e => logTo(elAvatarLog, `FAIL: ${e.message || e}`)));
+        document.getElementById('btn-reset-avatar').addEventListener('click', resetAvatar);
+
+        refreshAuthStatus().catch(() => {});
+    </script>
+</body>
+</html>
+
+

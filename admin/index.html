@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Ruston Family Whist Drive</title>
+    <meta name="description" content="Admin tools for maintaining the site.">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="/assets/js/footer-nav.js?v=1" defer></script>
+    <style>
+        .admin-wrap { padding: var(--spacing-3xl) 0; }
+        .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--spacing-xl); }
+        .card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            box-shadow: var(--shadow-card);
+        }
+        .card h2 { margin: 0 0 0.4rem; font-weight: 950; color: var(--text-primary-dark); }
+        .card p { margin: 0 0 0.85rem; color: var(--text-secondary-dark); }
+        .card a { font-weight: 900; }
+        .hint { margin-top: 1rem; color: var(--text-secondary-dark); font-size: 0.9rem; }
+        .pill {
+            display:inline-flex;
+            align-items:center;
+            gap: 0.4rem;
+            padding: 0.2rem 0.65rem;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            background: rgba(15, 23, 42, 0.04);
+            font-weight: 800;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
+                    <h1 class="site-title">Ruston Family Whist Drive</h1>
+                    <p class="site-subtitle">Admin</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="../" class="nav-link">Home</a>
+                    <a href="../tournaments/" class="nav-link">Tournaments</a>
+                    <a href="../players/" class="nav-link">Players</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="admin-wrap">
+            <div class="container">
+                <h1 class="section-title"><span class="title-icon">🔧</span>Admin tools</h1>
+                <p class="section-subtitle" style="color: var(--text-secondary-dark);">
+                    Password protected. For family uploads (avatars + tournament photos), use the public upload buttons on profiles and tournament pages.
+                </p>
+
+                <div class="admin-grid" style="margin-top: 1.25rem;">
+                    <div class="card">
+                        <h2>Update data</h2>
+                        <p>Refresh the site-wide caches from Google Sheets.</p>
+                        <p><a href="../update-data.html">Open update data →</a></p>
+                        <div class="hint"><span class="pill">Admin</span> Uses `WHIST_ADMIN_TOKEN` + cache endpoints.</div>
+                    </div>
+                    <div class="card">
+                        <h2>Media tools</h2>
+                        <p>Bulk uploads and management (scorecards, round/table scans, cover picks, avatars).</p>
+                        <p><a href="./media-upload.html">Open media upload tools →</a></p>
+                        <div class="hint"><span class="pill">Admin</span> Upload actions require `WHIST_UPLOAD_TOKEN`.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div data-footer-nav></div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
+
+

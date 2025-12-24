@@ -59,7 +59,7 @@ function normalizeCoverPicks(keys) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const auth = requireUploader(request, env);
+  const auth = await requireUploader(request, env);
   if (!auth.ok) return jsonResponse({ error: auth.message }, { status: auth.status });
 
   const bucket = env && env.WHIST_MEDIA;

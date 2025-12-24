@@ -224,7 +224,6 @@
                     </div>
                     <div class="hero-stats" id="tournament-stats"></div>
                     <p class="hero-comment" id="tournament-comment" style="display: none;"></p>
-                    <div class="cover-strip" id="tournament-cover-strip" aria-label="Tournament cover photos"></div>
                 </div>
             </div>
         </section>
@@ -235,6 +234,14 @@
                     <!-- Tournament summary will be loaded dynamically -->
                 </div>
                 <p class="tie-break-message" id="tie-break-message" style="display: none;"></p>
+                <div style="margin-top: 1.25rem;">
+                    <div class="cover-strip" id="tournament-cover-strip" aria-label="Tournament cover photos"></div>
+                    <div id="tournament-cover-empty" style="display:none; margin-top: 1rem; text-align:center; color: rgba(255,255,255,0.85);"></div>
+                    <div id="tournament-cover-actions" style="margin-top: 0.85rem; display:flex; justify-content:center; gap: 0.75rem; flex-wrap: wrap;">
+                        <a class="btn btn-secondary" id="tournament-see-more" href="#" style="display:none;">See more →</a>
+                        <a class="btn btn-primary" id="tournament-upload-photos" href="#" style="display:none;">Upload photos</a>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -273,7 +280,7 @@
                     <span class="title-icon">📸</span>
                     Tournament Photos
                 </h2>
-                <p class="section-subtitle" style="color: var(--text-secondary-dark);">Grouped by uploader. Upload more via the “Media uploads” link in the footer.</p>
+                <p class="section-subtitle" style="color: var(--text-secondary-dark);">Grouped by uploader.</p>
                 <div id="tournament-photos-groups"></div>
             </div>
         </section>
@@ -854,6 +861,9 @@
 
         async function renderTournamentPhotosFromR2(year) {
             const strip = document.getElementById('tournament-cover-strip');
+            const empty = document.getElementById('tournament-cover-empty');
+            const seeMore = document.getElementById('tournament-see-more');
+            const uploadBtn = document.getElementById('tournament-upload-photos');
             const photosSection = document.getElementById('tournament-photos');
             const groupsWrap = document.getElementById('tournament-photos-groups');
             if (!strip || !photosSection || !groupsWrap) return;
@@ -861,7 +871,21 @@
             if (!(window.WhistMedia && typeof window.WhistMedia.publicUrlForKey === 'function')) return;
 
             const meta = await window.WhistMedia.getTournamentMeta(year);
-            if (!meta) return;
+            if (seeMore) {
+                seeMore.href = `photos.html?year=${encodeURIComponent(String(year))}`;
+            }
+            if (uploadBtn) {
+                uploadBtn.href = `../upload/tournament-photos.html?year=${encodeURIComponent(String(year))}`;
+                uploadBtn.style.display = 'inline-flex';
+            }
+            if (!meta) {
+                if (empty) {
+                    empty.style.display = 'block';
+                    empty.innerHTML = `There are no photos uploaded for this event yet! <a style="color: inherit; font-weight: 900; text-decoration: underline;" href="${uploadBtn ? uploadBtn.href.replaceAll('"', '&quot;') : '../upload/tournament-photos.html'}">Upload some →</a>`;
+                }
+                if (seeMore) seeMore.style.display = 'none';
+                return;
+            }
 
             const photos = Array.isArray(meta.photos) ? meta.photos.slice() : [];
             const coverPicks = Array.isArray(meta.coverPicks) ? meta.coverPicks.slice(0, 3) : [];
@@ -877,6 +901,18 @@
                 if (items.length) {
                     strip.innerHTML = items.join('');
                     strip.style.display = 'flex';
+                }
+            }
+            if (seeMore) {
+                seeMore.style.display = photos.length ? 'inline-flex' : 'none';
+            }
+            if (empty) {
+                if (!photos.length) {
+                    empty.style.display = 'block';
+                    empty.innerHTML = `There are no photos uploaded for this event yet! <a style="color: inherit; font-weight: 900; text-decoration: underline;" href="${uploadBtn ? uploadBtn.href.replaceAll('"', '&quot;') : '../upload/tournament-photos.html'}">Upload some →</a>`;
+                } else {
+                    empty.style.display = 'none';
+                    empty.innerHTML = '';
                 }
             }
 
