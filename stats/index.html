@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=block" rel="stylesheet">
+    <script src="/assets/js/footer-nav.js?v=1" defer></script>
 </head>
 <body>
     <header class="header">
@@ -84,24 +85,7 @@
     <footer class="footer">
         <div class="container">
             <div class="footer-content">
-                <div class="footer-section">
-                    <h4>Data Analytics</h4>
-                    <p id="total-scorecards">Loading...</p>
-                    <p id="data-timespan">Loading...</p>
-                    <p><a href="../google-sheets-example.html">Data Source Details</a></p>
-                </div>
-                <div class="footer-section">
-                    <h4>Statistics</h4>
-                    <p><a href="../leaderboard/">Player Rankings</a></p>
-                    <p><a href="../players/">Player Profiles</a></p>
-                    <p><a href="../tournaments/">Tournament Archive</a></p>
-                </div>
-                <div class="footer-section">
-                    <h4>Performance</h4>
-                    <p>Real-time Analysis</p>
-                    <p>Historical Trends</p>
-                    <p>Championship Records</p>
-                </div>
+                <div data-footer-nav></div>
             </div>
             <div class="footer-bottom">
                 <p>&copy; 2024 Ruston Family Whist Drive. Advanced analytics from real tournament data.</p>

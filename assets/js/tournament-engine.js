@@ -461,7 +461,8 @@ class TournamentEngine {
     }
 
     injectUpdateDataFooterLink() {
-        // Normalizes footer links + adds an "Update data" link.
+        // Adds an "Update data" link to the footer bottom.
+        // Footer navigation is owned by assets/js/footer-nav.js (single source of truth).
         try {
             if (typeof document === 'undefined') {
                 return;
@@ -472,20 +473,7 @@ class TournamentEngine {
                 return;
             }
 
-            // 1) Normalize footer navigation links (avoid duplicating header nav).
-            // Keep only: Memorial + History placeholder.
-            if (footerContent && !footerContent.querySelector('[data-footer-nav="true"]')) {
-                footerContent.innerHTML = `
-                    <div class="footer-section" data-footer-nav="true">
-                        <h4>More</h4>
-                        <p><a href="${rootUrl}memorial/">Memorial</a></p>
-                        <p><a href="${rootUrl}families/">Family Tree</a></p>
-                        <p><a href="#" aria-disabled="true" style="pointer-events:none; opacity:0.7; text-decoration:none;">History (coming soon)</a></p>
-                    </div>
-                `;
-            }
-
-            // 2) Add "Update data" link into footer bottom.
+            // Add "Update data" link into footer bottom.
             const footerBottom = document.querySelector('.footer-bottom');
             if (!footerBottom) {
                 return;
@@ -1290,7 +1278,7 @@ class TournamentEngine {
             
             // Clear existing players data
             this.playersLookup = new Map();
-
+            
             const normalizeRosterHeader = (h) => (typeof h === 'string' ? h : '')
                 .replace(/\ufeff/g, '')
                 .replace(/^"|"$/g, '')

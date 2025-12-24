@@ -659,9 +659,16 @@ a:hover {
 
 .footer-content {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    /* Center 3 footer columns (don’t stretch full width) */
+    grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
     gap: var(--spacing-xl);
+    justify-content: center;
+    justify-items: center;
     margin-bottom: var(--spacing-xl);
+}
+
+.footer-section {
+    text-align: center;
 }
 
 .footer-section h4 {
@@ -674,6 +681,17 @@ a:hover {
     font-size: 0.875rem;
     color: var(--text-secondary);
     margin-bottom: var(--spacing-sm);
+}
+
+.footer-section a {
+    color: var(--text-secondary);
+    text-decoration: none;
+}
+
+.footer-section a:hover {
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
 
 .footer-bottom {

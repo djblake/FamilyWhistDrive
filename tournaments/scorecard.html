@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="/assets/js/footer-nav.js?v=1" defer></script>
 </head>
 <body>
     <header class="header">
@@ -157,13 +158,22 @@
         </section>
     </main>
 
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div data-footer-nav></div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive.</p>
+            </div>
+        </div>
+    </footer>
+
     <!-- Load Chart.js first -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
             <script src="../assets/js/tournament-engine.js?v=cache1"></script>
             <script src="../assets/js/charts.js?v=20"></script>
     <script src="../assets/js/photo-gallery.js"></script>
-</body>
-</html>
     <script>
         // Normalize hand sharing partnership display format
         function normalizeHandSharingDisplay(playerName) {
@@ -1732,3 +1742,6 @@
             transform: translateY(-1px);
         }
     </style>
+
+</body>
+</html>
