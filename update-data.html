@@ -35,8 +35,7 @@
                 <div class="hero-content">
                     <h1 class="hero-title">Update Data & Caches</h1>
                     <p class="hero-subtitle">
-                        This site is updated roughly once a year. Use this page to refresh the site-wide cached JSON files
-                        so normal browsing doesn’t repeatedly load Google Sheets.
+                        This site is updated roughly once a year. Use this page to refresh the site-wide caches so visitors don’t repeatedly load Google Sheets.
                     </p>
                 </div>
             </div>
@@ -61,24 +60,14 @@
                         </p>
                     </div>
                     <div class="analytics-card">
-                        <h3 class="card-title">2) Refresh the raw data cache</h3>
-                        <p>
-                            This reads the Google Sheet and produces a downloadable <code>raw-data.json</code>.
+                        <h3 class="card-title">2) Refresh the site-wide cache</h3>
+                        <p class="muted" style="margin-bottom:0.5rem;">
+                            On the live site (Cloudflare), this will update caches for everyone.
                         </p>
-                    </div>
-                    <div class="analytics-card">
-                        <h3 class="card-title">3) Refresh the stats cache</h3>
-                        <p>
-                            This recomputes derived stats (tournaments, players, partnerships) from the raw cache and produces <code>stats.json</code>.
-                        </p>
-                        <p class="muted">
-                            You can refresh stats without changing raw data (useful when new analytics are added to the site).
-                        </p>
-                    </div>
-                    <div class="analytics-card">
-                        <h3 class="card-title">4) Publish the files</h3>
-                        <p>
-                            Replace the files in <code>assets/cache/</code> on the hosted site (commit + deploy).
+                        <p style="margin:0;">
+                            <strong>Step A:</strong> Enter the <strong>Admin token</strong> below.<br/>
+                            <strong>Step B:</strong> Click <strong>Refresh data cache</strong>.<br/>
+                            <strong>Result:</strong> Raw data is refreshed and <strong>stats are refreshed automatically</strong>.
                         </p>
                     </div>
                 </div>
@@ -91,16 +80,6 @@
                     <span class="title-icon">🔄</span>
                     Refresh actions
                 </h2>
-
-                <div class="analytics-card" style="margin-bottom: var(--spacing-lg);">
-                    <h3 class="card-title">Current cache status</h3>
-                    <p class="muted">Reads the live KV manifest (if configured) to show what the site is currently using.</p>
-                    <div id="cache-status" class="muted">Loading…</div>
-                    <div style="margin-top:0.75rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
-                        <button id="btn-refresh-status" class="btn btn-secondary" type="button">Refresh status</button>
-                        <a class="btn btn-secondary" href="/api/cache/manifest" target="_blank" rel="noopener">Open manifest JSON</a>
-                    </div>
-                </div>
 
                 <div class="analytics-card" style="margin-bottom: var(--spacing-lg);">
                     <h3 class="card-title">Admin token</h3>
@@ -123,7 +102,7 @@
                 <div class="metrics-grid">
                     <div class="analytics-card">
                         <h3 class="card-title">Raw data cache</h3>
-                        <p class="muted">Creates <code>assets/cache/raw-data.json</code></p>
+                        <p class="muted">Loads from Google Sheets, then stores the site-wide cache (and refreshes stats automatically on Cloudflare).</p>
                         <button id="btn-refresh-raw" class="btn btn-primary" type="button">Refresh data cache</button>
                         <div class="progress-block" id="raw-progress" style="display:none;">
                             <div class="progress-line"><span class="spinner" aria-hidden="true"></span><span id="raw-progress-text">Working...</span></div>
@@ -134,7 +113,7 @@
 
                     <div class="analytics-card">
                         <h3 class="card-title">Stats cache</h3>
-                        <p class="muted">Creates <code>assets/cache/stats.json</code></p>
+                        <p class="muted">Optional: recompute stats only (useful if you change analytics code without changing raw data).</p>
                         <button id="btn-refresh-stats" class="btn btn-primary" type="button">Refresh stats</button>
                         <div class="progress-block" id="stats-progress" style="display:none;">
                             <div class="progress-line"><span class="spinner" aria-hidden="true"></span><span id="stats-progress-text">Working...</span></div>
@@ -144,9 +123,15 @@
                     </div>
                 </div>
 
-                <p class="muted" style="margin-top:1rem;">
-                    Tip: you can download both files here, then copy them into <code>assets/cache/</code> and redeploy.
-                </p>
+                <div class="analytics-card" style="margin-top: var(--spacing-lg);">
+                    <h3 class="card-title">Current cache status</h3>
+                    <p class="muted">Reads the live cache manifest (if configured) so you can confirm the site is using the latest data.</p>
+                    <div id="cache-status" class="muted">Loading…</div>
+                    <div style="margin-top:0.75rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+                        <button id="btn-refresh-status" class="btn btn-secondary" type="button">Refresh status</button>
+                        <a class="btn btn-secondary" href="/api/cache/manifest" target="_blank" rel="noopener">Open manifest JSON</a>
+                    </div>
+                </div>
             </div>
         </section>
     </main>
@@ -299,7 +284,7 @@
                 if (isLocalStaticDev()) {
                     setHtml('raw-download',
                         `<p class="warn">Local mode: Cloudflare KV endpoints are not available.</p>
-                         <p class="muted">Downloaded files can be copied into <code>assets/cache/</code> for deployment.</p>
+                         <p class="muted">You can still generate and download backups for validation.</p>
                          <p class="muted">rawHash: <code>${rawCache.rawHash}</code></p>
                          <p><a href="#" id="dl-raw">Download raw-data.json</a></p>`,
                         true
