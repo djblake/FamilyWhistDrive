@@ -23,9 +23,22 @@ function isAllowedMediaKey(key) {
 
 function cacheControlForMediaKey(key) {
   const k = String(key || '');
-  // Avatars can change, so keep caching shorter.
-  if (k.startsWith('avatars/')) return 'public, max-age=600';
-  return 'public, max-age=31536000, immutable';
+  // Meta files and user-managed media can be deleted/changed; always revalidate so deletions show up.
+  if (k.endsWith('/_meta.json') || k.endsWith('_meta.json')) {
+    return 'no-store';
+  }
+  if (k.startsWith('tournament-photos/')) {
+    return 'public, max-age=0, must-revalidate';
+  }
+  // Avatars can change too.
+  if (k.startsWith('avatars/')) {
+    return 'public, max-age=0, must-revalidate';
+  }
+  // Scorecards are relatively stable, but still allow quick deletes/updates.
+  if (k.startsWith('scorecards/') || k.startsWith('player-scorecards/')) {
+    return 'public, max-age=0, must-revalidate';
+  }
+  return 'public, max-age=0, must-revalidate';
 }
 
 function parseCookies(cookieHeader) {
@@ -168,7 +181,9 @@ export async function onRequest(context) {
     if (!isAllowedMediaKey(key)) return new Response('Not Found', { status: 404 });
 
     const obj = await bucket.get(key);
-    if (!obj) return new Response('Not Found', { status: 404 });
+    if (!obj) {
+      return new Response('Not Found', { status: 404, headers: { 'Cache-Control': 'no-store' } });
+    }
 
     const headers = new Headers();
     const ct = obj.httpMetadata && obj.httpMetadata.contentType ? String(obj.httpMetadata.contentType) : 'application/octet-stream';

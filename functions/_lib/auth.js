@@ -86,8 +86,29 @@ function requireBearerToken(request, env, envKey) {
   return { ok: false, status: 401, message: 'Unauthorized' };
 }
 
-export function requireAdmin(request, env) {
-  return requireBearerToken(request, env, 'WHIST_ADMIN_TOKEN');
+export async function requireAdmin(request, env) {
+  // Option A: Bearer admin token (good for curl / automation).
+  const token = env && env.WHIST_ADMIN_TOKEN ? String(env.WHIST_ADMIN_TOKEN) : '';
+  if (token) {
+    const auth = request.headers.get('authorization') || '';
+    if (auth === `Bearer ${token}`) return { ok: true };
+  }
+
+  // Option B: Admin cookie (good for the website admin UI).
+  const password = env && env.WHIST_ADMIN_PASSWORD ? String(env.WHIST_ADMIN_PASSWORD) : '';
+  if (password) {
+    const cookies = parseCookies(request.headers.get('Cookie'));
+    const c = cookies.whist_admin || '';
+    // Cookie is signed with WHIST_ADMIN_PASSWORD.
+    // Reuse shared signed-cookie verifier (payloadB64.sigB64).
+    // Note: this enforces expiration.
+    const verified = await verifySignedCookie(c, password);
+    if (verified.ok) return { ok: true, exp: verified.exp };
+    return { ok: false, status: 401, message: 'Unauthorized' };
+  }
+
+  // If neither auth mechanism is configured, return 501.
+  return { ok: false, status: 501, message: 'Admin auth not configured (WHIST_ADMIN_TOKEN or WHIST_ADMIN_PASSWORD)' };
 }
 
 export async function requireUploader(request, env) {

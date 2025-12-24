@@ -17,7 +17,7 @@ export async function onRequestPost(context) {
     return jsonResponse({ error: 'KV binding WHIST_CACHE not configured' }, { status: 501 });
   }
 
-  const auth = requireAdmin(request, env);
+  const auth = await requireAdmin(request, env);
   if (!auth.ok) {
     return jsonResponse({ error: auth.message }, { status: auth.status });
   }

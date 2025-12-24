@@ -87,6 +87,41 @@
         }
         .cover-preview img { width: 100%; height: 100%; object-fit: cover; display:block; }
 
+        .photo-delete-controls { display:flex; align-items:center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.75rem; }
+        .photo-delete-grid { margin-top: 0.75rem; display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; }
+        .photo-delete-item {
+            position: relative;
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            border-radius: 14px;
+            overflow: hidden;
+            background: rgba(15, 23, 42, 0.03);
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        }
+        .photo-delete-item img { width: 100%; height: 110px; object-fit: cover; display:block; background: rgba(15, 23, 42, 0.06); }
+        .photo-delete-item .meta {
+            padding: 0.55rem 0.6rem;
+            display: grid;
+            gap: 0.25rem;
+        }
+        .photo-delete-item .meta .k { font-size: 0.8rem; font-weight: 900; color: var(--text-primary-dark); overflow:hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .photo-delete-item .meta .s { font-size: 0.8rem; color: var(--text-secondary-dark); overflow:hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .photo-delete-item .check {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            z-index: 2;
+            display:flex;
+            align-items:center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.92);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            font-weight: 900;
+            color: var(--text-primary-dark);
+        }
+        .photo-delete-item input[type="checkbox"] { width: 18px; height: 18px; }
+
         .avatar-crop-wrap { display: grid; grid-template-columns: 260px 1fr; gap: 1rem; align-items: start; }
         @media (max-width: 920px) { .avatar-crop-wrap { grid-template-columns: 1fr; } }
         .avatar-stage {
@@ -290,6 +325,24 @@
                             <div class="cover-preview" id="cover-prev-6">Cover 6</div>
                         </div>
 
+                        <div class="divider"></div>
+
+                        <div class="admin-title" style="font-size: 1.15rem;">Delete photos</div>
+                        <div class="admin-sub">
+                            Select photos to delete. This will delete the <strong>full-size</strong> object and its <strong>thumbnail</strong> (if present),
+                            and update <code>tournament-photos/YYYY/_meta.json</code> so the site stops listing them.
+                        </div>
+                        <div class="photo-delete-controls">
+                            <label style="display:flex; align-items:center; gap: 0.5rem; margin:0;">
+                                <input id="photo-delete-selectall" type="checkbox">
+                                Select all (<span id="photo-delete-selected-count">0</span> selected)
+                            </label>
+                            <div class="btn-row" style="margin:0;">
+                                <button class="btn btn-secondary" id="btn-delete-selected-photos" type="button">Delete selected</button>
+                            </div>
+                        </div>
+                        <div class="photo-delete-grid" id="photo-delete-grid"></div>
+
                         <div class="log" id="photos-log" aria-live="polite"></div>
                     </div>
 
@@ -364,6 +417,10 @@
         const elPhotoUploader = document.getElementById('photo-uploader');
         const elPhotoFiles = document.getElementById('photo-files');
         const elPhotosLog = document.getElementById('photos-log');
+        const elDeleteSelectAll = document.getElementById('photo-delete-selectall');
+        const elDeleteSelectedCount = document.getElementById('photo-delete-selected-count');
+        const elDeleteGrid = document.getElementById('photo-delete-grid');
+        const elBtnDeleteSelected = document.getElementById('btn-delete-selected-photos');
         const elCover1 = document.getElementById('cover-1');
         const elCover2 = document.getElementById('cover-2');
         const elCover3 = document.getElementById('cover-3');
@@ -384,7 +441,7 @@
         const elAvatarUrl = document.getElementById('avatar-url');
         const elAvatarLog = document.getElementById('avatar-log');
 
-        const state = { files: [] };
+        const state = { files: [], tournamentPhotos: [] };
 
         function log(line) {
             const now = new Date().toISOString().slice(11, 19);
@@ -623,10 +680,13 @@
                 setSelectOptions(elCover5, empty, '');
                 setSelectOptions(elCover6, empty, '');
                 renderCoverPreviews([]);
+                state.tournamentPhotos = [];
+                renderDeletePhotoGrid([]);
                 return;
             }
             const photos = Array.isArray(meta.photos) ? meta.photos.slice() : [];
             photos.sort((a, b) => String(b?.uploadedAt || '').localeCompare(String(a?.uploadedAt || '')));
+            state.tournamentPhotos = photos;
 
             const options = photos.map(p => {
                 const key = String(p?.key || '');
@@ -643,7 +703,103 @@
             setSelectOptions(elCover5, options, coverPicks[4] || '');
             setSelectOptions(elCover6, options, coverPicks[5] || '');
             renderCoverPreviews(coverPicks);
+            renderDeletePhotoGrid(photos).catch(() => {});
             logTo(elPhotosLog, `Loaded ${photos.length} photo(s). Current cover picks: ${coverPicks.length ? coverPicks.join(' | ') : 'none'}`);
+        }
+
+        function getSelectedPhotoKeys() {
+            const inputs = Array.from(elDeleteGrid.querySelectorAll('input[type="checkbox"][data-full-key]'));
+            return inputs.filter(i => i.checked).map(i => String(i.dataset.fullKey || '')).filter(Boolean);
+        }
+
+        function renderSelectedCount() {
+            const keys = getSelectedPhotoKeys();
+            elDeleteSelectedCount.textContent = String(keys.length);
+            const allBoxes = Array.from(elDeleteGrid.querySelectorAll('input[type="checkbox"][data-full-key]'));
+            const allChecked = allBoxes.length > 0 && allBoxes.every(i => i.checked);
+            const noneChecked = allBoxes.every(i => !i.checked);
+            elDeleteSelectAll.indeterminate = !allChecked && !noneChecked;
+            elDeleteSelectAll.checked = allChecked;
+        }
+
+        async function renderDeletePhotoGrid(photos) {
+            const list = Array.isArray(photos) ? photos : [];
+            if (!list.length) {
+                elDeleteGrid.innerHTML = `<div class="small">No photos loaded for this year (or none uploaded yet).</div>`;
+                renderSelectedCount();
+                return;
+            }
+
+            // Build thumbnail URLs.
+            const tiles = await Promise.all(list.map(async (p, idx) => {
+                const fullKey = String(p?.key || '').trim();
+                const thumbKey = String(p?.thumbKey || '').trim();
+                const uploader = String(p?.uploaderName || p?.uploaderSlug || '').trim();
+                const originalName = String(p?.originalName || '').trim();
+                const imgKey = thumbKey || fullKey;
+                const imgUrl = (window.WhistMedia && typeof window.WhistMedia.publicUrlForKey === 'function')
+                    ? await window.WhistMedia.publicUrlForKey(imgKey)
+                    : '';
+
+                const safeImg = imgUrl ? imgUrl.replaceAll('"', '&quot;') : '';
+                const safeUploader = uploader.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+                const safeName = originalName.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+                const safeKey = fullKey.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+
+                return `
+                    <div class="photo-delete-item">
+                        <label class="check" title="Select for deletion">
+                            <input type="checkbox" data-full-key="${safeKey.replaceAll('"', '&quot;')}">
+                            Delete
+                        </label>
+                        ${safeImg ? `<img alt="photo ${idx + 1}" src="${safeImg}" loading="lazy">` : `<div style="height:110px; display:flex; align-items:center; justify-content:center;" class="small">No preview</div>`}
+                        <div class="meta">
+                            <div class="k">${safeUploader || 'Uploader'}</div>
+                            <div class="s">${safeName || fullKey}</div>
+                        </div>
+                    </div>
+                `;
+            }));
+
+            elDeleteGrid.innerHTML = tiles.join('');
+            renderSelectedCount();
+        }
+
+        async function deleteSelectedPhotos() {
+            const year = String(elPhotoYear.value || '').trim();
+            if (!year) return alert('Enter a year first.');
+            const keys = getSelectedPhotoKeys();
+            if (!keys.length) return alert('Select at least one photo to delete.');
+            const ok = confirm(`Delete ${keys.length} photo(s) for ${year}? This deletes full + thumbnail and updates meta.`);
+            if (!ok) return;
+
+            elBtnDeleteSelected.disabled = true;
+            try {
+                let success = 0;
+                let fail = 0;
+                for (let i = 0; i < keys.length; i++) {
+                    const k = keys[i];
+                    try {
+                        const res = await fetch('/api/media/delete', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ key: k })
+                        });
+                        const json = await res.json().catch(() => ({}));
+                        if (!res.ok) throw new Error(json?.error || `Delete failed (${res.status})`);
+                        success++;
+                        const del = Array.isArray(json?.deleted) ? json.deleted.join(' , ') : k;
+                        logTo(elPhotosLog, `DELETE OK ${i + 1}/${keys.length}: ${k} → ${del}`);
+                    } catch (e) {
+                        fail++;
+                        logTo(elPhotosLog, `DELETE FAIL ${i + 1}/${keys.length}: ${k} → ${e.message || e}`);
+                    }
+                }
+                logTo(elPhotosLog, `Delete complete. Success: ${success}. Failed: ${fail}.`);
+            } finally {
+                elBtnDeleteSelected.disabled = false;
+                await loadTournamentMetaAndPopulate();
+            }
         }
 
         async function renderCoverPreviews(coverKeys) {
@@ -841,6 +997,13 @@
         document.getElementById('btn-upload-photos').addEventListener('click', () => uploadTournamentPhotos().catch(e => logTo(elPhotosLog, `FAIL: ${e.message || e}`)));
         document.getElementById('btn-load-meta').addEventListener('click', () => loadTournamentMetaAndPopulate().catch(e => logTo(elPhotosLog, `FAIL: ${e.message || e}`)));
         document.getElementById('btn-save-covers').addEventListener('click', () => saveCoverPicks().catch(e => logTo(elPhotosLog, `FAIL: ${e.message || e}`)));
+        elBtnDeleteSelected.addEventListener('click', () => deleteSelectedPhotos().catch(e => logTo(elPhotosLog, `FAIL: ${e.message || e}`)));
+        elDeleteSelectAll.addEventListener('change', () => {
+            const inputs = Array.from(elDeleteGrid.querySelectorAll('input[type="checkbox"][data-full-key]'));
+            for (const i of inputs) i.checked = Boolean(elDeleteSelectAll.checked);
+            renderSelectedCount();
+        });
+        elDeleteGrid.addEventListener('change', () => renderSelectedCount());
 
         const currentCoverValues = () => [elCover1.value, elCover2.value, elCover3.value, elCover4.value, elCover5.value, elCover6.value];
         elCover1.addEventListener('change', () => renderCoverPreviews(currentCoverValues()));
