@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="/assets/js/footer-nav.js?v=2" defer></script>
-    <script src="/assets/js/media.js?v=1" defer></script>
+    <script src="/assets/js/media.js?v=2" defer></script>
     <style>
         .admin-wrap { padding: var(--spacing-3xl) 0; }
         .admin-card {
@@ -19,6 +19,8 @@
             padding: var(--spacing-xl);
             border: 1px solid rgba(15, 23, 42, 0.10);
             box-shadow: var(--shadow-card);
+            max-width: 100%;
+            overflow-x: hidden; /* prevent any child from forcing horizontal scroll */
         }
         .admin-grid { display: grid; grid-template-columns: 1fr; gap: var(--spacing-xl); }
         .admin-title { font-size: 1.5rem; margin-bottom: 0.25rem; color: var(--text-primary-dark); font-weight: 900; }
@@ -33,6 +35,17 @@
             border-radius: 12px;
             border: 1px solid rgba(15, 23, 42, 0.18);
             font-size: 0.95rem;
+        }
+        select {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            padding: 0.75rem 0.9rem;
+            border-radius: 12px;
+            border: 1px solid rgba(15, 23, 42, 0.18);
+            font-size: 0.95rem;
+            background: #ffffff;
+            box-sizing: border-box;
         }
         input[type="file"] { width: 100%; }
         .btn-row { display:flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.5rem; }
@@ -98,6 +111,17 @@
             box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
         }
         .photo-delete-item img { width: 100%; height: 110px; object-fit: cover; display:block; background: rgba(15, 23, 42, 0.06); }
+        .photo-delete-item .missing {
+            width: 100%;
+            height: 110px;
+            display:none;
+            align-items:center;
+            justify-content:center;
+            background: rgba(15, 23, 42, 0.06);
+            color: var(--text-secondary-dark);
+            font-weight: 800;
+            font-size: 0.8rem;
+        }
         .photo-delete-item .meta {
             padding: 0.55rem 0.6rem;
             display: grid;
@@ -736,12 +760,16 @@
                 const thumbKey = String(p?.thumbKey || '').trim();
                 const uploader = String(p?.uploaderName || p?.uploaderSlug || '').trim();
                 const originalName = String(p?.originalName || '').trim();
-                const imgKey = thumbKey || fullKey;
-                const imgUrl = (window.WhistMedia && typeof window.WhistMedia.publicUrlForKey === 'function')
-                    ? await window.WhistMedia.publicUrlForKey(imgKey)
+                const fullUrl = (window.WhistMedia && typeof window.WhistMedia.publicUrlForKey === 'function')
+                    ? await window.WhistMedia.publicUrlForKey(fullKey)
                     : '';
+                const thumbUrl = thumbKey && (window.WhistMedia && typeof window.WhistMedia.publicUrlForKey === 'function')
+                    ? await window.WhistMedia.publicUrlForKey(thumbKey)
+                    : '';
+                const startUrl = thumbUrl || fullUrl;
 
-                const safeImg = imgUrl ? imgUrl.replaceAll('"', '&quot;') : '';
+                const safeStart = startUrl ? startUrl.replaceAll('"', '&quot;') : '';
+                const safeFull = fullUrl ? fullUrl.replaceAll('"', '&quot;') : '';
                 const safeUploader = uploader.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
                 const safeName = originalName.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
                 const safeKey = fullKey.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
@@ -752,7 +780,8 @@
                             <input type="checkbox" data-full-key="${safeKey.replaceAll('"', '&quot;')}">
                             Delete
                         </label>
-                        ${safeImg ? `<img alt="photo ${idx + 1}" src="${safeImg}" loading="lazy">` : `<div style="height:110px; display:flex; align-items:center; justify-content:center;" class="small">No preview</div>`}
+                        ${safeStart ? `<img alt="photo ${idx + 1}" src="${safeStart}" data-full="${safeFull}" loading="lazy" onerror="if(this.dataset.full && this.src!==this.dataset.full){this.src=this.dataset.full;return;} this.style.display='none'; const m=this.parentElement&&this.parentElement.querySelector&&this.parentElement.querySelector('.missing'); if(m) m.style.display='flex';">` : ``}
+                        <div class="missing">Missing preview</div>
                         <div class="meta">
                             <div class="k">${safeUploader || 'Uploader'}</div>
                             <div class="s">${safeName || fullKey}</div>
