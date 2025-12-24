@@ -198,6 +198,7 @@
                                 if (flagsEl && photos.length > 0) {
                                     const icon = flagsEl.querySelector('[data-flag="photo"]');
                                     if (icon) icon.classList.add('on');
+                                    flagsEl.style.display = 'flex';
                                 }
 
                                 const urls = [];
@@ -256,10 +257,12 @@
                                     if (stories.length > 0) {
                                         const icon = flagsEl.querySelector('[data-flag="story"]');
                                         if (icon) icon.classList.add('on');
+                                        flagsEl.style.display = 'flex';
                                     }
                                     if (quotes.length > 0) {
                                         const icon = flagsEl.querySelector('[data-flag="quote"]');
                                         if (icon) icon.classList.add('on');
+                                        flagsEl.style.display = 'flex';
                                     }
                                 }
 
@@ -563,26 +566,25 @@
 
         .tournament-indicators {
             margin-top: 0.6rem;
-            display: flex;
-            gap: 0.4rem;
+            display: none; /* only show if at least one icon is active */
+            gap: 0.45rem;
             align-items: center;
             justify-content: center;
-            color: rgba(15, 23, 42, 0.35);
+            color: rgba(15, 23, 42, 0.82);
         }
         .tournament-indicators .indicator {
-            display: inline-flex;
+            display: none; /* hide icons unless content exists */
             align-items: center;
             justify-content: center;
-            width: 22px;
-            height: 22px;
-            border-radius: 999px;
-            border: 1px solid rgba(15, 23, 42, 0.12);
-            background: rgba(255,255,255,0.45);
+            width: 18px;
+            height: 18px;
+            padding: 0;
+            border: 0;
+            background: transparent; /* no circular background */
         }
         .tournament-indicators .indicator.on {
-            color: rgba(15, 23, 42, 0.92);
-            border-color: rgba(15, 23, 42, 0.22);
-            background: rgba(255,255,255,0.85);
+            display: inline-flex;
+            color: rgba(15, 23, 42, 0.82);
         }
         .tournament-indicators svg { display:block; }
 
