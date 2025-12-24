@@ -189,6 +189,142 @@
             object-fit: cover;
             display: block;
         }
+
+        .day-actions {
+            margin-top: 0.75rem;
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .day-notes {
+            margin-top: var(--spacing-xl);
+            display: grid;
+            gap: 0.85rem;
+        }
+
+        .day-note {
+            border-radius: var(--border-radius-lg);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            background: #fff;
+            box-shadow: var(--shadow-card);
+            padding: 0.95rem 1rem;
+        }
+        .day-note__kicker {
+            font-size: 0.75rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            font-weight: 950;
+            color: var(--text-secondary-dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .day-note__body {
+            margin-top: 0.55rem;
+            color: var(--text-primary-dark);
+            font-weight: 650;
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+        .day-note__meta {
+            margin-top: 0.6rem;
+            color: var(--text-secondary-dark);
+            font-size: 0.85rem;
+            font-weight: 750;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .day-note__meta strong { color: var(--text-primary-dark); font-weight: 900; }
+
+        .day-photo-row {
+            margin-top: var(--spacing-xl);
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 0.65rem;
+        }
+        @media (max-width: 840px) {
+            .day-photo-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        }
+        .day-photo-row a {
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            background: rgba(15, 23, 42, 0.04);
+            aspect-ratio: 16 / 10;
+            display: block;
+        }
+        .day-photo-row img { width: 100%; height: 100%; object-fit: cover; display:block; }
+
+        .day-empty {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 14px;
+            border: 1px dashed rgba(15, 23, 42, 0.22);
+            background: rgba(15, 23, 42, 0.03);
+            color: var(--text-secondary-dark);
+            font-weight: 750;
+            text-align: center;
+        }
+
+        .day-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 99990;
+        }
+        .day-modal__backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.72);
+        }
+        .day-modal__panel {
+            position: relative;
+            margin: 8vh auto;
+            width: min(820px, 92vw);
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 18px;
+            padding: 1rem;
+            box-shadow: 0 24px 70px rgba(0,0,0,0.55);
+            color: rgba(255,255,255,0.95);
+        }
+        .day-modal__close {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+        }
+        .day-modal__title {
+            margin: 0 0 0.25rem;
+            font-family: var(--font-secondary);
+            font-size: 1.25rem;
+            font-weight: 950;
+        }
+        .day-modal__sub {
+            margin: 0 0 0.85rem;
+            color: rgba(255,255,255,0.75);
+            font-weight: 700;
+        }
+        .day-modal__label {
+            display: block;
+            font-weight: 900;
+            margin: 0.7rem 0 0.35rem;
+        }
+        .day-modal__input,
+        .day-modal__textarea {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.18);
+            background: rgba(0,0,0,0.20);
+            color: rgba(255,255,255,0.96);
+            padding: 0.75rem 0.85rem;
+            font-size: 0.95rem;
+            font-weight: 650;
+        }
+        .day-modal__textarea { resize: vertical; }
+        .day-modal__actions { margin-top: 0.9rem; display:flex; gap:0.75rem; justify-content:flex-end; flex-wrap: wrap; }
+        .day-modal__status { margin-top: 0.6rem; color: rgba(255,255,255,0.82); font-weight: 750; min-height: 1.2em; }
     </style>
 </head>
 <body>
@@ -235,14 +371,7 @@
                     <!-- Tournament summary will be loaded dynamically -->
                 </div>
                 <p class="tie-break-message" id="tie-break-message" style="display: none;"></p>
-                <div style="margin-top: 1.25rem;">
-                    <div class="cover-strip" id="tournament-cover-strip" aria-label="Tournament cover photos"></div>
-                    <div id="tournament-cover-empty" style="display:none; margin-top: 1rem; text-align:center; color: rgba(255,255,255,0.85);"></div>
-                    <div id="tournament-cover-actions" style="margin-top: 0.85rem; display:flex; justify-content:center; gap: 0.75rem; flex-wrap: wrap;">
-                        <a class="btn btn-secondary" id="tournament-see-more" href="#" style="display:none;">See more →</a>
-                        <a class="btn btn-primary" id="tournament-upload-photos" href="#" style="display:none;">Upload photos</a>
-                    </div>
-                </div>
+                <!-- Photo thumbnails + stories/quotes are rendered in the "About the day…" section below. -->
             </div>
         </section>
 
@@ -279,12 +408,64 @@
             <div class="container">
                 <h2 class="section-title">
                     <span class="title-icon">📸</span>
-                    Tournament Photos
+                    About the day…
                 </h2>
-                <p class="section-subtitle" style="color: var(--text-secondary-dark);">Grouped by uploader.</p>
-                <div id="tournament-photos-groups"></div>
+
+                <div class="day-actions">
+                    <button class="btn btn-secondary" id="btn-add-story" type="button">Add story</button>
+                    <button class="btn btn-secondary" id="btn-add-quote" type="button">Add quote</button>
+                    <a class="btn btn-primary" id="btn-add-photos" href="#" style="display:none;">Add photos</a>
+                    <a class="btn btn-secondary" id="btn-see-gallery" href="#" style="display:none;">See more →</a>
+                </div>
+
+                <div id="day-notes" class="day-notes"></div>
+
+                <div class="day-photo-row" id="day-photo-row" aria-label="Photo highlights"></div>
+                <div id="day-photo-empty" class="day-empty" style="display:none;"></div>
             </div>
         </section>
+
+        <!-- Modal: Add story -->
+        <div class="day-modal" id="modal-story" style="display:none;" aria-hidden="true">
+            <div class="day-modal__backdrop" data-close="1"></div>
+            <div class="day-modal__panel" role="dialog" aria-modal="true" aria-label="Add story">
+                <button class="btn btn-secondary day-modal__close" type="button" data-close="1">Close</button>
+                <h3 class="day-modal__title">Add a story</h3>
+                <div class="day-modal__sub">Write up what happened, funny moments, and highlights.</div>
+                <label class="day-modal__label" for="story-author">Your name</label>
+                <input id="story-author" class="day-modal__input" type="text" placeholder="Paul">
+                <label class="day-modal__label" for="story-text">Story</label>
+                <textarea id="story-text" class="day-modal__textarea" rows="8" placeholder="Today’s drive was…"></textarea>
+                <label class="day-modal__label" for="story-password">Family password</label>
+                <input id="story-password" class="day-modal__input" type="password" placeholder="Family password" autocomplete="current-password">
+                <div class="day-modal__actions">
+                    <button class="btn btn-primary" id="btn-submit-story" type="button">Submit story</button>
+                </div>
+                <div class="day-modal__status" id="story-status"></div>
+            </div>
+        </div>
+
+        <!-- Modal: Add quote -->
+        <div class="day-modal" id="modal-quote" style="display:none;" aria-hidden="true">
+            <div class="day-modal__backdrop" data-close="1"></div>
+            <div class="day-modal__panel" role="dialog" aria-modal="true" aria-label="Add quote">
+                <button class="btn btn-secondary day-modal__close" type="button" data-close="1">Close</button>
+                <h3 class="day-modal__title">Add a quote</h3>
+                <div class="day-modal__sub">Capture the best one-liners from the day.</div>
+                <label class="day-modal__label" for="quote-said-by">Who said it?</label>
+                <input id="quote-said-by" class="day-modal__input" type="text" placeholder="Ursula">
+                <label class="day-modal__label" for="quote-text">Quote</label>
+                <textarea id="quote-text" class="day-modal__textarea" rows="4" placeholder="“I can’t believe that worked…”"></textarea>
+                <label class="day-modal__label" for="quote-author">Your name</label>
+                <input id="quote-author" class="day-modal__input" type="text" placeholder="Leanne">
+                <label class="day-modal__label" for="quote-password">Family password</label>
+                <input id="quote-password" class="day-modal__input" type="password" placeholder="Family password" autocomplete="current-password">
+                <div class="day-modal__actions">
+                    <button class="btn btn-primary" id="btn-submit-quote" type="button">Submit quote</button>
+                </div>
+                <div class="day-modal__status" id="quote-status"></div>
+            </div>
+        </div>
 
         <section class="tournament-chart">
             <div class="container">
@@ -562,6 +743,11 @@
                 if (!hasTieBreakValue) continue;
 
                 const leader = group[0];
+                // Only show tie-break messaging when it affects podium placement (1st/2nd/3rd).
+                // We do not play tie-breakers for lower placings.
+                if (!leader || !Number.isFinite(leader.position) || leader.position > 3) {
+                    continue;
+                }
                 const others = group.slice(1);
                 const leaderName = getDisplayPlayerName(tournament, leader.player, tournamentEngine);
                 const otherNames = others.map(entry => getDisplayPlayerName(tournament, entry.player, tournamentEngine));
@@ -658,8 +844,8 @@
                 renderHeroStats(stats);
                 renderTournamentComment(tournamentComment);
 
-                // Cover picks + photo gallery (from R2 meta).
-                await renderTournamentPhotosFromR2(year);
+                // About the day… (stories/quotes + minimal photo highlights)
+                await renderAboutTheDay(year);
                 
                 // Generate podium-style tournament summary
                 const thirdPlace = tournament.final_standings.length >= 3 ? tournament.final_standings[2] : null;
@@ -923,7 +1109,7 @@
                                     ? `
                                         <span class="player-cell__wrap">
                                             ${sharedHandAvatarHtml(player.partnership_players, player.player, 'table')}
-                                            <strong>${getDisplayPlayerName(tournament, player.player, tournamentEngine)}</strong>
+                                        <strong>${getDisplayPlayerName(tournament, player.player, tournamentEngine)}</strong>
                                         </span>
                                     `
                                     : `
@@ -971,117 +1157,280 @@
             }
         });
 
-        async function renderTournamentPhotosFromR2(year) {
-            const strip = document.getElementById('tournament-cover-strip');
-            const empty = document.getElementById('tournament-cover-empty');
-            const seeMore = document.getElementById('tournament-see-more');
-            const uploadBtn = document.getElementById('tournament-upload-photos');
-            const photosSection = document.getElementById('tournament-photos');
-            const groupsWrap = document.getElementById('tournament-photos-groups');
-            if (!strip || !photosSection || !groupsWrap) return;
-            if (!(window.WhistMedia && typeof window.WhistMedia.getTournamentMeta === 'function')) return;
-            if (!(window.WhistMedia && typeof window.WhistMedia.publicUrlForKey === 'function')) return;
+        function openDayModal(modalEl) {
+            if (!modalEl) return;
+            modalEl.style.display = 'block';
+            modalEl.setAttribute('aria-hidden', 'false');
+        }
 
-            const meta = await window.WhistMedia.getTournamentMeta(year);
-            if (seeMore) {
-                seeMore.href = `photos.html?year=${encodeURIComponent(String(year))}`;
+        function closeDayModal(modalEl) {
+            if (!modalEl) return;
+            modalEl.style.display = 'none';
+            modalEl.setAttribute('aria-hidden', 'true');
+        }
+
+        async function ensureFamilyAuth(password) {
+            const pw = String(password || '').trim();
+            if (pw) {
+                const res = await fetch('/api/family/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pw })
+                });
+                return res.ok;
             }
-            if (uploadBtn) {
-                uploadBtn.href = `../upload/tournament-photos.html?year=${encodeURIComponent(String(year))}`;
-                uploadBtn.style.display = 'inline-flex';
+            try {
+                const res = await fetch('/api/family/status', { cache: 'no-store' });
+                return res.ok;
+            } catch (_) {
+                return false;
             }
-            if (!meta) {
-                if (empty) {
-                    empty.style.display = 'block';
-                    empty.innerHTML = `There are no photos uploaded for this event yet! <a style="color: inherit; font-weight: 900; text-decoration: underline;" href="${uploadBtn ? uploadBtn.href.replaceAll('"', '&quot;') : '../upload/tournament-photos.html'}">Upload some →</a>`;
-                }
-                if (seeMore) seeMore.style.display = 'none';
+        }
+
+        function fmtDate(iso) {
+            const s = String(iso || '').trim();
+            if (!s) return '';
+            const d = new Date(s);
+            if (!Number.isFinite(d.getTime())) return '';
+            return d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        async function fetchDayNotes(year) {
+            const y = String(year || '').trim();
+            if (!/^\d{4}$/.test(y)) return { stories: [], quotes: [] };
+            const res = await fetch(`/api/day-notes?year=${encodeURIComponent(y)}`, { cache: 'no-store' });
+            if (!res.ok) return { stories: [], quotes: [] };
+            const json = await res.json().catch(() => ({}));
+            return {
+                stories: Array.isArray(json?.stories) ? json.stories : [],
+                quotes: Array.isArray(json?.quotes) ? json.quotes : []
+            };
+        }
+
+        function renderDayNotesInto(el, { stories = [], quotes = [] } = {}) {
+            if (!el) return;
+                const items = [];
+            for (const s of (stories || [])) {
+                items.push({ type: 'story', id: s?.id, text: s?.text, author: s?.author, createdAt: s?.createdAt });
+            }
+            for (const q of (quotes || [])) {
+                items.push({ type: 'quote', id: q?.id, text: q?.text, author: q?.author, saidBy: q?.saidBy, createdAt: q?.createdAt });
+            }
+            items.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+
+            if (!items.length) {
+                el.innerHTML = `<div class="day-empty">No stories or quotes yet — add one above.</div>`;
                 return;
             }
 
-            const photos = Array.isArray(meta.photos) ? meta.photos.slice() : [];
-            const coverPicks = Array.isArray(meta.coverPicks) ? meta.coverPicks.slice(0, 3) : [];
-
-            // Render cover strip (if any).
-            if (coverPicks.length) {
-                const items = [];
-                for (const key of coverPicks) {
-                    const url = await window.WhistMedia.publicUrlForKey(key);
-                    if (!url) continue;
-                    const match = photos.find(p => String(p?.key || '') === String(key || ''));
-                    const thumbKey = match && match.thumbKey ? String(match.thumbKey) : '';
-                    const thumbUrl = thumbKey ? await window.WhistMedia.publicUrlForKey(thumbKey) : '';
-                    const imgUrl = thumbUrl || url;
-                    items.push(`<a href="${url.replaceAll('"', '&quot;')}" rel="noopener"><img alt="Tournament cover" src="${imgUrl.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
-                }
-                if (items.length) {
-                    strip.innerHTML = items.join('');
-                    strip.style.display = 'flex';
-                }
-            }
-            if (seeMore) {
-                seeMore.style.display = photos.length ? 'inline-flex' : 'none';
-            }
-            if (empty) {
-                if (!photos.length) {
-                    empty.style.display = 'block';
-                    empty.innerHTML = `There are no photos uploaded for this event yet! <a style="color: inherit; font-weight: 900; text-decoration: underline;" href="${uploadBtn ? uploadBtn.href.replaceAll('"', '&quot;') : '../upload/tournament-photos.html'}">Upload some →</a>`;
-                } else {
-                    empty.style.display = 'none';
-                    empty.innerHTML = '';
-                }
-            }
-
-            // Render grouped gallery (if any).
-            if (!photos.length) return;
-
-            const byUploader = new Map();
-            for (const p of photos) {
-                const uploader = String(p?.uploaderName || p?.uploaderSlug || 'Unknown').trim() || 'Unknown';
-                if (!byUploader.has(uploader)) byUploader.set(uploader, []);
-                byUploader.get(uploader).push(p);
-            }
-
-            const uploaderNames = Array.from(byUploader.keys()).sort((a, b) => a.localeCompare(b));
-            const groupsHtml = [];
-            for (const uploader of uploaderNames) {
-                const list = byUploader.get(uploader) || [];
-                list.sort((a, b) => String(b?.uploadedAt || '').localeCompare(String(a?.uploadedAt || '')));
-                const thumbs = [];
-                for (const p of list) {
-                    const key = String(p?.key || '');
-                    if (!key) continue;
-                    const url = await window.WhistMedia.publicUrlForKey(key);
-                    if (!url) continue;
-                    const thumbKey = String(p?.thumbKey || '').trim();
-                    const thumbUrl = thumbKey ? await window.WhistMedia.publicUrlForKey(thumbKey) : '';
-                    const imgUrl = thumbUrl || url;
-                    thumbs.push(`<a class="photo-thumb" href="${url.replaceAll('"', '&quot;')}" rel="noopener"><img alt="Tournament photo" src="${imgUrl.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
-                }
-                if (!thumbs.length) continue;
-
-                groupsHtml.push(`
-                    <div class="photos-group">
-                        <div class="photos-group-header">
-                            <div class="photos-group-title">${escapeHtml(uploader)}</div>
-                            <div class="photos-group-meta">${thumbs.length} photo${thumbs.length === 1 ? '' : 's'}</div>
+            el.innerHTML = items.map(item => {
+                if (item.type === 'quote') {
+                    const saidBy = String(item.saidBy || '').trim();
+                    const author = String(item.author || '').trim();
+                    const metaBits = [];
+                    if (saidBy) metaBits.push(`Said by <strong>${escapeHtml(saidBy)}</strong>`);
+                    if (author) metaBits.push(`Added by <strong>${escapeHtml(author)}</strong>`);
+                    const when = fmtDate(item.createdAt);
+                    if (when) metaBits.push(escapeHtml(when));
+                    return `
+                        <div class="day-note">
+                            <div class="day-note__kicker">💬 Quote</div>
+                            <div class="day-note__body">“${escapeHtml(String(item.text || '').trim())}”</div>
+                            <div class="day-note__meta">${metaBits.join(' • ')}</div>
                         </div>
-                        <div class="photos-grid">
-                            ${thumbs.join('')}
-                        </div>
+                    `;
+                }
+                const author = String(item.author || '').trim();
+                const metaBits = [];
+                if (author) metaBits.push(`By <strong>${escapeHtml(author)}</strong>`);
+                const when = fmtDate(item.createdAt);
+                if (when) metaBits.push(escapeHtml(when));
+                return `
+                    <div class="day-note">
+                        <div class="day-note__kicker">📖 Story</div>
+                        <div class="day-note__body">${escapeHtml(String(item.text || '').trim())}</div>
+                        <div class="day-note__meta">${metaBits.join(' • ')}</div>
                     </div>
-                `);
+                `;
+            }).join('');
+        }
+
+        async function renderPhotoHighlights(year) {
+            const section = document.getElementById('tournament-photos');
+            const row = document.getElementById('day-photo-row');
+            const empty = document.getElementById('day-photo-empty');
+            const btnAddPhotos = document.getElementById('btn-add-photos');
+            const btnSee = document.getElementById('btn-see-gallery');
+            if (!section || !row || !empty || !btnAddPhotos || !btnSee) return;
+
+            const y = String(year || '').trim();
+            btnAddPhotos.href = `../upload/tournament-photos.html?year=${encodeURIComponent(y)}`;
+            btnAddPhotos.style.display = 'inline-flex';
+            btnSee.href = `photos.html?year=${encodeURIComponent(y)}`;
+            btnSee.style.display = 'inline-flex';
+
+            if (!(window.WhistMedia && typeof window.WhistMedia.getTournamentMeta === 'function')) {
+                empty.style.display = 'block';
+                empty.textContent = 'Photo highlights not available.';
+                return;
+            }
+            if (!(window.WhistMedia && typeof window.WhistMedia.publicUrlForKey === 'function')) {
+                empty.style.display = 'block';
+                empty.textContent = 'Photo highlights not available.';
+                return;
             }
 
-            if (groupsHtml.length) {
-                groupsWrap.innerHTML = groupsHtml.join('');
-                photosSection.style.display = 'block';
+            const meta = await window.WhistMedia.getTournamentMeta(y);
+            const photos = Array.isArray(meta?.photos) ? meta.photos.slice() : [];
+            const coverPicks = Array.isArray(meta?.coverPicks) ? meta.coverPicks.slice(0, 3) : [];
+
+            const byKey = new Map();
+            for (const p of photos) {
+                if (!p || !p.key) continue;
+                byKey.set(String(p.key), p);
             }
 
-            // Lightbox: bind cover strip + photo thumbs
+            const selected = [];
+            const seen = new Set();
+            for (const key of coverPicks) {
+                const k = String(key || '');
+                if (!k || seen.has(k)) continue;
+                seen.add(k);
+                selected.push(k);
+            }
+
+            const sortedByTime = photos.slice().sort((a, b) => String(b?.uploadedAt || '').localeCompare(String(a?.uploadedAt || '')));
+            for (const p of sortedByTime) {
+                if (selected.length >= 6) break;
+                const k = String(p?.key || '');
+                if (!k || seen.has(k)) continue;
+                seen.add(k);
+                selected.push(k);
+            }
+
+            if (!selected.length) {
+                row.innerHTML = '';
+                empty.style.display = 'block';
+                empty.innerHTML = `No photos yet. <a style="color: inherit; font-weight: 900; text-decoration: underline;" href="${btnAddPhotos.href.replaceAll('"', '&quot;')}">Add photos →</a>`;
+                return;
+            }
+
+            const cells = [];
+            for (const k of selected.slice(0, 6)) {
+                const entry = byKey.get(k);
+                const fullUrl = await window.WhistMedia.publicUrlForKey(k);
+                if (!fullUrl) continue;
+                const thumbKey = String(entry?.thumbKey || '').trim();
+                const thumbUrl = thumbKey ? await window.WhistMedia.publicUrlForKey(thumbKey) : '';
+                const imgUrl = thumbUrl || fullUrl;
+                cells.push(`<a href="${fullUrl.replaceAll('"', '&quot;')}" rel="noopener"><img alt="Tournament photo" loading="lazy" src="${imgUrl.replaceAll('"', '&quot;')}"></a>`);
+            }
+
+            row.innerHTML = cells.join('');
+            empty.style.display = 'none';
+            empty.innerHTML = '';
+
             if (window.WhistLightbox && typeof window.WhistLightbox.bindAnchors === 'function') {
-                window.WhistLightbox.bindAnchors(strip.querySelectorAll('a'));
-                window.WhistLightbox.bindAnchors(groupsWrap.querySelectorAll('a.photo-thumb'));
+                window.WhistLightbox.bindAnchors(row.querySelectorAll('a'));
+            }
+        }
+
+        async function renderAboutTheDay(year) {
+            const section = document.getElementById('tournament-photos');
+            const notesEl = document.getElementById('day-notes');
+            const btnStory = document.getElementById('btn-add-story');
+            const btnQuote = document.getElementById('btn-add-quote');
+            const modalStory = document.getElementById('modal-story');
+            const modalQuote = document.getElementById('modal-quote');
+            if (!section || !notesEl || !btnStory || !btnQuote || !modalStory || !modalQuote) return;
+
+            section.style.display = 'block';
+
+            const y = String(year || '').trim();
+            await renderPhotoHighlights(y);
+
+            const refresh = async () => {
+                const data = await fetchDayNotes(y);
+                renderDayNotesInto(notesEl, data);
+            };
+            await refresh();
+
+            // Modal close handlers (backdrop + close button)
+            [modalStory, modalQuote].forEach(m => {
+                m.addEventListener('click', (e) => {
+                    const t = e.target;
+                    if (t && t.getAttribute && t.getAttribute('data-close') === '1') {
+                        closeDayModal(m);
+                    }
+                });
+            });
+
+            btnStory.addEventListener('click', () => openDayModal(modalStory));
+            btnQuote.addEventListener('click', () => openDayModal(modalQuote));
+
+            const setStatus = (el, msg) => { if (el) el.textContent = String(msg || ''); };
+
+            const submitStoryBtn = document.getElementById('btn-submit-story');
+            const submitQuoteBtn = document.getElementById('btn-submit-quote');
+
+            if (submitStoryBtn) {
+                submitStoryBtn.addEventListener('click', async () => {
+                    const author = String(document.getElementById('story-author')?.value || '').trim();
+                    const text = String(document.getElementById('story-text')?.value || '').trim();
+                    const pw = String(document.getElementById('story-password')?.value || '').trim();
+                    const statusEl = document.getElementById('story-status');
+                    setStatus(statusEl, '');
+                    if (!author) return setStatus(statusEl, 'Please enter your name.');
+                    if (text.length < 5) return setStatus(statusEl, 'Please write a longer story.');
+                    if (!pw) return setStatus(statusEl, 'Family password required.');
+                    const res = await fetch('/api/day-notes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ year: y, type: 'story', author, text, password: pw })
+                    });
+                    const json = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        const msg = String(json?.error || '').toLowerCase() === 'unauthorized'
+                            ? 'Incorrect family password.'
+                            : (json?.error || `Submit failed (${res.status})`);
+                        return setStatus(statusEl, msg);
+                    }
+                    document.getElementById('story-text').value = '';
+                    document.getElementById('story-password').value = '';
+                    closeDayModal(modalStory);
+                    await refresh();
+                });
+            }
+
+            if (submitQuoteBtn) {
+                submitQuoteBtn.addEventListener('click', async () => {
+                    const saidBy = String(document.getElementById('quote-said-by')?.value || '').trim();
+                    const text = String(document.getElementById('quote-text')?.value || '').trim();
+                    const author = String(document.getElementById('quote-author')?.value || '').trim();
+                    const pw = String(document.getElementById('quote-password')?.value || '').trim();
+                    const statusEl = document.getElementById('quote-status');
+                    setStatus(statusEl, '');
+                    if (!saidBy) return setStatus(statusEl, 'Please enter who said it.');
+                    if (text.length < 2) return setStatus(statusEl, 'Please enter a quote.');
+                    if (!author) return setStatus(statusEl, 'Please enter your name.');
+                    if (!pw) return setStatus(statusEl, 'Family password required.');
+                    const res = await fetch('/api/day-notes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ year: y, type: 'quote', author, saidBy, text, password: pw })
+                    });
+                    const json = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        const msg = String(json?.error || '').toLowerCase() === 'unauthorized'
+                            ? 'Incorrect family password.'
+                            : (json?.error || `Submit failed (${res.status})`);
+                        return setStatus(statusEl, msg);
+                    }
+                    document.getElementById('quote-text').value = '';
+                    document.getElementById('quote-password').value = '';
+                    closeDayModal(modalQuote);
+                    await refresh();
+                });
             }
         }
 

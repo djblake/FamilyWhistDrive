@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin – Day Notes | Ruston Family Whist Drive</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="/assets/js/footer-nav.js?v=2" defer></script>
+    <style>
+        .admin-wrap { padding: var(--spacing-3xl) 0; }
+        .admin-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            box-shadow: var(--shadow-card);
+        }
+        .admin-title { font-size: 1.6rem; margin-bottom: 0.25rem; color: var(--text-primary-dark); font-weight: 950; }
+        .admin-sub { color: var(--text-secondary-dark); margin-bottom: var(--spacing-lg); }
+        label { font-weight: 900; color: var(--text-primary-dark); font-size: 0.9rem; }
+        input[type="text"] {
+            width: 100%;
+            padding: 0.75rem 0.9rem;
+            border-radius: 12px;
+            border: 1px solid rgba(15, 23, 42, 0.18);
+            font-size: 0.95rem;
+        }
+        .row { display:flex; gap: 0.75rem; flex-wrap: wrap; align-items: end; }
+        .row > div { flex: 1; min-width: 220px; }
+        .note-list { margin-top: 1rem; display: grid; gap: 0.85rem; }
+        .note {
+            border-radius: 16px;
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            padding: 0.9rem 1rem;
+            background: rgba(15, 23, 42, 0.02);
+        }
+        .note__kicker {
+            font-size: 0.75rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            font-weight: 950;
+            color: var(--text-secondary-dark);
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+            align-items: baseline;
+        }
+        .note__body {
+            margin-top: 0.55rem;
+            color: var(--text-primary-dark);
+            font-weight: 650;
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+        .note__meta {
+            margin-top: 0.6rem;
+            color: var(--text-secondary-dark);
+            font-size: 0.85rem;
+            font-weight: 750;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .small { font-size: 0.85rem; color: var(--text-secondary-dark); }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
+                    <h1 class="site-title">Ruston Family Whist Drive</h1>
+                    <p class="site-subtitle">Admin • Day notes</p>
+                </div>
+                <nav class="main-nav">
+                    <a href="../" class="nav-link">Home</a>
+                    <a href="../tournaments/" class="nav-link">Tournaments</a>
+                    <a href="../tables/" class="nav-link">Tables</a>
+                    <a href="../players/" class="nav-link">Players</a>
+                    <a href="../leaderboard/" class="nav-link">Hall of Fame</a>
+                    <a href="../stats/" class="nav-link">Statistics</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="admin-wrap">
+            <div class="container">
+                <div class="admin-card">
+                    <div class="admin-title">Day stories & quotes</div>
+                    <div class="admin-sub">Pick a year, refresh, and delete anything that shouldn’t be on the site.</div>
+
+                    <div class="row">
+                        <div>
+                            <label for="year">Tournament year</label>
+                            <input id="year" type="text" placeholder="2025">
+                        </div>
+                        <div style="flex: 0 0 auto; min-width: 0;">
+                            <button class="btn btn-primary" id="btn-refresh" type="button">Refresh</button>
+                        </div>
+                    </div>
+                    <div class="small" id="status" style="margin-top: 0.5rem;"></div>
+
+                    <div class="note-list" id="list"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div data-footer-nav></div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const elYear = document.getElementById('year');
+        const elList = document.getElementById('list');
+        const elStatus = document.getElementById('status');
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#39;');
+        }
+
+        function fmtDate(iso) {
+            const s = String(iso || '').trim();
+            if (!s) return '';
+            const d = new Date(s);
+            if (!Number.isFinite(d.getTime())) return '';
+            return d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        async function loadNotes() {
+            const year = String(elYear.value || '').trim();
+            if (!/^\d{4}$/.test(year)) {
+                elStatus.textContent = 'Enter a valid year (YYYY).';
+                elList.innerHTML = '';
+                return;
+            }
+            elStatus.textContent = 'Loading…';
+            const res = await fetch(`/api/day-notes?year=${encodeURIComponent(year)}`, { cache: 'no-store' });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                elStatus.textContent = `Failed: ${json?.error || res.status}`;
+                elList.innerHTML = '';
+                return;
+            }
+            const stories = Array.isArray(json?.stories) ? json.stories : [];
+            const quotes = Array.isArray(json?.quotes) ? json.quotes : [];
+            const items = [];
+            stories.forEach(s => items.push({ type: 'story', ...s }));
+            quotes.forEach(q => items.push({ type: 'quote', ...q }));
+            items.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+            elStatus.textContent = `Loaded ${items.length} item(s).`;
+
+            if (!items.length) {
+                elList.innerHTML = `<div class="note"><div class="note__body">No stories or quotes for ${escapeHtml(year)}.</div></div>`;
+                return;
+            }
+
+            elList.innerHTML = items.map(item => {
+                const type = item.type === 'quote' ? 'Quote' : 'Story';
+                const title = item.type === 'quote' ? `💬 ${type}` : `📖 ${type}`;
+                const body = item.type === 'quote'
+                    ? `“${escapeHtml(String(item.text || '').trim())}”`
+                    : escapeHtml(String(item.text || '').trim());
+                const metaBits = [];
+                if (item.type === 'quote' && item.saidBy) metaBits.push(`Said by <strong>${escapeHtml(item.saidBy)}</strong>`);
+                if (item.author) metaBits.push(`Added by <strong>${escapeHtml(item.author)}</strong>`);
+                const when = fmtDate(item.createdAt);
+                if (when) metaBits.push(escapeHtml(when));
+                return `
+                    <div class="note" data-id="${escapeHtml(item.id)}" data-type="${escapeHtml(item.type)}">
+                        <div class="note__kicker">
+                            <span>${title}</span>
+                            <button class="btn btn-secondary btn-delete" type="button">Delete</button>
+                        </div>
+                        <div class="note__body">${body}</div>
+                        <div class="note__meta">${metaBits.join(' • ')}</div>
+                    </div>
+                `;
+            }).join('');
+
+            elList.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const wrap = e.target.closest('.note');
+                    const id = wrap?.getAttribute('data-id') || '';
+                    const type = wrap?.getAttribute('data-type') || '';
+                    const year = String(elYear.value || '').trim();
+                    if (!id || (type !== 'story' && type !== 'quote')) return;
+                    if (!confirm(`Delete this ${type}?`)) return;
+                    const res = await fetch(`/api/day-notes?year=${encodeURIComponent(year)}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'delete', type, id })
+                    });
+                    const json = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                        alert(json?.error || `Delete failed (${res.status})`);
+                        return;
+                    }
+                    await loadNotes();
+                });
+            });
+        }
+
+        document.getElementById('btn-refresh').addEventListener('click', () => loadNotes().catch(e => {
+            elStatus.textContent = `Error: ${e?.message || e}`;
+        }));
+
+        // Prefill year from URL if provided
+        const url = new URL(window.location.href);
+        const y = String(url.searchParams.get('year') || '').trim();
+        if (y) elYear.value = y;
+    </script>
+</body>
+</html>
+
+
