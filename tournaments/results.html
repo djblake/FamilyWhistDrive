@@ -700,73 +700,18 @@
                         `;
                     }
                     return `
-                        <div class="avatar-placeholder ${sizeClass}" data-player-key="${encodeHtml(key)}">
-                            <img alt="" loading="lazy" style="display:none;">
+                        <div class="avatar-placeholder ${sizeClass}">
+                            <img
+                                alt=""
+                                loading="lazy"
+                                style="display:none;"
+                                src="/media/avatars/${encodeHtml(key)}_sm.jpg"
+                                onload="this.style.display='block'; const s=this.parentElement && this.parentElement.querySelector && this.parentElement.querySelector('.avatar-initial'); if(s) s.style.display='none';"
+                                onerror="if(!this.dataset.fallback){this.dataset.fallback='1'; this.src='/media/avatars/${encodeHtml(key)}.jpg'; return;} this.style.display='none';"
+                            >
                             <span class="avatar-initial">${initials}</span>
                         </div>
                     `;
-                }
-
-                async function hydrateAvatars(root = document) {
-                    const waitForMedia = async (timeoutMs = 2500) => {
-                        const start = Date.now();
-                        while (!(window.WhistMedia && typeof window.WhistMedia.avatarUrl === 'function')) {
-                            if (Date.now() - start > timeoutMs) return false;
-                            await new Promise(r => setTimeout(r, 50));
-                        }
-                        return true;
-                    };
-                    const ready = await waitForMedia();
-                    if (!ready) return;
-
-                    const nodes = Array.from(root.querySelectorAll('.avatar-placeholder[data-player-key]'));
-
-                    const queue = nodes.slice();
-                    const workers = Array.from({ length: 6 }).map(async () => {
-                        while (queue.length) {
-                            const el = queue.shift();
-                            if (!el) continue;
-                            const key = (el.getAttribute('data-player-key') || '').trim();
-                            if (!key) continue;
-                            const imgEl = el.querySelector('img');
-                            const initialsEl = el.querySelector('.avatar-initial');
-                            if (!imgEl || !initialsEl) continue;
-
-                            const candidates = [
-                                await window.WhistMedia.avatarUrl(key, 'small'),
-                                await window.WhistMedia.avatarUrl(key, 'large')
-                            ].filter(Boolean);
-
-                            const tryLoad = async (url) => {
-                                return await Promise.race([
-                                    new Promise((resolve) => {
-                                        imgEl.onload = () => resolve(true);
-                                        imgEl.onerror = () => resolve(false);
-                                        imgEl.setAttribute('src', url);
-                                    }),
-                                    new Promise((resolve) => setTimeout(() => resolve(false), 1500))
-                                ]);
-                            };
-
-                            let loaded = false;
-                            for (const url of candidates) {
-                                if (await tryLoad(url)) {
-                                    loaded = true;
-                                    break;
-                                }
-                            }
-
-                            if (loaded) {
-                                imgEl.style.display = 'block';
-                                initialsEl.style.display = 'none';
-                            } else {
-                                imgEl.removeAttribute('src');
-                                imgEl.style.display = 'none';
-                                initialsEl.style.display = 'block';
-                            }
-                        }
-                    });
-                    await Promise.all(workers);
                 }
                 
         const podiumHTML = `
@@ -845,7 +790,6 @@
                     ` : ''}
                 `;
                 document.getElementById('summary-grid').innerHTML = podiumHTML;
-                await hydrateAvatars(document.getElementById('summary-grid'));
                 renderTieBreakMessage(tournament, tournamentEngine);
                 
                 // Debug: Check what's actually in final standings
@@ -935,7 +879,6 @@
                 }).join('');
                 
                 document.getElementById('rankings-tbody').innerHTML = rankingsHTML;
-                await hydrateAvatars(document.getElementById('rankings-table'));
                 
 
                 

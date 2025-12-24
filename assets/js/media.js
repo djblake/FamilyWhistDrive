@@ -1,7 +1,8 @@
 (() => {
   const state = {
     cfgLoaded: false,
-    publicBaseUrl: ''
+    publicBaseUrl: '',
+    gatewayBaseUrl: ''
   };
 
   function trimSlash(s) {
@@ -23,6 +24,7 @@
       if (!res.ok) return;
       const json = await res.json();
       state.publicBaseUrl = String(json?.publicBaseUrl || '');
+      state.gatewayBaseUrl = String(json?.gatewayBaseUrl || '');
     } catch (_) {
       // ignore
     }
@@ -34,7 +36,12 @@
   }
 
   async function publicUrlForKey(key) {
-    const base = await getPublicBaseUrl();
+    await loadConfig();
+    const gateway = trimSlash(state.gatewayBaseUrl);
+    if (gateway) {
+      return joinUrl(gateway, key);
+    }
+    const base = trimSlash(state.publicBaseUrl);
     return base ? joinUrl(base, key) : '';
   }
 

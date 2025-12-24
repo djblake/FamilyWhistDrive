@@ -263,8 +263,15 @@
                         </td>
                         <td class="player-cell">
                             <div class="player-info">
-                                <div class="player-avatar" data-player-key="${escapeHtml(playerKey)}">
-                                    <img alt="" loading="lazy" style="display:none;">
+                                <div class="player-avatar">
+                                    <img
+                                        alt=""
+                                        loading="lazy"
+                                        style="display:none;"
+                                        src="/media/avatars/${escapeHtml(playerKey)}_sm.jpg"
+                                        onload="this.style.display='block'; const s=this.parentElement && this.parentElement.querySelector && this.parentElement.querySelector('.avatar-initials'); if(s) s.style.display='none';"
+                                        onerror="if(!this.dataset.fallback){this.dataset.fallback='1'; this.src='/media/avatars/${escapeHtml(playerKey)}.jpg'; return;} this.style.display='none';"
+                                    >
                                     <span class="avatar-initials">${initials}</span>
                                 </div>
                                 <div class="player-details">
@@ -306,7 +313,6 @@
             }).join('');
             
             tbody.innerHTML = playersHTML;
-            hydrateAvatars();
         }
 
         function escapeHtml(str) {
@@ -318,76 +324,6 @@
                 .replaceAll("'", '&#39;');
         }
 
-        async function hydrateAvatars() {
-            // Some pages can run before deferred scripts have initialized WhistMedia.
-            // Wait briefly so avatars reliably hydrate on first load.
-            const waitForMedia = async (timeoutMs = 2500) => {
-                const start = Date.now();
-                while (!(window.WhistMedia && typeof window.WhistMedia.avatarUrl === 'function')) {
-                    if (Date.now() - start > timeoutMs) return false;
-                    await new Promise(r => setTimeout(r, 50));
-                }
-                return true;
-            };
-            const ready = await waitForMedia();
-            if (!ready) return;
-
-            const nodes = Array.from(document.querySelectorAll('.player-avatar[data-player-key]'));
-            const queue = nodes.slice();
-            const workers = Array.from({ length: 6 }).map(async () => {
-                while (queue.length) {
-                    const el = queue.shift();
-                    if (!el) continue;
-                    const key = (el.getAttribute('data-player-key') || '').trim();
-                    if (!key) continue;
-                    const imgEl = el.querySelector('img');
-                    const initialsEl = el.querySelector('.avatar-initials');
-                    if (!imgEl || !initialsEl) continue;
-
-                    try {
-                        // Prefer small avatars in table views; fall back to large if small doesn't exist yet.
-                        // Avoid a separate "probe image" queue; instead load per-row with onload/onerror so one missing avatar
-                        // cannot block the whole table.
-                        const candidates = [
-                            await window.WhistMedia.avatarUrl(key, 'small'),
-                            await window.WhistMedia.avatarUrl(key, 'large')
-                        ].filter(Boolean);
-
-                        const tryLoad = async (url) => {
-                            return await Promise.race([
-                                new Promise((resolve) => {
-                                    imgEl.onload = () => resolve(true);
-                                    imgEl.onerror = () => resolve(false);
-                                    imgEl.setAttribute('src', url);
-                                }),
-                                new Promise((resolve) => setTimeout(() => resolve(false), 1500))
-                            ]);
-                        };
-
-                        let loaded = false;
-                        for (const url of candidates) {
-                            if (await tryLoad(url)) {
-                                loaded = true;
-                                break;
-                            }
-                        }
-
-                        if (loaded) {
-                            imgEl.style.display = 'block';
-                            initialsEl.style.display = 'none';
-                        } else {
-                            imgEl.removeAttribute('src');
-                            imgEl.style.display = 'none';
-                            initialsEl.style.display = 'block';
-                        }
-                    } catch (_) {
-                        // ignore
-                    }
-                }
-            });
-            await Promise.all(workers);
-        }
-        
         function updateSummaryStats() {
             const totalPlayers = allPlayers.length;
             const champions = allPlayers.filter(p => p.championships > 0).length;
