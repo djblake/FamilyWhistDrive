@@ -352,12 +352,17 @@
                         ].filter(Boolean);
 
                         const probeUrl = async (url) => {
-                            return await new Promise((resolve) => {
-                                const probe = new Image();
-                                probe.onload = () => resolve(true);
-                                probe.onerror = () => resolve(false);
-                                probe.src = `${url}${url.includes('?') ? '&' : '?'}probe=${Date.now()}`;
-                            });
+                            // Some browsers can surface missing cross-origin images as ORB-blocked in a way that
+                            // doesn't always cleanly resolve. Add a timeout so one missing avatar can't stall the entire table.
+                            return await Promise.race([
+                                new Promise((resolve) => {
+                                    const probe = new Image();
+                                    probe.onload = () => resolve(true);
+                                    probe.onerror = () => resolve(false);
+                                    probe.src = `${url}${url.includes('?') ? '&' : '?'}probe=${Date.now()}`;
+                                }),
+                                new Promise((resolve) => setTimeout(() => resolve(false), 1500))
+                            ]);
                         };
 
                         for (const url of candidates) {
