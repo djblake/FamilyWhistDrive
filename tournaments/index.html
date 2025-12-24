@@ -126,7 +126,7 @@
                                 <div class="tournament-year">${tournament.year}</div>
                             </div>
                             <div class="tournament-content">
-                                <div class="tournament-cover tournament-cover--corner" data-cover-year="${tournament.year}" style="display:none;"></div>
+                                <div class="tournament-covers" data-cover-year="${tournament.year}" aria-hidden="true" style="display:none;"></div>
                                 <div class="tournament-header">
                                     <h3 class="tournament-title">${tournament.name}</h3>
                                 </div>
@@ -171,12 +171,23 @@
                             if (!year) continue;
                             try {
                                 const meta = await window.WhistMedia.getTournamentMeta(year);
-                                const key = meta && Array.isArray(meta.coverPicks) && meta.coverPicks.length ? String(meta.coverPicks[0] || '') : '';
-                                if (!key) continue;
-                                const url = await window.WhistMedia.publicUrlForKey(key);
-                                if (!url) continue;
-                                el.innerHTML = `<img alt="Tournament cover" src="${url.replaceAll('"', '&quot;')}" loading="lazy">`;
-                                el.style.display = 'block';
+                                const picks = meta && Array.isArray(meta.coverPicks) ? meta.coverPicks.slice(0, 3) : [];
+                                const photos = meta && Array.isArray(meta.photos) ? meta.photos : [];
+                                const urls = [];
+                                for (const k of picks) {
+                                    const key = String(k || '').trim();
+                                    if (!key) continue;
+                                    const match = photos.find(p => String(p?.key || '') === key);
+                                    const thumbKey = String(match?.thumbKey || '').trim();
+                                    const imgKey = thumbKey || key;
+                                    const url = await window.WhistMedia.publicUrlForKey(imgKey);
+                                    if (url) urls.push(url);
+                                    if (urls.length >= 3) break;
+                                }
+                                if (!urls.length) continue;
+
+                                el.innerHTML = urls.map((u, idx) => `<img alt="Cover ${idx + 1}" src="${u.replaceAll('"', '&quot;')}" loading="lazy">`).join('');
+                                el.style.display = 'flex';
                                 const content = el.closest && el.closest('.tournament-content');
                                 if (content && content.classList) content.classList.add('has-cover');
                             } catch (_) {
@@ -483,23 +494,31 @@
             position: relative;
         }
 
-        .tournament-content.has-cover {
-            padding-right: 120px; /* only when a cover image exists */
+        /* Up to 3 cover thumbs pinned to the top-right of the white content area */
+        .tournament-covers {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            display: none;
+            gap: 0.35rem;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        .tournament-covers img {
+            width: 46px;
+            height: 32px;
+            border-radius: 10px;
+            object-fit: cover;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            background: rgba(15, 23, 42, 0.06);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.10);
+            display: block;
         }
 
-        .tournament-cover--corner {
-            position: absolute;
-            top: 14px;
-            right: 14px;
-            width: 96px;
-            height: 64px;
-            border-radius: 14px;
-            overflow: hidden;
-            border: 1px solid rgba(15, 23, 42, 0.12);
-            background: rgba(15, 23, 42, 0.04);
-            box-shadow: 0 10px 26px rgba(15, 23, 42, 0.10);
+        /* Only the title row makes room for the thumbs; description stays full width */
+        .tournament-content.has-cover .tournament-header {
+            padding-right: 150px;
         }
-        .tournament-cover--corner img { width: 100%; height: 100%; object-fit: cover; display:block; }
 
         .tournament-story {
             margin-top: 0.65rem;
