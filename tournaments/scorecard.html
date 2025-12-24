@@ -151,11 +151,11 @@
                         Original scorecard scan: checking…
                     </div>
                     <div class="verification-actions" id="scorecard-scan-actions" style="margin-top:0.75rem; display:none; gap:0.75rem; flex-wrap:wrap;">
-                        <button class="btn btn-secondary" id="btn-toggle-player-scan" type="button">Show scan</button>
+                        <button class="btn btn-secondary" id="btn-toggle-player-scan" type="button">See original scorecard</button>
                         <a class="btn btn-secondary" id="btn-open-player-scan" href="#" target="_blank" rel="noopener" style="display:none;">Open full size</a>
                     </div>
 
-                    <div class="verification-grid" id="scorecard-verification-grid" style="margin-top:1rem;">
+                    <div class="verification-grid" id="scorecard-verification-grid" style="margin-top:1rem; display:none;">
                         <div class="verification-pane">
                             <div class="scan-frame" id="player-scan-frame">
                                 <div class="scan-empty" id="player-scan-empty">No scan uploaded.</div>
@@ -698,6 +698,7 @@
             const actionsEl = document.getElementById('scorecard-scan-actions');
             const btnToggle = document.getElementById('btn-toggle-player-scan');
             const btnOpen = document.getElementById('btn-open-player-scan');
+            const gridEl = document.getElementById('scorecard-verification-grid');
             const emptyEl = document.getElementById('player-scan-empty');
             const imgEl = document.getElementById('player-scan-img');
             const compactBody = document.getElementById('scorecard-compact-body');
@@ -725,7 +726,7 @@
                 }).join('');
             }
 
-            if (!statusEl || !actionsEl || !btnToggle || !emptyEl || !imgEl) {
+            if (!statusEl || !actionsEl || !btnToggle || !emptyEl || !imgEl || !gridEl) {
                 return;
             }
 
@@ -734,11 +735,13 @@
             if (!/^\d{4}$/.test(y) || ids.length === 0) {
                 statusEl.textContent = 'Original scorecard scan: unavailable';
                 actionsEl.style.display = 'none';
+                gridEl.style.display = 'none';
                 return;
             }
             if (!(window.WhistMedia && typeof window.WhistMedia.playerScorecardUrl === 'function')) {
                 statusEl.textContent = 'Original scorecard scan: unavailable';
                 actionsEl.style.display = 'none';
+                gridEl.style.display = 'none';
                 return;
             }
 
@@ -760,13 +763,14 @@
                 scanVisible = Boolean(visible);
                 if (!foundUrl) return;
                 if (scanVisible) {
+                    gridEl.style.display = 'grid';
                     // IMPORTANT: do not rely on imgEl.src truthiness.
                     // If src attribute is missing/empty, imgEl.src resolves to the current page URL (truthy),
                     // which prevents us from ever setting the real image URL.
                     emptyEl.style.display = 'block';
                     emptyEl.textContent = 'Loading scan…';
                     imgEl.style.display = 'block';
-                    btnToggle.textContent = 'Hide scan';
+                    btnToggle.textContent = 'Hide original scorecard';
 
                     imgEl.onload = () => {
                         emptyEl.style.display = 'none';
@@ -776,7 +780,8 @@
                         emptyEl.style.display = 'block';
                         emptyEl.textContent = 'Failed to load scan inline. Use “Open full size”.';
                         scanVisible = false;
-                        btnToggle.textContent = 'Show scan';
+                        btnToggle.textContent = 'See original scorecard';
+                        gridEl.style.display = 'none';
                     };
 
                     // Always set the src attribute with a cache buster (helps after uploads / CDN caching).
@@ -785,8 +790,9 @@
                 } else {
                     imgEl.style.display = 'none';
                     emptyEl.style.display = 'block';
-                    emptyEl.textContent = 'Scan hidden (click “Show scan”).';
-                    btnToggle.textContent = 'Show scan';
+                    emptyEl.textContent = 'Scan hidden.';
+                    btnToggle.textContent = 'See original scorecard';
+                    gridEl.style.display = 'none';
                 }
             };
 
@@ -794,8 +800,9 @@
 
             const tryCandidate = async (idx) => {
                 if (idx >= candidates.length) {
-                    statusEl.textContent = 'Original scorecard scan: not available';
+                    statusEl.textContent = 'Original scorecard scan: none uploaded.';
                     actionsEl.style.display = 'none';
+                    gridEl.style.display = 'none';
                     emptyEl.textContent = 'No scan uploaded.';
                     imgEl.style.display = 'none';
                     imgEl.removeAttribute('src');
@@ -810,13 +817,14 @@
                 const probe = new Image();
                 probe.onload = () => {
                     foundUrl = url;
-                    statusEl.textContent = 'Original scorecard scan: available';
+                    statusEl.innerHTML = `Original scorecard scan: <span style="color:#16a34a; font-weight:900;">available</span>`;
                     actionsEl.style.display = 'flex';
                     if (btnOpen) {
                         btnOpen.href = url;
                         btnOpen.style.display = 'inline-flex';
                     }
-                    emptyEl.textContent = 'Scan hidden (click “Show scan”).';
+                    emptyEl.textContent = 'Scan hidden.';
+                    btnToggle.textContent = 'See original scorecard';
                     setVisible(false);
                 };
                 probe.onerror = () => tryCandidate(idx + 1);
@@ -825,6 +833,7 @@
 
             statusEl.textContent = 'Original scorecard scan: checking…';
             actionsEl.style.display = 'none';
+            gridEl.style.display = 'none';
             emptyEl.textContent = 'Checking for scan…';
             emptyEl.style.display = 'block';
             imgEl.style.display = 'none';
