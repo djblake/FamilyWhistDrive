@@ -50,9 +50,9 @@
         gap: 0.75rem;
         align-items: center;
         justify-content: space-between;
-        background: rgba(255,255,255,0.06);
-        border-top: 1px solid rgba(255,255,255,0.12);
-        color: rgba(255,255,255,0.92);
+        background: rgba(255,255,255,0.92);
+        border-top: 1px solid rgba(15, 23, 42, 0.12);
+        color: #0f172a;
       }
       .whist-lightbox__caption {
         font-size: 0.85rem;
@@ -64,12 +64,21 @@
       .whist-lightbox__caption code {
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
         font-size: 0.82rem;
-        color: rgba(255,255,255,0.88);
+        color: rgba(15, 23, 42, 0.90);
         word-break: break-all;
       }
       .whist-lightbox__goto {
         flex: 0 0 auto;
         white-space: nowrap;
+      }
+      .whist-lightbox__goto.btn {
+        background: rgba(15, 23, 42, 0.06);
+        border-color: rgba(15, 23, 42, 0.18);
+        color: #0f172a;
+      }
+      .whist-lightbox__goto.btn:hover {
+        background: rgba(15, 23, 42, 0.10);
+        border-color: rgba(15, 23, 42, 0.26);
       }
       .whist-lightbox__close {
         position: absolute;
