@@ -36,6 +36,37 @@
         object-fit: contain;
         background: #0b1220;
       }
+      .whist-lightbox__captionbar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 0.65rem 0.75rem;
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        justify-content: space-between;
+        background: linear-gradient(180deg, rgba(0,0,0,0.00) 0%, rgba(0,0,0,0.55) 38%, rgba(0,0,0,0.72) 100%);
+        color: rgba(255,255,255,0.92);
+        z-index: 2;
+      }
+      .whist-lightbox__caption {
+        font-size: 0.85rem;
+        font-weight: 700;
+        line-height: 1.25;
+        max-width: 100%;
+        white-space: normal;
+      }
+      .whist-lightbox__caption code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.82rem;
+        color: rgba(255,255,255,0.88);
+        word-break: break-all;
+      }
+      .whist-lightbox__goto {
+        flex: 0 0 auto;
+        white-space: nowrap;
+      }
       .whist-lightbox__close {
         position: absolute;
         top: 0.75rem;
@@ -79,6 +110,7 @@
       @media (max-width: 520px) {
         .whist-lightbox { padding: 0.75rem; }
         .whist-lightbox__btn { width: 40px; height: 40px; font-size: 22px; }
+        .whist-lightbox__caption { font-size: 0.8rem; }
       }
     `;
     document.head.appendChild(style);
@@ -99,6 +131,10 @@
       <div class="whist-lightbox__panel" role="document">
         <button type="button" class="btn btn-secondary whist-lightbox__close" aria-label="Close">Close</button>
         <img class="whist-lightbox__img" alt="Tournament photo">
+        <div class="whist-lightbox__captionbar">
+          <div class="whist-lightbox__caption" aria-live="polite"></div>
+          <a class="btn btn-secondary whist-lightbox__goto" href="#" style="display:none;">Go to gallery</a>
+        </div>
         <div class="whist-lightbox__nav" aria-hidden="true">
           <button type="button" class="whist-lightbox__btn whist-lightbox__prev" aria-label="Previous photo">‹</button>
           <button type="button" class="whist-lightbox__btn whist-lightbox__next" aria-label="Next photo">›</button>
@@ -109,30 +145,65 @@
     return root;
   };
 
-  let urls = [];
+  let items = [];
   let idx = 0;
+  let goToHref = '';
+  let goToLabel = 'Go to gallery';
 
   const render = () => {
     const root = ensureDom();
     const img = root.querySelector('.whist-lightbox__img');
     const btnPrev = root.querySelector('.whist-lightbox__prev');
     const btnNext = root.querySelector('.whist-lightbox__next');
+    const captionEl = root.querySelector('.whist-lightbox__caption');
+    const goToEl = root.querySelector('.whist-lightbox__goto');
     if (!img || !btnPrev || !btnNext) return;
 
-    const hasMany = urls.length > 1;
+    const hasMany = items.length > 1;
     btnPrev.style.display = hasMany ? 'inline-flex' : 'none';
     btnNext.style.display = hasMany ? 'inline-flex' : 'none';
 
-    const cur = urls[idx] || '';
-    img.src = cur;
+    const cur = items[idx] || null;
+    const url = cur && cur.url ? cur.url : '';
+    img.src = url;
     btnPrev.disabled = !hasMany;
     btnNext.disabled = !hasMany;
+
+    if (captionEl) {
+      captionEl.textContent = cur && cur.caption ? String(cur.caption) : '';
+    }
+    if (goToEl) {
+      if (goToHref) {
+        goToEl.href = goToHref;
+        goToEl.textContent = goToLabel || 'Go to gallery';
+        goToEl.style.display = 'inline-flex';
+      } else {
+        goToEl.style.display = 'none';
+      }
+    }
   };
 
-  const open = (nextUrls, startIndex = 0) => {
-    urls = Array.isArray(nextUrls) ? nextUrls.filter(Boolean) : [];
-    if (!urls.length) return;
-    idx = Math.max(0, Math.min(urls.length - 1, Number(startIndex) || 0));
+  const normalizeItems = (arr) => {
+    const raw = Array.isArray(arr) ? arr : [];
+    const out = [];
+    for (const it of raw) {
+      if (typeof it === 'string') {
+        const u = String(it || '').trim();
+        if (u) out.push({ url: u, caption: '' });
+      } else if (it && typeof it === 'object') {
+        const u = String(it.url || '').trim();
+        if (u) out.push({ url: u, caption: String(it.caption || '') });
+      }
+    }
+    return out;
+  };
+
+  const open = (next, startIndex = 0, options = {}) => {
+    items = normalizeItems(next);
+    if (!items.length) return;
+    idx = Math.max(0, Math.min(items.length - 1, Number(startIndex) || 0));
+    goToHref = String(options && options.goToHref ? options.goToHref : (options && options.galleryHref ? options.galleryHref : '')).trim();
+    goToLabel = String(options && (options.goToLabel || options.galleryLabel) ? (options.goToLabel || options.galleryLabel) : 'Go to gallery');
 
     const root = ensureDom();
     root.setAttribute('aria-hidden', 'false');
@@ -145,30 +216,44 @@
     root.setAttribute('aria-hidden', 'true');
     const img = root.querySelector('.whist-lightbox__img');
     if (img) img.removeAttribute('src');
-    urls = [];
+    items = [];
     idx = 0;
+    goToHref = '';
+    goToLabel = 'Go to gallery';
   };
 
   const step = (delta) => {
-    if (!urls.length) return;
-    idx = (idx + delta + urls.length) % urls.length;
+    if (!items.length) return;
+    idx = (idx + delta + items.length) % items.length;
     render();
   };
 
-  const bindAnchors = (anchors) => {
+  const buildCaptionFromDataset = (ds) => {
+    if (!ds) return '';
+    const uploader = String(ds.uploader || '').trim();
+    const filename = String(ds.filename || '').trim();
+    const key = String(ds.key || '').trim();
+    const parts = [];
+    if (uploader) parts.push(`Uploader: ${uploader}`);
+    if (filename) parts.push(`File: ${filename}`);
+    if (key) parts.push(`Key: ${key}`);
+    return parts.join(' • ');
+  };
+
+  const bindAnchors = (anchors, options = {}) => {
     const list = Array.from(anchors || []).filter(a => a && a.getAttribute);
     const links = list
-      .map(a => ({ a, href: a.getAttribute('href') || '' }))
+      .map(a => ({ a, href: a.getAttribute('href') || '', caption: buildCaptionFromDataset(a.dataset) }))
       .filter(x => x.href && x.href !== '#');
-    const fullUrls = links.map(x => x.href);
-    if (!fullUrls.length) return;
+    const nextItems = links.map(x => ({ url: x.href, caption: x.caption || '' }));
+    if (!nextItems.length) return;
 
     links.forEach((x, i) => {
       x.a.addEventListener('click', (e) => {
         // Allow open-in-new-tab modifiers
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
         e.preventDefault();
-        open(fullUrls, i);
+        open(nextItems, i, options);
       });
     });
   };

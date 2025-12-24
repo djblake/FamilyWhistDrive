@@ -18,7 +18,7 @@ export async function onRequestGet(context) {
   return jsonResponse({
     publicBaseUrl,
     gatewayBaseUrl,
-    maxCoverPicks: 3,
+    maxCoverPicks: 6,
     hasBucket
   });
 }

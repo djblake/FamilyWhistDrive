@@ -258,6 +258,12 @@
         }
         .day-photo-row img { width: 100%; height: 100%; object-fit: cover; display:block; }
 
+        .day-photo-actions {
+            margin-top: 0.75rem;
+            display: flex;
+            justify-content: center;
+        }
+
         .day-empty {
             margin-top: 1rem;
             padding: 1rem;
@@ -415,12 +421,14 @@
                     <button class="btn btn-secondary" id="btn-add-story" type="button">Add story</button>
                     <button class="btn btn-secondary" id="btn-add-quote" type="button">Add quote</button>
                     <a class="btn btn-primary" id="btn-add-photos" href="#" style="display:none;">Add photos</a>
-                    <a class="btn btn-secondary" id="btn-see-gallery" href="#" style="display:none;">See more →</a>
                 </div>
 
                 <div id="day-notes" class="day-notes"></div>
 
                 <div class="day-photo-row" id="day-photo-row" aria-label="Photo highlights"></div>
+                <div class="day-photo-actions">
+                    <a class="btn btn-secondary" id="btn-see-gallery" href="#" style="display:none;">See more photos</a>
+                </div>
                 <div id="day-photo-empty" class="day-empty" style="display:none;"></div>
             </div>
         </section>
@@ -1235,7 +1243,7 @@
                     return `
                         <div class="day-note">
                             <div class="day-note__kicker">💬 Quote</div>
-                            <div class="day-note__body">“${escapeHtml(String(item.text || '').trim())}”</div>
+                            <div class="day-note__body">${escapeHtml(String(item.text || '').trim())}</div>
                             <div class="day-note__meta">${metaBits.join(' • ')}</div>
                         </div>
                     `;
@@ -1267,7 +1275,7 @@
             btnAddPhotos.href = `../upload/tournament-photos.html?year=${encodeURIComponent(y)}`;
             btnAddPhotos.style.display = 'inline-flex';
             btnSee.href = `photos.html?year=${encodeURIComponent(y)}`;
-            btnSee.style.display = 'inline-flex';
+            btnSee.style.display = 'none';
 
             if (!(window.WhistMedia && typeof window.WhistMedia.getTournamentMeta === 'function')) {
                 empty.style.display = 'block';
@@ -1282,7 +1290,7 @@
 
             const meta = await window.WhistMedia.getTournamentMeta(y);
             const photos = Array.isArray(meta?.photos) ? meta.photos.slice() : [];
-            const coverPicks = Array.isArray(meta?.coverPicks) ? meta.coverPicks.slice(0, 3) : [];
+            const coverPicks = Array.isArray(meta?.coverPicks) ? meta.coverPicks.slice(0, 6) : [];
 
             const byKey = new Map();
             for (const p of photos) {
@@ -1290,48 +1298,100 @@
                 byKey.set(String(p.key), p);
             }
 
-            const selected = [];
-            const seen = new Set();
+            // 1) Highlights row: prefer up to 6 cover picks; if fewer, fill with most recent uploads.
+            const highlights = [];
+            const highlightSet = new Set();
             for (const key of coverPicks) {
                 const k = String(key || '');
-                if (!k || seen.has(k)) continue;
-                seen.add(k);
-                selected.push(k);
+                if (!k || highlightSet.has(k)) continue;
+                highlightSet.add(k);
+                highlights.push(k);
+                if (highlights.length >= 6) break;
             }
-
-            const sortedByTime = photos.slice().sort((a, b) => String(b?.uploadedAt || '').localeCompare(String(a?.uploadedAt || '')));
-            for (const p of sortedByTime) {
-                if (selected.length >= 6) break;
+            const newestFirst = photos.slice().sort((a, b) => String(b?.uploadedAt || '').localeCompare(String(a?.uploadedAt || '')));
+            for (const p of newestFirst) {
+                if (highlights.length >= 6) break;
                 const k = String(p?.key || '');
-                if (!k || seen.has(k)) continue;
-                seen.add(k);
-                selected.push(k);
+                if (!k || highlightSet.has(k)) continue;
+                highlightSet.add(k);
+                highlights.push(k);
             }
 
-            if (!selected.length) {
+            if (!highlights.length) {
                 row.innerHTML = '';
                 empty.style.display = 'block';
                 empty.innerHTML = `No photos yet. <a style="color: inherit; font-weight: 900; text-decoration: underline;" href="${btnAddPhotos.href.replaceAll('"', '&quot;')}">Add photos →</a>`;
+                btnSee.style.display = 'none';
                 return;
             }
 
+            // 2) Lightbox sequence: cover/highlights first, then the rest of the album (oldest → newest),
+            // skipping anything already shown in highlights.
+            const oldestFirst = photos.slice().sort((a, b) => {
+                const da = String(a?.uploadedAt || '');
+                const db = String(b?.uploadedAt || '');
+                const t = da.localeCompare(db);
+                if (t !== 0) return t;
+                return String(a?.key || '').localeCompare(String(b?.key || ''));
+            });
+            const restKeys = [];
+            for (const p of oldestFirst) {
+                const k = String(p?.key || '');
+                if (!k || highlightSet.has(k)) continue;
+                restKeys.push(k);
+            }
+            const sequenceKeys = highlights.concat(restKeys);
+
+            const buildCaption = (entry, key) => {
+                const uploader = String(entry?.uploaderName || entry?.uploaderSlug || '').trim();
+                const filename = String(entry?.originalName || '').trim() || String(key || '').split('/').pop();
+                const parts = [];
+                if (uploader) parts.push(`Uploader: ${uploader}`);
+                if (filename) parts.push(`File: ${filename}`);
+                if (key) parts.push(`Key: ${key}`);
+                return parts.join(' • ');
+            };
+
+            const lightboxItems = [];
+            for (const k of sequenceKeys) {
+                const fullUrl = await window.WhistMedia.publicUrlForKey(k);
+                if (!fullUrl) continue;
+                const entry = byKey.get(k);
+                lightboxItems.push({ url: fullUrl, caption: buildCaption(entry, k) });
+            }
+
             const cells = [];
-            for (const k of selected.slice(0, 6)) {
+            for (let i = 0; i < highlights.length && cells.length < 6; i++) {
+                const k = highlights[i];
                 const entry = byKey.get(k);
                 const fullUrl = await window.WhistMedia.publicUrlForKey(k);
                 if (!fullUrl) continue;
                 const thumbKey = String(entry?.thumbKey || '').trim();
                 const thumbUrl = thumbKey ? await window.WhistMedia.publicUrlForKey(thumbKey) : '';
                 const imgUrl = thumbUrl || fullUrl;
-                cells.push(`<a href="${fullUrl.replaceAll('"', '&quot;')}" rel="noopener"><img alt="Tournament photo" loading="lazy" src="${imgUrl.replaceAll('"', '&quot;')}"></a>`);
+                const uploader = String(entry?.uploaderName || entry?.uploaderSlug || '').trim();
+                const filename = String(entry?.originalName || '').trim() || String(k).split('/').pop();
+                cells.push(
+                    `<a href="${fullUrl.replaceAll('"', '&quot;')}" data-index="${i}" rel="noopener" data-uploader="${escapeHtml(uploader)}" data-filename="${escapeHtml(filename)}" data-key="${escapeHtml(String(k))}"><img alt="Tournament photo" loading="lazy" src="${imgUrl.replaceAll('"', '&quot;')}"></a>`
+                );
             }
 
             row.innerHTML = cells.join('');
             empty.style.display = 'none';
             empty.innerHTML = '';
+            btnSee.style.display = 'inline-flex';
 
-            if (window.WhistLightbox && typeof window.WhistLightbox.bindAnchors === 'function') {
-                window.WhistLightbox.bindAnchors(row.querySelectorAll('a'));
+            if (window.WhistLightbox && typeof window.WhistLightbox.open === 'function') {
+                const goToHref = btnSee.href;
+                const goToLabel = /^\d{4}$/.test(y) ? `Go to ${y} gallery` : 'Go to gallery';
+                row.querySelectorAll('a[data-index]').forEach(a => {
+                    a.addEventListener('click', (e) => {
+                        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                        e.preventDefault();
+                        const start = Number(a.getAttribute('data-index') || '0') || 0;
+                        window.WhistLightbox.open(lightboxItems, start, { goToHref, goToLabel });
+                    });
+                });
             }
         }
 

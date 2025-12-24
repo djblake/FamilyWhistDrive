@@ -52,7 +52,7 @@ function normalizeCoverPicks(keys) {
     if (!key) continue;
     if (out.includes(key)) continue;
     out.push(key);
-    if (out.length >= 3) break;
+    if (out.length >= 6) break;
   }
   return out;
 }

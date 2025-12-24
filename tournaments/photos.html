@@ -219,7 +219,7 @@
 
             const meta = await window.WhistMedia.getTournamentMeta(year);
             const photos = Array.isArray(meta?.photos) ? meta.photos.slice() : [];
-            const coverPicks = Array.isArray(meta?.coverPicks) ? meta.coverPicks.slice(0, 3) : [];
+            const coverPicks = Array.isArray(meta?.coverPicks) ? meta.coverPicks.slice(0, 6) : [];
 
             // Cover strip (if any)
             if (coverPicks.length) {
@@ -232,7 +232,9 @@
                     const thumbKey = match && match.thumbKey ? String(match.thumbKey) : '';
                     const thumbUrl = thumbKey ? await window.WhistMedia.publicUrlForKey(thumbKey) : '';
                     const imgUrl = thumbUrl || url;
-                    items.push(`<a href="${url.replaceAll('"', '&quot;')}" rel="noopener"><img alt="Tournament cover" src="${imgUrl.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
+                    const uploader = String(match?.uploaderName || match?.uploaderSlug || '').trim();
+                    const filename = String(match?.originalName || '').trim() || String(key).split('/').pop();
+                    items.push(`<a href="${url.replaceAll('"', '&quot;')}" rel="noopener" data-uploader="${escapeHtml(uploader)}" data-filename="${escapeHtml(filename)}" data-key="${escapeHtml(String(key))}"><img alt="Tournament cover" src="${imgUrl.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
                 }
                 if (items.length) {
                     coverStrip.innerHTML = items.join('');
@@ -268,7 +270,9 @@
                     const thumbKey = String(p?.thumbKey || '').trim();
                     const thumbUrl = thumbKey ? await window.WhistMedia.publicUrlForKey(thumbKey) : '';
                     const imgUrl = thumbUrl || url;
-                    thumbs.push(`<a class="photo-thumb" href="${url.replaceAll('"', '&quot;')}" rel="noopener"><img alt="Tournament photo" src="${imgUrl.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
+                    const uploader = String(p?.uploaderName || p?.uploaderSlug || '').trim();
+                    const filename = String(p?.originalName || '').trim() || String(key).split('/').pop();
+                    thumbs.push(`<a class="photo-thumb" href="${url.replaceAll('"', '&quot;')}" rel="noopener" data-uploader="${escapeHtml(uploader)}" data-filename="${escapeHtml(filename)}" data-key="${escapeHtml(String(key))}"><img alt="Tournament photo" src="${imgUrl.replaceAll('"', '&quot;')}" loading="lazy"></a>`);
                 }
                 if (!thumbs.length) continue;
 

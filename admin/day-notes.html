@@ -177,7 +177,7 @@
                 const type = item.type === 'quote' ? 'Quote' : 'Story';
                 const title = item.type === 'quote' ? `💬 ${type}` : `📖 ${type}`;
                 const body = item.type === 'quote'
-                    ? `“${escapeHtml(String(item.text || '').trim())}”`
+                    ? escapeHtml(String(item.text || '').trim())
                     : escapeHtml(String(item.text || '').trim());
                 const metaBits = [];
                 if (item.type === 'quote' && item.saidBy) metaBits.push(`Said by <strong>${escapeHtml(item.saidBy)}</strong>`);

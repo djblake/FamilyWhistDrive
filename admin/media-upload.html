@@ -224,7 +224,7 @@
 
                     <div class="admin-card">
                         <div class="admin-title">Tournament-day photos + cover picks</div>
-                        <div class="admin-sub">Upload photos, then select up to 3 cover picks for that year.</div>
+                        <div class="admin-sub">Upload photos, then select up to 6 cover picks for that year.</div>
 
                         <div class="row-2">
                             <div class="row">
@@ -257,9 +257,25 @@
                                 <select id="cover-2"></select>
                             </div>
                         </div>
-                        <div class="row" style="margin-top:0.75rem;">
-                            <label for="cover-3">Cover pick #3</label>
-                            <select id="cover-3"></select>
+                        <div class="row-2" style="margin-top:0.75rem;">
+                            <div class="row">
+                                <label for="cover-3">Cover pick #3</label>
+                                <select id="cover-3"></select>
+                            </div>
+                            <div class="row">
+                                <label for="cover-4">Cover pick #4</label>
+                                <select id="cover-4"></select>
+                            </div>
+                        </div>
+                        <div class="row-2" style="margin-top:0.75rem;">
+                            <div class="row">
+                                <label for="cover-5">Cover pick #5</label>
+                                <select id="cover-5"></select>
+                            </div>
+                            <div class="row">
+                                <label for="cover-6">Cover pick #6</label>
+                                <select id="cover-6"></select>
+                            </div>
                         </div>
                         <div class="btn-row">
                             <button class="btn btn-primary" id="btn-save-covers" type="button">Save cover picks</button>
@@ -269,6 +285,9 @@
                             <div class="cover-preview" id="cover-prev-1">Cover 1</div>
                             <div class="cover-preview" id="cover-prev-2">Cover 2</div>
                             <div class="cover-preview" id="cover-prev-3">Cover 3</div>
+                            <div class="cover-preview" id="cover-prev-4">Cover 4</div>
+                            <div class="cover-preview" id="cover-prev-5">Cover 5</div>
+                            <div class="cover-preview" id="cover-prev-6">Cover 6</div>
                         </div>
 
                         <div class="log" id="photos-log" aria-live="polite"></div>
@@ -348,9 +367,15 @@
         const elCover1 = document.getElementById('cover-1');
         const elCover2 = document.getElementById('cover-2');
         const elCover3 = document.getElementById('cover-3');
+        const elCover4 = document.getElementById('cover-4');
+        const elCover5 = document.getElementById('cover-5');
+        const elCover6 = document.getElementById('cover-6');
         const elCoverPrev1 = document.getElementById('cover-prev-1');
         const elCoverPrev2 = document.getElementById('cover-prev-2');
         const elCoverPrev3 = document.getElementById('cover-prev-3');
+        const elCoverPrev4 = document.getElementById('cover-prev-4');
+        const elCoverPrev5 = document.getElementById('cover-prev-5');
+        const elCoverPrev6 = document.getElementById('cover-prev-6');
         const elAvatarPlayer = document.getElementById('avatar-player');
         const elAvatarFile = document.getElementById('avatar-file');
         const elAvatarStage = document.getElementById('avatar-stage');
@@ -594,6 +619,9 @@
                 setSelectOptions(elCover1, empty, '');
                 setSelectOptions(elCover2, empty, '');
                 setSelectOptions(elCover3, empty, '');
+                setSelectOptions(elCover4, empty, '');
+                setSelectOptions(elCover5, empty, '');
+                setSelectOptions(elCover6, empty, '');
                 renderCoverPreviews([]);
                 return;
             }
@@ -607,21 +635,24 @@
                 return { key, label };
             }).filter(x => x.key);
 
-            const coverPicks = Array.isArray(meta.coverPicks) ? meta.coverPicks.slice(0, 3) : [];
+            const coverPicks = Array.isArray(meta.coverPicks) ? meta.coverPicks.slice(0, 6) : [];
             setSelectOptions(elCover1, options, coverPicks[0] || '');
             setSelectOptions(elCover2, options, coverPicks[1] || '');
             setSelectOptions(elCover3, options, coverPicks[2] || '');
+            setSelectOptions(elCover4, options, coverPicks[3] || '');
+            setSelectOptions(elCover5, options, coverPicks[4] || '');
+            setSelectOptions(elCover6, options, coverPicks[5] || '');
             renderCoverPreviews(coverPicks);
             logTo(elPhotosLog, `Loaded ${photos.length} photo(s). Current cover picks: ${coverPicks.length ? coverPicks.join(' | ') : 'none'}`);
         }
 
         async function renderCoverPreviews(coverKeys) {
             const keys = Array.isArray(coverKeys) ? coverKeys : [];
-            const boxes = [elCoverPrev1, elCoverPrev2, elCoverPrev3];
+            const boxes = [elCoverPrev1, elCoverPrev2, elCoverPrev3, elCoverPrev4, elCoverPrev5, elCoverPrev6];
             for (let i = 0; i < boxes.length; i++) {
                 const box = boxes[i];
                 const key = keys[i] || '';
-                box.innerHTML = i === 0 ? 'Cover 1' : (i === 1 ? 'Cover 2' : 'Cover 3');
+                box.innerHTML = `Cover ${i + 1}`;
                 if (!key) continue;
                 const url = (window.WhistMedia && typeof window.WhistMedia.publicUrlForKey === 'function')
                     ? await window.WhistMedia.publicUrlForKey(key)
@@ -639,7 +670,7 @@
             if (!token) return alert('Please enter the upload token first.');
             const year = String(elPhotoYear.value || '').trim();
             if (!year) return alert('Enter a year first.');
-            const picks = [elCover1.value, elCover2.value, elCover3.value].map(v => String(v || '').trim()).filter(Boolean);
+            const picks = [elCover1.value, elCover2.value, elCover3.value, elCover4.value, elCover5.value, elCover6.value].map(v => String(v || '').trim()).filter(Boolean);
             logTo(elPhotosLog, `Saving cover picks for ${year}...`);
             const res = await fetch('/api/media/tournament-meta', {
                 method: 'POST',
@@ -811,9 +842,13 @@
         document.getElementById('btn-load-meta').addEventListener('click', () => loadTournamentMetaAndPopulate().catch(e => logTo(elPhotosLog, `FAIL: ${e.message || e}`)));
         document.getElementById('btn-save-covers').addEventListener('click', () => saveCoverPicks().catch(e => logTo(elPhotosLog, `FAIL: ${e.message || e}`)));
 
-        elCover1.addEventListener('change', () => renderCoverPreviews([elCover1.value, elCover2.value, elCover3.value]));
-        elCover2.addEventListener('change', () => renderCoverPreviews([elCover1.value, elCover2.value, elCover3.value]));
-        elCover3.addEventListener('change', () => renderCoverPreviews([elCover1.value, elCover2.value, elCover3.value]));
+        const currentCoverValues = () => [elCover1.value, elCover2.value, elCover3.value, elCover4.value, elCover5.value, elCover6.value];
+        elCover1.addEventListener('change', () => renderCoverPreviews(currentCoverValues()));
+        elCover2.addEventListener('change', () => renderCoverPreviews(currentCoverValues()));
+        elCover3.addEventListener('change', () => renderCoverPreviews(currentCoverValues()));
+        elCover4.addEventListener('change', () => renderCoverPreviews(currentCoverValues()));
+        elCover5.addEventListener('change', () => renderCoverPreviews(currentCoverValues()));
+        elCover6.addEventListener('change', () => renderCoverPreviews(currentCoverValues()));
 
         elAvatarFile.addEventListener('change', () => {
             const f = elAvatarFile.files && elAvatarFile.files[0] ? elAvatarFile.files[0] : null;

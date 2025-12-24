@@ -306,7 +306,7 @@
             const meta = await window.WhistMedia.getTournamentMeta(year);
             const photos = Array.isArray(meta?.photos) ? meta.photos.slice() : [];
             photos.sort((a, b) => String(b?.uploadedAt || '').localeCompare(String(a?.uploadedAt || '')));
-            const picks = photos.map(p => String(p?.key || '')).filter(Boolean).slice(0, 3);
+            const picks = photos.map(p => String(p?.key || '')).filter(Boolean).slice(0, 6);
             if (picks.length === 0) return;
             const res = await fetch('/api/media/tournament-meta', {
                 method: 'POST',
