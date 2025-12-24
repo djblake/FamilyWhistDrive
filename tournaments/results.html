@@ -720,18 +720,6 @@
                     if (!ready) return;
 
                     const nodes = Array.from(root.querySelectorAll('.avatar-placeholder[data-player-key]'));
-                    const probeUrl = async (url) => {
-                        // Add a timeout so a missing cross-origin image cannot stall the whole hydration pass.
-                        return await Promise.race([
-                            new Promise((resolve) => {
-                                const probe = new Image();
-                                probe.onload = () => resolve(true);
-                                probe.onerror = () => resolve(false);
-                                probe.src = `${url}${url.includes('?') ? '&' : '?'}probe=${Date.now()}`;
-                            }),
-                            new Promise((resolve) => setTimeout(() => resolve(false), 1500))
-                        ]);
-                    };
 
                     const queue = nodes.slice();
                     const workers = Array.from({ length: 6 }).map(async () => {
@@ -749,13 +737,32 @@
                                 await window.WhistMedia.avatarUrl(key, 'large')
                             ].filter(Boolean);
 
+                            const tryLoad = async (url) => {
+                                return await Promise.race([
+                                    new Promise((resolve) => {
+                                        imgEl.onload = () => resolve(true);
+                                        imgEl.onerror = () => resolve(false);
+                                        imgEl.setAttribute('src', url);
+                                    }),
+                                    new Promise((resolve) => setTimeout(() => resolve(false), 1500))
+                                ]);
+                            };
+
+                            let loaded = false;
                             for (const url of candidates) {
-                                const ok = await probeUrl(url);
-                                if (!ok) continue;
-                                imgEl.setAttribute('src', url);
+                                if (await tryLoad(url)) {
+                                    loaded = true;
+                                    break;
+                                }
+                            }
+
+                            if (loaded) {
                                 imgEl.style.display = 'block';
                                 initialsEl.style.display = 'none';
-                                break;
+                            } else {
+                                imgEl.removeAttribute('src');
+                                imgEl.style.display = 'none';
+                                initialsEl.style.display = 'block';
                             }
                         }
                     });
