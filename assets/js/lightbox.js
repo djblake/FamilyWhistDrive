@@ -8,13 +8,15 @@
     style.id = STYLE_ID;
     style.textContent = `
       .whist-lightbox {
+        --whist-lightbox-pad: 32px;
         position: fixed;
         inset: 0;
         z-index: 99999;
         display: none;
         align-items: center;
         justify-content: center;
-        padding: 1.25rem;
+        /* Keep a click-to-dismiss margin around the panel */
+        padding: var(--whist-lightbox-pad);
         background: rgba(0,0,0,0.72);
       }
       .whist-lightbox[aria-hidden="false"] { display: flex; }
@@ -38,8 +40,6 @@
         overflow: hidden;
         /* Make the media box shrink to the image, while still respecting the panel max size */
         flex: 0 0 auto;
-        max-width: 96vw;
-        max-height: 92vh;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -48,8 +48,9 @@
         display: block;
         width: auto;
         height: auto;
-        max-width: 100%;
-        max-height: 100%;
+        /* Constrain directly to viewport so portrait photos never clip. */
+        max-width: calc(100vw - (2 * var(--whist-lightbox-pad)));
+        max-height: calc(100vh - (2 * var(--whist-lightbox-pad)));
         object-fit: contain;
         background: #0b1220;
       }
@@ -136,7 +137,7 @@
       .whist-lightbox__prev { left: 0.75rem; }
       .whist-lightbox__next { right: 0.75rem; }
       @media (max-width: 520px) {
-        .whist-lightbox { padding: 0.75rem; }
+        .whist-lightbox { --whist-lightbox-pad: 18px; }
         .whist-lightbox__btn { width: 40px; height: 40px; font-size: 22px; }
         .whist-lightbox__hud { width: 92vw; }
         .whist-lightbox__caption { font-size: 0.82rem; }
