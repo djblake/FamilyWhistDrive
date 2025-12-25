@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=block" rel="stylesheet">
-    <script src="/assets/js/footer-nav.js?v=2" defer></script>
+    <script src="/assets/js/footer-nav.js?v=4" defer></script>
 </head>
 <body>
     <header class="header">
@@ -342,8 +342,8 @@
         let performanceScoresAllTime = new Map();
         let currentRecentFormScores = new Map();
         let currentPerformanceScores = new Map();
-        let winStreakStatsAllTime = new Map(); // Map<playerId, { longest, current }>
-        let currentWinStreakStats = new Map(); // Map<playerId, { longest, current }>
+        let winStreakStatsAllTime = new Map(); // Map<playerId, { longest, current, longestFrom, longestTo }>
+        let currentWinStreakStats = new Map(); // Map<playerId, { longest, current, longestFrom, longestTo }>
         let excludeLowSampleSize = true;
         const MIN_TOURNAMENT_SAMPLE_SIZE = 2;
         const YEAR_SCRUBBER_RECENT_COUNT = 5;
@@ -1676,7 +1676,9 @@
                     if (!row || !row.playerId) continue;
                     map.set(row.playerId, {
                         longest: Number(row.longest) || 0,
-                        current: Number(row.current) || 0
+                        current: Number(row.current) || 0,
+                        longestFrom: row.longestFrom || null,
+                        longestTo: row.longestTo || null
                     });
                 }
                 return map;
@@ -2393,9 +2395,19 @@
                         </div>
                     `;
                 } else if (currentRankingType === 'win_streaks') {
-                    const rec = currentWinStreakStats.get(player.name) || { longest: 0, current: 0 };
+                    const rec = currentWinStreakStats.get(player.name) || { longest: 0, current: 0, longestFrom: null, longestTo: null };
                     const longest = Number.isFinite(rec.longest) ? rec.longest : 0;
                     const current = Number.isFinite(rec.current) ? rec.current : 0;
+
+                    const fmtYearRound = (m) => {
+                        const y = m && Number.isFinite(Number(m.year)) ? Number(m.year) : null;
+                        const r = m && Number.isFinite(Number(m.round)) ? Number(m.round) : null;
+                        if (!y || !r) return '';
+                        return `${y} R${r}`;
+                    };
+                    const fromTxt = fmtYearRound(rec.longestFrom);
+                    const toTxt = fmtYearRound(rec.longestTo);
+                    const rangeTxt = (fromTxt && toTxt) ? `${fromTxt} → ${toTxt}` : '—';
                     return `
                         <div class="ranking-row ${index < 3 ? 'podium-row' : ''}" data-player-id="${player.name}">
                             <div class="rank-col">
@@ -2407,6 +2419,7 @@
                                     <span class="player-name">${tournamentEngine.getDisplayName(player.name)}</span>
                                 </a>
                             </div>
+                            <div class="streak-range-col">${rangeTxt}</div>
                             <div class="streak-longest-col">${longest}</div>
                             <div class="streak-current-col">${current}</div>
                         </div>
@@ -2514,6 +2527,7 @@
                 tableHeader.innerHTML = `
                     <div class="rank-col">Rank</div>
                     <div class="player-col">Player</div>
+                    <div class="streak-range-col">Range</div>
                     <div class="streak-longest-col">Longest</div>
                     <div class="streak-current-col">Current</div>
                 `;
@@ -2937,7 +2951,10 @@
             grid-template-columns: 80px 1.2fr 120px 120px 100px 120px 80px;
             background: var(--primary);
             color: white;
-            padding: var(--spacing-lg) var(--spacing-md);
+            /* Match row padding so header columns line up perfectly with body cells */
+            padding: var(--spacing-md) var(--spacing-lg);
+            /* When a header wraps to 2 lines (e.g. Performance tab), keep all titles aligned from the top */
+            align-items: start;
             font-weight: 600;
             font-size: 0.875rem;
         }
@@ -2946,11 +2963,53 @@
             color: white;
             font-weight: 600;
             font-size: 0.875rem;
+            /* Default: numeric/data headers centered */
+            justify-self: center;
+            text-align: center;
+            align-self: start;
+            line-height: 1.15;
         }
 
         .rankings-table-header .score-col {
             color: white;
             font-weight: 600;
+        }
+
+        /* Column alignment: keep Player left-aligned, Trend right-aligned, everything else centered */
+        .rankings-table-header .player-col {
+            justify-self: start;
+            text-align: left;
+        }
+        .ranking-row .player-col {
+            justify-self: start;
+            text-align: left;
+        }
+        .rankings-table-header .trend-col {
+            justify-self: end;
+            text-align: right;
+        }
+        .ranking-row .trend-col {
+            justify-self: end;
+            text-align: right;
+        }
+
+        /* Ensure all other data columns are centered consistently in BOTH header and rows */
+        .rankings-table-header .score-col,
+        .rankings-table-header .wins-col,
+        .rankings-table-header .percentage-col,
+        .rankings-table-header .podium-col,
+        .rankings-table-header .avg-finish-col,
+        .rankings-table-header .recent-col,
+        .rankings-table-header .tournaments-col,
+        .rankings-table-header .rounds-won-col,
+        .rankings-table-header .rounds-played-col,
+        .rankings-table-header .booby-count-col,
+        .rankings-table-header .booby-percent-col,
+        .rankings-table-header .streak-range-col,
+        .rankings-table-header .streak-longest-col,
+        .rankings-table-header .streak-current-col {
+            justify-self: center;
+            text-align: center;
         }
 
         .ranking-row {
@@ -3139,11 +3198,21 @@
 
         /* Win streak tab grid layout */
         .win-streaks .rankings-table-header {
-            grid-template-columns: 80px 1.6fr 160px 160px;
+            grid-template-columns: 80px 1.6fr 240px 160px 160px;
         }
 
         .win-streaks .ranking-row {
-            grid-template-columns: 80px 1.6fr 160px 160px;
+            grid-template-columns: 80px 1.6fr 240px 160px 160px;
+        }
+
+        .ranking-row .streak-range-col {
+            font-variant-numeric: tabular-nums;
+            justify-self: center;
+            text-align: center;
+            color: var(--primary-dark);
+            font-weight: 750;
+            font-size: 0.92rem;
+            white-space: nowrap;
         }
 
         .ranking-row .streak-longest-col,
