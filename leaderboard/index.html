@@ -60,6 +60,7 @@
                 <div class="rankings-header">
                     <h2 class="rankings-title" id="current-ranking-title">Official Seed Rankings</h2>
                     <p class="rankings-subtitle" id="current-ranking-description">Comprehensive ranking based on tournament victories, career performance, and recent form</p>
+                    <button type="button" class="seed-points-help-link" id="seed-points-help-link" data-seed-explain-general style="display:none;">How are seed points calculated?</button>
                 </div>
 
                 <div class="full-rankings-tools">
@@ -110,6 +111,16 @@
                             <span class="btn-icon">👁️</span>
                         </button>
                     </div>
+                </div>
+
+                <div class="seed-points-explained" id="seed-points-explained">
+                    <details class="seed-points-details">
+                        <summary>How seed points are calculated</summary>
+                        <div class="seed-points-details__body">
+                            <p><strong>Seed points</strong> come from the last <strong>7</strong> tournaments (weighted by recency), with a smoothing rule that lets recent wins/podiums lift the next two <strong>future</strong> tournaments’ points (the next two tournaments that player plays). Older tournaments contribute <strong>0 base points</strong> (only small legacy multipliers apply).</p>
+                            <p>Click the <strong>(?)</strong> next to any player’s seed points to see the exact breakdown used for that row.</p>
+                        </div>
+                    </details>
                 </div>
             </div>
         </section>
@@ -293,7 +304,20 @@
         </div>
     </footer>
 
-            <script src="../assets/js/tournament-engine.js?v=cache2"></script>
+    <div class="seed-explain-overlay" id="seed-explain-overlay" style="display:none;">
+        <div class="seed-explain-backdrop" data-seed-explain-close aria-hidden="true"></div>
+        <div class="seed-explain-panel" role="dialog" aria-modal="true" aria-label="Seed points explanation">
+            <div class="seed-explain-panel__header">
+                <div class="seed-explain-panel__title" id="seed-explain-title">Seed points</div>
+                <button type="button" class="seed-explain-panel__close" data-seed-explain-close aria-label="Close seed explanation">Close</button>
+            </div>
+            <div class="seed-explain-panel__body" id="seed-explain-body">
+                <!-- Filled dynamically -->
+            </div>
+        </div>
+    </div>
+
+            <script src="../assets/js/tournament-engine.js"></script>
     
     <script>
         // Leaderboard specific JavaScript
@@ -378,6 +402,9 @@
                 
                 // Add toggle view event listener
                 setupToggleViewListener();
+
+                // Seed points explanation modal (+ per-row (?))
+                setupSeedExplainUI();
 
                 // Sample size filter toggle
                 setupSampleSizeToggle();
@@ -2195,6 +2222,7 @@
         function updateRankingInfo(rankingType) {
             const titleElement = document.getElementById('current-ranking-title');
             const descElement = document.getElementById('current-ranking-description');
+            const seedHelpLink = document.getElementById('seed-points-help-link');
             
             const rankingInfo = {
                 overall: {
@@ -2230,6 +2258,10 @@
             const info = rankingInfo[rankingType] || rankingInfo.overall;
             titleElement.textContent = info.title;
             descElement.textContent = info.desc;
+
+            if (seedHelpLink) {
+                seedHelpLink.style.display = rankingType === 'overall' ? 'inline-flex' : 'none';
+            }
         }
 
 
@@ -2365,6 +2397,7 @@
                         </div>
                     `;
                 } else if (currentRankingType === 'overall') {
+                    const scoreVal = formatScoreDisplay(player, currentRankingType);
                     return `
                         <div class="ranking-row ${index < 3 ? 'podium-row' : ''}" data-player-id="${player.name}">
                             <div class="rank-col">
@@ -2376,11 +2409,13 @@
                                     <span class="player-name">${tournamentEngine.getDisplayName(player.name)}</span>
                                 </a>
                             </div>
-                            <div class="score-col">${formatScoreDisplay(player, currentRankingType)}</div>
+                            <div class="score-col seed-score-col">
+                                <button type="button" class="seed-score-help" data-seed-explain="${encodeURIComponent(player.name)}" aria-label="Explain seed points">?</button>
+                                <span class="seed-score-val">${scoreVal}</span>
+                            </div>
                             <div class="recent-col">${player.tournaments_in_period ?? 0}</div>
                             <div class="wins-col">${player.championships ?? 0}</div>
                             <div class="podium-col">${player.podium_finishes ?? 0}</div>
-                            <div class="avg-finish-col">${player.avg_finish ?? '—'}</div>
                             <div class="trend-col">${trend}</div>
                         </div>
                     `;
@@ -2479,10 +2514,9 @@
                         <div class="rank-col">Rank</div>
                         <div class="player-col">Player</div>
                         <div class="score-col">${getScoreHeaderText(rankingType)}</div>
-                        <div class="recent-col">Recent (6)</div>
+                        <div class="recent-col">Recent (7)</div>
                         <div class="wins-col">Championships</div>
                         <div class="podium-col">Podiums</div>
-                        <div class="avg-finish-col">Avg Finish</div>
                         <div class="trend-col">Trend</div>
                     `;
                 } else {
@@ -2502,7 +2536,7 @@
         function getScoreHeaderText(rankingType) {
             switch (rankingType) {
                 case 'overall':
-                    return 'Score';
+                    return 'Seed pts';
                 case 'championships':
                     return 'Championships';
                 case 'recent_form':
@@ -2574,6 +2608,203 @@
         function generateChampionshipHistory() {
             // Championship history is now rendered as a table via renderHallOfFamePanels().
             return;
+        }
+
+        function setupSeedExplainUI() {
+            const overlay = document.getElementById('seed-explain-overlay');
+            const title = document.getElementById('seed-explain-title');
+            const body = document.getElementById('seed-explain-body');
+            if (!overlay || !title || !body) {
+                return;
+            }
+
+            const close = () => {
+                overlay.style.display = 'none';
+            };
+
+            const openGeneral = () => {
+                if (!tournamentEngine) {
+                    return;
+                }
+                title.textContent = 'How seed points are calculated';
+                body.innerHTML = `
+                    <div class="seed-explain-hero">
+                        <div class="seed-explain-hero__title">Seed points = last‑7 tournament points (weighted) + small adjustments</div>
+                        <div class="seed-explain-hero__subtitle">Click the <strong>?</strong> next to any player to see the exact breakdown for that row.</div>
+                    </div>
+
+                    <div class="seed-explain-card">
+                        <div class="seed-explain-card__title">1) Last‑7 tournament window + recency weights</div>
+                        <div class="seed-explain-card__body">
+                            <div class="seed-explain-weights">
+                                <div class="seed-explain-weight"><span class="seed-explain-weight__idx">Year 1</span><span class="seed-explain-weight__w">1.00</span></div>
+                                <div class="seed-explain-weight"><span class="seed-explain-weight__idx">Year 2</span><span class="seed-explain-weight__w">0.90</span></div>
+                                <div class="seed-explain-weight"><span class="seed-explain-weight__idx">Year 3</span><span class="seed-explain-weight__w">0.82</span></div>
+                                <div class="seed-explain-weight"><span class="seed-explain-weight__idx">Year 4</span><span class="seed-explain-weight__w">0.74</span></div>
+                                <div class="seed-explain-weight"><span class="seed-explain-weight__idx">Year 5</span><span class="seed-explain-weight__w">0.62</span></div>
+                                <div class="seed-explain-weight"><span class="seed-explain-weight__idx">Year 6</span><span class="seed-explain-weight__w">0.48</span></div>
+                                <div class="seed-explain-weight"><span class="seed-explain-weight__idx">Year 7</span><span class="seed-explain-weight__w">0.30</span></div>
+                            </div>
+                            <div class="seed-explain-note"><strong>Year 1</strong> means the most recent tournament played. Only these 7 tournaments contribute base points. Older tournaments contribute <strong>0</strong> base points (legacy is handled separately).</div>
+                        </div>
+                    </div>
+
+                    <div class="seed-explain-card">
+                        <div class="seed-explain-card__title">2) Base points by finishing position</div>
+                        <div class="seed-explain-card__body">
+                            <div class="seed-explain-basegrid">
+                                <div><strong>1st</strong>: 500 pts</div><div><strong>2nd</strong>: 300 pts</div><div><strong>3rd</strong>: 200 pts</div><div><strong>4th</strong>: 120 pts</div>
+                                <div><strong>5th</strong>: 80 pts</div><div><strong>6th–8th</strong>: 50 pts</div><div><strong>9th–12th</strong>: 25 pts</div><div><strong>13+</strong>: 10 pts</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="seed-explain-card">
+                        <div class="seed-explain-card__title">3) Achievement smoothing (win/podium influences 3 tournaments)</div>
+                        <div class="seed-explain-card__body">
+                            <div class="seed-explain-smoothing">
+                                <div class="seed-explain-smoothing__row">
+                                    <div class="seed-explain-smoothing__box seed-explain-smoothing__box--hit">Win / Podium</div>
+                                    <div class="seed-explain-smoothing__arrow">→</div>
+                                    <div class="seed-explain-smoothing__box seed-explain-smoothing__box--carry">Next future tournament</div>
+                                    <div class="seed-explain-smoothing__arrow">→</div>
+                                    <div class="seed-explain-smoothing__box seed-explain-smoothing__box--carry">Next future tournament</div>
+                                </div>
+                                <div class="seed-explain-note">
+                                    Win carry signal: <strong>×1.25</strong>. Podium carry signal (2nd/3rd): <strong>×1.10</strong>.<br/>
+                                    Carry is computed from the previous <strong>two tournaments the player played</strong> (chronological past), and carry <strong>persists across years not played</strong>.<br/>
+                                    <strong>Carry stacks</strong> and applies to the player's <strong>next 2 tournaments played</strong> (chronological future). Example: if the previous two played tournaments were (win, podium) then the next tournament played gets <strong>carry = 1.25 × 1.10 = 1.375</strong>.<br/>
+                                    <strong>Important</strong>: a win/podium does <em>not</em> multiply the tournament where it happened — it only creates carry for future tournaments.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="seed-explain-card">
+                        <div class="seed-explain-card__title">4) End multipliers (applied after summing last‑7 points)</div>
+                        <div class="seed-explain-card__body">
+                            <ul class="seed-explain-bullets">
+                                <li><strong>Recent consistency bonus</strong> (last 6): avg finish ≤4 → ×1.30, ≤6 → ×1.20</li>
+                                <li><strong>Bad-finish penalty</strong> (last 6): avg finish ≥10 → ×0.85, ≥12 → ×0.75</li>
+                                <li><strong>Legacy wins</strong> (outside window): ×1.05, ×1.04, ×1.03, ×1.02, ×1.01 (cap 5)</li>
+                                <li><strong>Legacy podiums</strong> (2nd/3rd, 8–15y ago): ×1.03, ×1.025, ×1.02, ×1.015, ×1.01, ×1.005 (cap 6)</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                overlay.style.display = 'block';
+            };
+
+            const open = (playerId) => {
+                if (!tournamentEngine || typeof tournamentEngine.explainOfficialSeedPointsForPlayer !== 'function') {
+                    return;
+                }
+                const info = tournamentEngine.explainOfficialSeedPointsForPlayer(playerId, true);
+                if (!info) {
+                    return;
+                }
+
+                const multLine = (Array.isArray(info.endMultipliers) ? info.endMultipliers : [])
+                    .map(m => `${m.label} ×${Number(m.mult).toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}`)
+                    .join(' • ');
+
+                const contribRows = (Array.isArray(info.contributions) ? info.contributions : [])
+                    .slice()
+                    .sort((a, b) => (a.idx || 0) - (b.idx || 0))
+                    .map((c) => {
+                        const idx = c.idx;
+                        const yearNum = Number.isFinite(idx) ? (idx + 1) : null;
+                        const year = c.year || '—';
+                        if (!c.played) {
+                            return `
+                                <tr class="seed-explain-table__row seed-explain-table__row--miss">
+                                    <td>Year ${yearNum || '—'}</td>
+                                    <td>${year}</td>
+                                    <td>—</td>
+                                    <td>—</td>
+                                    <td>${Number(c.recencyWeight || 0).toFixed(2)}</td>
+                                    <td>${Number(c.carry || 1).toFixed(3)}</td>
+                                    <td>—</td>
+                                    <td class="seed-explain-table__pts">0.00</td>
+                                </tr>
+                            `;
+                        }
+                        const sharedTxt = c.shared ? 'shared' : '';
+                        const achTxt = c.achLabel ? c.achLabel : '—';
+                        return `
+                            <tr class="seed-explain-table__row">
+                                <td>Year ${yearNum || '—'}</td>
+                                <td>${year}</td>
+                                <td>${c.position}</td>
+                                <td>${c.basePoints}</td>
+                                <td>${Number(c.recencyWeight || 0).toFixed(2)}</td>
+                                <td>${Number(c.carry || 1).toFixed(3)}</td>
+                                <td>${achTxt}${sharedTxt ? ` <span class="seed-explain-tag">${sharedTxt}</span>` : ''}</td>
+                                <td class="seed-explain-table__pts">${Number(c.points || 0).toFixed(2)}</td>
+                            </tr>
+                        `;
+                    })
+                    .join('');
+
+                title.textContent = `${info.displayName} • ${info.seedPoints} pts`;
+                body.innerHTML = `
+                    <div class="seed-explain-meta">
+                        <div><strong>Subtotal</strong>: ${Number(info.subtotal || 0).toFixed(2)}</div>
+                        <div><strong>Legacy wins</strong>: ${info.legacyWinsOutsideWindow || 0} &nbsp; <strong>Legacy podiums (8–15y)</strong>: ${info.legacyPodiumsOutsideWindow || 0}</div>
+                        ${multLine ? `<div><strong>End multipliers</strong>: ${multLine}</div>` : ''}
+                    </div>
+                    <div class="seed-explain-tablewrap">
+                        <table class="seed-explain-table">
+                            <thead>
+                                <tr>
+                                    <th>Year #</th>
+                                    <th>Year</th>
+                                    <th>Pos</th>
+                                    <th>Base</th>
+                                    <th>W</th>
+                                    <th>Carry (stacked)</th>
+                                    <th>Ach</th>
+                                    <th class="seed-explain-table__pts">Pts</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${contribRows}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                overlay.style.display = 'block';
+            };
+
+            document.addEventListener('click', (e) => {
+                const closeEl = e.target.closest('[data-seed-explain-close]');
+                if (closeEl) {
+                    close();
+                    return;
+                }
+
+                const generalBtn = e.target.closest('[data-seed-explain-general]');
+                if (generalBtn) {
+                    e.preventDefault();
+                    openGeneral();
+                    return;
+                }
+
+                const btn = e.target.closest('[data-seed-explain]');
+                if (!btn) return;
+                e.preventDefault();
+                const encoded = btn.getAttribute('data-seed-explain') || '';
+                const playerId = encoded ? decodeURIComponent(encoded) : '';
+                if (!playerId) return;
+                open(playerId);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && overlay.style.display !== 'none') {
+                    close();
+                }
+            });
         }
 
         function loadFallbackData() {
@@ -3115,11 +3346,315 @@
             grid-template-columns: 80px 1.2fr 120px 120px 120px 80px;
         }
         .seed-stats .rankings-table-header {
-            grid-template-columns: 80px 1.5fr 120px 120px 120px 120px 120px 80px;
+            grid-template-columns: 80px 1.5fr 150px 120px 120px 120px 80px;
         }
 
         .seed-stats .ranking-row {
-            grid-template-columns: 80px 1.5fr 120px 120px 120px 120px 120px 80px;
+            grid-template-columns: 80px 1.5fr 150px 120px 120px 120px 80px;
+        }
+
+        .seed-points-help-link {
+            margin-top: 0.35rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.92);
+            text-decoration: underline;
+            text-decoration-thickness: 2px;
+            text-underline-offset: 3px;
+            background: transparent;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .seed-score-col {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        .seed-score-help {
+            border: none;
+            background: transparent;
+            padding: 0;
+            line-height: 1;
+            cursor: pointer;
+            font-weight: 900;
+            font-size: 0.95rem;
+            color: rgba(15, 23, 42, 0.32);
+        }
+
+        .seed-score-help:hover {
+            color: rgba(15, 23, 42, 0.65);
+        }
+
+        .seed-stats .rankings-table-header .score-col,
+        .seed-stats .ranking-row .score-col {
+            justify-self: end;
+            text-align: right;
+        }
+
+        .seed-score-val {
+            display: inline-block;
+            min-width: 4.5ch;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .seed-points-explained {
+            margin-top: 1rem;
+        }
+
+        .seed-points-details {
+            background: rgba(255,255,255,0.92);
+            border-radius: 14px;
+            padding: 0.8rem 1rem;
+            border: 1px solid rgba(15,23,42,0.12);
+        }
+
+        .seed-points-details summary {
+            cursor: pointer;
+            font-weight: 950;
+            color: rgba(15, 23, 42, 0.95);
+        }
+
+        .seed-points-details__body {
+            margin-top: 0.6rem;
+            color: rgba(15, 23, 42, 0.9);
+            font-weight: 600;
+        }
+
+        .seed-explain-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+        }
+
+        .seed-explain-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+        }
+
+        .seed-explain-panel {
+            position: relative;
+            width: min(920px, calc(100vw - 28px));
+            max-height: calc(100vh - 28px);
+            margin: 14px auto;
+            background: #ffffff;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.35);
+            display: grid;
+            grid-template-rows: auto 1fr;
+        }
+
+        .seed-explain-panel__header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(15,23,42,0.12);
+        }
+
+        .seed-explain-panel__title {
+            font-weight: 950;
+            color: rgba(15, 23, 42, 0.95);
+        }
+
+        .seed-explain-panel__close {
+            border: 1px solid rgba(15, 23, 42, 0.18);
+            background: rgba(15, 23, 42, 0.06);
+            color: rgba(15, 23, 42, 0.95);
+            border-radius: 999px;
+            padding: 0.45rem 0.8rem;
+            font-weight: 900;
+            cursor: pointer;
+        }
+
+        .seed-explain-panel__body {
+            padding: 14px 16px 18px;
+            overflow: auto;
+        }
+
+        .seed-explain-meta {
+            background: rgba(15, 23, 42, 0.04);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            border-radius: 14px;
+            padding: 12px 12px;
+            color: rgba(15, 23, 42, 0.92);
+            font-weight: 650;
+        }
+
+        .seed-explain-list {
+            margin-top: 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.45;
+            color: rgba(15, 23, 42, 0.92);
+        }
+
+        .seed-explain-row {
+            padding: 4px 0;
+            border-bottom: 1px dashed rgba(15, 23, 42, 0.14);
+        }
+
+        .seed-explain-hero__title {
+            font-weight: 950;
+            color: rgba(15, 23, 42, 0.95);
+            font-size: 1.05rem;
+        }
+
+        .seed-explain-hero__subtitle {
+            margin-top: 0.25rem;
+            color: rgba(15, 23, 42, 0.75);
+            font-weight: 650;
+        }
+
+        .seed-explain-card {
+            margin-top: 12px;
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            border-radius: 14px;
+            background: rgba(15, 23, 42, 0.03);
+            padding: 12px 12px;
+        }
+
+        .seed-explain-card__title {
+            font-weight: 950;
+            color: rgba(15, 23, 42, 0.92);
+            margin-bottom: 8px;
+        }
+
+        .seed-explain-note {
+            margin-top: 8px;
+            color: rgba(15, 23, 42, 0.75);
+            font-weight: 650;
+        }
+
+        .seed-explain-weights {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .seed-explain-weight {
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            border-radius: 12px;
+            padding: 8px 8px;
+            background: rgba(255, 255, 255, 0.9);
+            text-align: center;
+        }
+
+        .seed-explain-weight__idx {
+            display: block;
+            font-weight: 900;
+            color: rgba(15, 23, 42, 0.65);
+            font-size: 0.75rem;
+        }
+
+        .seed-explain-weight__w {
+            display: block;
+            font-weight: 950;
+            color: rgba(15, 23, 42, 0.95);
+            font-variant-numeric: tabular-nums;
+            margin-top: 2px;
+        }
+
+        .seed-explain-basegrid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            color: rgba(15, 23, 42, 0.85);
+            font-weight: 700;
+        }
+
+        .seed-explain-smoothing__row {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr auto 1fr;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .seed-explain-smoothing__box {
+            border-radius: 12px;
+            padding: 10px 10px;
+            text-align: center;
+            font-weight: 900;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            background: rgba(255, 255, 255, 0.92);
+            color: rgba(15, 23, 42, 0.92);
+        }
+
+        .seed-explain-smoothing__box--hit {
+            border-color: rgba(16, 185, 129, 0.35);
+            background: rgba(16, 185, 129, 0.08);
+        }
+
+        .seed-explain-smoothing__box--carry {
+            border-color: rgba(59, 130, 246, 0.25);
+            background: rgba(59, 130, 246, 0.06);
+        }
+
+        .seed-explain-smoothing__arrow {
+            font-weight: 950;
+            color: rgba(15, 23, 42, 0.55);
+        }
+
+        .seed-explain-bullets {
+            margin: 0;
+            padding-left: 18px;
+            color: rgba(15, 23, 42, 0.85);
+            font-weight: 650;
+        }
+
+        .seed-explain-tablewrap {
+            margin-top: 12px;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        .seed-explain-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            color: rgba(15, 23, 42, 0.92);
+        }
+
+        .seed-explain-table th,
+        .seed-explain-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        .seed-explain-table thead th {
+            background: rgba(15, 23, 42, 0.04);
+            font-weight: 950;
+        }
+
+        .seed-explain-table__pts {
+            text-align: right;
+            font-weight: 950;
+        }
+
+        .seed-explain-table__row--miss td {
+            color: rgba(15, 23, 42, 0.55);
+        }
+
+        .seed-explain-tag {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 2px 6px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.06);
+            color: rgba(15, 23, 42, 0.75);
+            font-weight: 850;
+            font-size: 11px;
         }
 
         .performance-stats .ranking-row {
@@ -3910,8 +4445,6 @@
             .seed-stats .ranking-row .recent-col,
             .seed-stats .rankings-table-header .podium-col,
             .seed-stats .ranking-row .podium-col,
-            .seed-stats .rankings-table-header .avg-finish-col,
-            .seed-stats .ranking-row .avg-finish-col,
             .seed-stats .rankings-table-header .trend-col,
             .seed-stats .ranking-row .trend-col {
                 display: none;

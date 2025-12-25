@@ -1,0 +1,9 @@
+/assets/js/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/assets/css/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+/assets/cache/*
+  Cache-Control: public, max-age=0, must-revalidate
+

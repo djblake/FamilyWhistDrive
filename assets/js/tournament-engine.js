@@ -3762,21 +3762,21 @@ class TournamentEngine {
      *    - 3rd Place: 200 points    - 9th-12th: 25 points
      *    - 4th Place: 120 points
      * 
-     * 2. RECENCY WEIGHTING (Last 6 tournaments system):
-     *    - Most recent tournament: 100% weight    - 5th most recent: 20% weight
-     *    - 2nd most recent: 80% weight            - 6th most recent: 10% weight  
-     *    - 3rd most recent: 60% weight            - 7+ tournaments ago: 5% weight
-     *    - 4th most recent: 40% weight
+     * 2. RECENCY WEIGHTING (Last 8 tournaments system; flatter curve):
+     *    - Most recent tournament: 100% weight
+     *    - Next 7 tournaments: gradually reduced weight (still meaningful)
+     *    - Older tournaments: small legacy weight
      * 
-     * 3. BONUS MULTIPLIERS:
-     *    - Championship Bonus: +25% for 1st place finishes
-     *    - Podium Bonus: +15% for top-3 finishes
+     * 3. BONUS MULTIPLIERS (no stacking for 1st):
+     *    - Championship Bonus: +25% for 1st place finishes (exclusive)
+     *    - Podium Bonus: +15% for 2nd/3rd finishes (exclusive)
      *    - Legacy Bonus: +10% if player has any historical wins (maintains relevance)
      * 
      * 4. CONSISTENCY FACTOR:
-     *    - Minimum 3 of the last 6 tournaments for full ranking
+     *    - Minimum 3 of the last 8 tournaments for full ranking
      *    - Players with <3 tournaments get 50% penalty
-     *    - Average performance bonus: +10% if avg finish is top-6
+     *    - Recent consistency (last 6 tournaments): rewards top-6 average finishes
+     *    - Avoiding bad finishes: applies a small penalty if recent average finish is poor
      * 
      * 5. FINAL CALCULATION:
      *    Total Points = Σ(Base Points × Recency Weight × Bonuses) + Consistency Adjustments
@@ -3793,10 +3793,12 @@ class TournamentEngine {
         console.log('\n🏆 === OFFICIAL SEED RANKING CALCULATION ===');
         console.log(`📊 Total players in system: ${this.players.size}`);
         
-        // Get all tournaments sorted by year (most recent first)
-        const allTournaments = Array.from(this.tournaments.entries())
-            .map(([key, tournament]) => ({ key, ...tournament }))
-            .sort((a, b) => b.year - a.year);
+        // Get all tournaments sorted by year (most recent first) — deduped
+        const allTournaments = (typeof this.getAllTournamentsUnique === 'function')
+            ? this.getAllTournamentsUnique('desc')
+            : Array.from(this.tournaments.entries())
+                .map(([key, tournament]) => ({ key, ...tournament }))
+                .sort((a, b) => b.year - a.year);
         
         console.log(`🏟️ Tournament order (most recent first): ${allTournaments.map(t => `${t.name} (${t.year})`).join(', ')}`);
         
@@ -3806,15 +3808,31 @@ class TournamentEngine {
             6: 50, 7: 50, 8: 50, 9: 25, 10: 25, 11: 25, 12: 25
         };
         
-        // Recency weight factors (last 6 tournaments system)
+        // Seed tuning knobs
+        const SEED_RECENCY_WINDOW = 7;        // only these tournaments contribute base points
+        const SEED_CONSISTENCY_WINDOW = 6;    // consistency is measured over the most recent N tournaments (within the recency window)
+        const SEED_MIN_TOURNEYS_IN_WINDOW = 3;
+
+        // Option B: lighter per-tournament multipliers (no stacking)
+        const SEED_CHAMPIONSHIP_MULTIPLIER = 1.25; // 1st place
+        const SEED_PODIUM_MULTIPLIER = 1.10;       // 2nd/3rd place
+
+        // Legacy multipliers (outside recency window)
+        // - Wins (position 1): diminishing stackable multipliers, capped at 5
+        const LEGACY_WIN_STEPS = [1.05, 1.04, 1.03, 1.02, 1.01];
+        // - Podiums (position 2/3 ONLY): diminishing stackable multipliers, capped at 6
+        const LEGACY_PODIUM_STEPS = [1.03, 1.025, 1.02, 1.015, 1.01, 1.005];
+        // Only count legacy podiums (2nd/3rd) from tournaments 8–15 years ago (inclusive), relative to the most recent tournament year.
+        const LEGACY_PODIUM_MIN_AGE_YEARS = 8;
+        const LEGACY_PODIUM_MAX_AGE_YEARS = 15;
+
+        // Recency weight factors (last-7 curve)
         const getRecencyWeight = (tournamentPosition) => {
-            if (tournamentPosition === 0) return 1.00;      // Most recent tournament
-            if (tournamentPosition === 1) return 0.80;      // 2nd most recent
-            if (tournamentPosition === 2) return 0.60;      // 3rd most recent
-            if (tournamentPosition === 3) return 0.40;      // 4th most recent
-            if (tournamentPosition === 4) return 0.20;      // 5th most recent
-            if (tournamentPosition === 5) return 0.10;      // 6th most recent
-            return 0.05;                                     // 7+ tournaments ago (minimal legacy weight)
+            const w = [1.00, 0.90, 0.82, 0.74, 0.62, 0.48, 0.30];
+            if (tournamentPosition >= 0 && tournamentPosition < w.length) {
+                return w[tournamentPosition];
+            }
+            return 0.00; // older tournaments do NOT contribute points (legacy handled via multipliers)
         };
         
         // Helper function to check if a player name represents a shared hand
@@ -3822,6 +3840,10 @@ class TournamentEngine {
             return playerName.includes('/') || playerName.includes('&') || playerName.includes('+');
         };
         
+        const mostRecentYear = (Array.isArray(allTournaments) && allTournaments.length > 0 && Number.isFinite(allTournaments[0].year))
+            ? allTournaments[0].year
+            : null;
+
         let processedCount = 0;
         
         for (const [playerName, playerData] of this.players) {
@@ -3849,24 +3871,67 @@ class TournamentEngine {
             let podiumCount = 0;
             let totalFinishSum = 0;
             let finishCount = 0;
+            let recentFinishSum = 0;
+            let recentFinishCount = 0;
             let hasHistoricalWin = false;
+            let legacyWinsOutsideWindow = 0;
+            let legacyPodiumsOutsideWindow = 0;
+            // Achievement smoothing (carry forward):
+            // - A win/podium does NOT multiply the tournament where it happened.
+            // - Instead it creates a carry signal that boosts the player's NEXT 2 tournaments played (chronological future).
+            // - Carry persists across years not played and stacks.
+            let prevAchMult1 = 1.0; // carry signal from the most recent prior played tournament (chronological past)
+            let prevAchMult2 = 1.0; // carry signal from two played tournaments ago (chronological past)
             
             console.log(`🔍 Checking tournament performance:`);
             
-            // Calculate points from each tournament based on position in chronological order
+            // For forward carry we score the last-7 window from oldest -> newest,
+            // while recency weights remain based on distance-from-most-recent (idx0 is most recent).
+            const lastWindow = Array.isArray(allTournaments) ? allTournaments.slice(0, SEED_RECENCY_WINDOW) : [];
+            const windowMeta = lastWindow.map((t, descIdx) => ({ tournament: t, descIdx, recencyWeight: getRecencyWeight(descIdx) }));
+            const windowAsc = [...windowMeta].reverse();
+
+            // Track legacy outside the window (do NOT feed into carry)
             allTournaments.forEach((tournament, tournamentIndex) => {
-                const recencyWeight = getRecencyWeight(tournamentIndex);
-                
                 // Get player's position in this tournament
                 const playerTournamentData = this.getIndividualPlayerData(tournament, playerName);
-                if (!playerTournamentData) {
-                    console.log(`   ${tournament.year} ${tournament.name}: Not participated`);
+                const position = playerTournamentData ? playerTournamentData.position : null;
+                if (tournamentIndex < SEED_RECENCY_WINDOW) {
                     return;
                 }
                 
-                const position = playerTournamentData.position;
-                const participantCount = tournament.final_standings ? tournament.final_standings.length : 20;
-                
+                // Outside the recency window, we do NOT add base points. We only track legacy wins for multiplier bonus.
+                if (!playerTournamentData) {
+                    return;
+                }
+                if (position === 1) {
+                    legacyWinsOutsideWindow++;
+                    hasHistoricalWin = true;
+                }
+                if (position === 2 || position === 3) {
+                    if (Number.isFinite(mostRecentYear) && Number.isFinite(tournament.year)) {
+                        const ageYears = mostRecentYear - tournament.year;
+                        if (ageYears >= LEGACY_PODIUM_MIN_AGE_YEARS && ageYears <= LEGACY_PODIUM_MAX_AGE_YEARS) {
+                            legacyPodiumsOutsideWindow++;
+                        }
+                    }
+                }
+                console.log(`   ${tournament.year} ${tournament.name}: Pos ${position} → outside last ${SEED_RECENCY_WINDOW} (no points)${position === 1 ? ' (legacy win counted)' : ''} ${playerTournamentData.is_partnership_member ? '(shared hand)' : ''}`);
+            });
+
+            // Score last-7 window in chronological order (oldest -> newest) so carry flows forward.
+            windowAsc.forEach(({ tournament, descIdx, recencyWeight }) => {
+                const rawCarryMult = prevAchMult1 * prevAchMult2;
+
+                const playerTournamentData = this.getIndividualPlayerData(tournament, playerName);
+                const position = playerTournamentData ? playerTournamentData.position : null;
+
+                if (!playerTournamentData) {
+                    console.log(`   ${tournament.year} ${tournament.name}: Not participated`);
+                    // Carry persists across non-participation: do NOT shift/reset carry window.
+                    return;
+                }
+
                 // Base points for this tournament
                 let basePoints = positionPoints[position] || 10; // Default 10 for positions 13+
                 if (position > 12) basePoints = 10;
@@ -3879,51 +3944,98 @@ class TournamentEngine {
                 let bonusesApplied = [];
                 
                 // Track statistics for bonuses
-                if (tournamentIndex <= 5) tournamentsInPeriod++; // Count tournaments in last 6 tournaments
+                tournamentsInPeriod++; // Count participation in the recent window
+
+                // Forward carry signal (applies to the player's next 2 tournaments played).
+                let achSignal = 1.0;
+                const isAchievement = position === 1 || position === 2 || position === 3;
                 if (position === 1) {
                     championshipCount++;
                     hasHistoricalWin = true;
-                    tournamentPoints *= 1.25; // Championship bonus
-                    bonusesApplied.push('Championship +25%');
-                }
-                if (position <= 3) {
+                    achSignal = SEED_CHAMPIONSHIP_MULTIPLIER;
+                    bonusesApplied.push(`Win (carry ×${SEED_CHAMPIONSHIP_MULTIPLIER.toFixed(2)})`);
+                } else if (position === 2 || position === 3) {
                     podiumCount++;
-                    tournamentPoints *= 1.15; // Podium bonus
-                    bonusesApplied.push('Podium +15%');
+                    achSignal = SEED_PODIUM_MULTIPLIER;
+                    bonusesApplied.push(`Podium (carry ×${SEED_PODIUM_MULTIPLIER.toFixed(2)})`);
                 }
+
+                // Carry always applies (even if this tournament is a win/podium). The win/podium does not multiply its own tournament.
+                const carryMult = rawCarryMult;
+                if (carryMult !== 1.0) {
+                    bonusesApplied.unshift(`Carryover ×${carryMult.toFixed(3)}`);
+                }
+
+                tournamentPoints *= carryMult;
+
                 if (position) {
                     totalFinishSum += position;
                     finishCount++;
+
+                    if (descIdx < SEED_CONSISTENCY_WINDOW) {
+                        recentFinishSum += position;
+                        recentFinishCount++;
+                    }
                 }
                 
                 console.log(`   ${tournament.year} ${tournament.name}: Pos ${position} → ${basePoints} base × ${recencyWeight} recency = ${(basePoints * recencyWeight).toFixed(1)} → ${bonusesApplied.length > 0 ? bonusesApplied.join(', ') + ' → ' : ''}${tournamentPoints.toFixed(1)} points ${playerTournamentData.is_partnership_member ? '(shared hand)' : ''}`);
                 
                 totalPoints += tournamentPoints;
+
+                // Shift the carry window for the next (newer) tournament in chronological order.
+                prevAchMult2 = prevAchMult1;
+                prevAchMult1 = achSignal;
             });
             
             console.log(`📊 Tournament Points Subtotal: ${totalPoints.toFixed(1)}`);
-            console.log(`🎯 Tournaments in last 6: ${tournamentsInPeriod} (need 3+ for full ranking)`);
+            console.log(`🎯 Tournaments in last ${SEED_RECENCY_WINDOW}: ${tournamentsInPeriod} (need ${SEED_MIN_TOURNEYS_IN_WINDOW}+ for full ranking)`);
             
-            // Apply consistency factor
-            if (tournamentsInPeriod < 3) {
-                console.log(`⚠️ Consistency Penalty: <3 tournaments in last 6 → ×0.5 penalty`);
-                totalPoints *= 0.5; // Penalty for infrequent participation
-            }
+            // No participation penalty: not playing already reduces points via missing tournaments + recency weighting.
             
-            // Average finish bonus (if avg finish is top 6)
-            if (finishCount > 0) {
-                const avgFinish = totalFinishSum / finishCount;
-                console.log(`📊 Average Finish: ${avgFinish.toFixed(1)}`);
-                if (avgFinish <= 6) {
-                    console.log(`🎯 Consistency Bonus: Avg finish ≤6 → ×1.10 bonus`);
-                    totalPoints *= 1.10; // Consistency bonus
+            // Recent consistency bonus/penalty (last 6 tournaments) — require a minimum sample size
+            const MIN_RECENT_TOURNEYS_FOR_CONSISTENCY = 4;
+            if (recentFinishCount >= MIN_RECENT_TOURNEYS_FOR_CONSISTENCY) {
+                const avgRecentFinish = recentFinishSum / recentFinishCount;
+                console.log(`📊 Recent Avg Finish (last ${SEED_CONSISTENCY_WINDOW}): ${avgRecentFinish.toFixed(1)}`);
+
+                // Reward consistent top-6 finishes in recent form
+                if (avgRecentFinish <= 4) {
+                    console.log(`🎯 Recent Consistency Bonus: Avg finish ≤4 → ×1.30`);
+                    totalPoints *= 1.30;
+                } else if (avgRecentFinish <= 6) {
+                    console.log(`🎯 Recent Consistency Bonus: Avg finish ≤6 → ×1.20`);
+                    totalPoints *= 1.20;
+                }
+
+                // Avoiding bad finishes: small penalty if recent avg finish is poor
+                if (avgRecentFinish >= 12) {
+                    console.log(`⚠️ Recent Bad-Finish Penalty: Avg finish ≥12 → ×0.75`);
+                    totalPoints *= 0.75;
+                } else if (avgRecentFinish >= 10) {
+                    console.log(`⚠️ Recent Bad-Finish Penalty: Avg finish ≥10 → ×0.85`);
+                    totalPoints *= 0.85;
                 }
             }
             
-            // Legacy bonus for historical winners
-            if (hasHistoricalWin) {
-                console.log(`👑 Legacy Bonus: Has championship(s) → ×1.10 bonus`);
-                totalPoints *= 1.10; // Legacy bonus
+            // Legacy multipliers (outside the recency window)
+            // - Wins: stackable diminishing multipliers, capped at 5 wins
+            if (legacyWinsOutsideWindow > 0) {
+                const applyCount = Math.min(legacyWinsOutsideWindow, LEGACY_WIN_STEPS.length);
+                for (let i = 0; i < applyCount; i++) {
+                    const mult = LEGACY_WIN_STEPS[i];
+                    console.log(`👑 Legacy Win Bonus: win outside last ${SEED_RECENCY_WINDOW} (#${i + 1}/${applyCount}) → ×${mult.toFixed(2)}`);
+                    totalPoints *= mult;
+                }
+            }
+
+            // - Podiums (2nd/3rd only): stackable diminishing multipliers, capped at 6 podiums
+            if (legacyPodiumsOutsideWindow > 0) {
+                const applyCount = Math.min(legacyPodiumsOutsideWindow, LEGACY_PODIUM_STEPS.length);
+                for (let i = 0; i < applyCount; i++) {
+                    const mult = LEGACY_PODIUM_STEPS[i];
+                    console.log(`🥈 Legacy Podium Bonus: podium 8–15y ago (outside last ${SEED_RECENCY_WINDOW}) (#${i + 1}/${applyCount}) → ×${mult.toFixed(3)}`);
+                    totalPoints *= mult;
+                }
             }
             
             console.log(`🏆 FINAL SEED POINTS: ${Math.round(totalPoints)}`);
@@ -4426,21 +4538,32 @@ class TournamentEngine {
             1: 500, 2: 300, 3: 200, 4: 120, 5: 80,
             6: 50, 7: 50, 8: 50, 9: 25, 10: 25, 11: 25, 12: 25
         };
+        const SEED_CHAMPIONSHIP_MULTIPLIER = 1.25;
+        const SEED_PODIUM_MULTIPLIER = 1.10;
+        const LEGACY_WIN_STEPS = [1.05, 1.04, 1.03, 1.02, 1.01];
+        const LEGACY_PODIUM_STEPS = [1.03, 1.025, 1.02, 1.015, 1.01, 1.005];
+        const LEGACY_PODIUM_MIN_AGE_YEARS = 8;
+        const LEGACY_PODIUM_MAX_AGE_YEARS = 15;
         const getRecencyWeight = (tournamentPosition) => {
-            if (tournamentPosition === 0) return 1.00;
-            if (tournamentPosition === 1) return 0.80;
-            if (tournamentPosition === 2) return 0.60;
-            if (tournamentPosition === 3) return 0.40;
-            if (tournamentPosition === 4) return 0.20;
-            if (tournamentPosition === 5) return 0.10;
-            return 0.05;
+            const w = [1.00, 0.90, 0.82, 0.74, 0.62, 0.48, 0.30];
+            if (tournamentPosition >= 0 && tournamentPosition < w.length) {
+                return w[tournamentPosition];
+            }
+            return 0.00;
         };
         const isSharedHandEntry = (playerName) => {
             return playerName.includes('/') || playerName.includes('&') || playerName.includes('+');
         };
 
+        const SEED_RECENCY_WINDOW = 7;
+        const SEED_CONSISTENCY_WINDOW = 6;
+        const SEED_MIN_TOURNEYS_IN_WINDOW = 3;
+
         const allTournaments = Array.isArray(tournaments) ? tournaments : [];
         const ordered = [...allTournaments].sort((a, b) => (b.year || 0) - (a.year || 0));
+        const mostRecentYear = (Array.isArray(ordered) && ordered.length > 0 && Number.isFinite(ordered[0].year))
+            ? ordered[0].year
+            : null;
 
         for (const [playerName] of this.players) {
             if (!playerName || isSharedHandEntry(playerName)) {
@@ -4458,18 +4581,56 @@ class TournamentEngine {
             let podiumCount = 0;
             let totalFinishSum = 0;
             let finishCount = 0;
+            let recentFinishSum = 0;
+            let recentFinishCount = 0;
             let hasHistoricalWin = false;
+            let legacyWinsOutsideWindow = 0;
+            let legacyPodiumsOutsideWindow = 0;
             let participated = false;
+            // Achievement smoothing (carry forward; see getOfficialSeedRankings for commentary)
+            let prevAchMult1 = 1.0;
+            let prevAchMult2 = 1.0;
 
+            const lastWindow = Array.isArray(ordered) ? ordered.slice(0, SEED_RECENCY_WINDOW) : [];
+            const windowMeta = lastWindow.map((t, descIdx) => ({ tournament: t, descIdx, recencyWeight: getRecencyWeight(descIdx) }));
+            const windowAsc = [...windowMeta].reverse();
+
+            // Legacy outside the window (do NOT feed into carry)
             ordered.forEach((tournament, tournamentIndex) => {
-                const recencyWeight = getRecencyWeight(tournamentIndex);
+                if (tournamentIndex < SEED_RECENCY_WINDOW) {
+                    return;
+                }
                 const playerTournamentData = this.getIndividualPlayerData(tournament, playerName);
+                const position = playerTournamentData ? playerTournamentData.position : null;
                 if (!playerTournamentData) {
+                    return;
+                }
+                if (position === 1) {
+                    legacyWinsOutsideWindow++;
+                    hasHistoricalWin = true;
+                }
+                if (position === 2 || position === 3) {
+                    if (Number.isFinite(mostRecentYear) && Number.isFinite(tournament.year)) {
+                        const ageYears = mostRecentYear - tournament.year;
+                        if (ageYears >= LEGACY_PODIUM_MIN_AGE_YEARS && ageYears <= LEGACY_PODIUM_MAX_AGE_YEARS) {
+                            legacyPodiumsOutsideWindow++;
+                        }
+                    }
+                }
+            });
+
+            // Score last-7 window oldest -> newest so carry flows forward
+            windowAsc.forEach(({ tournament, descIdx, recencyWeight }) => {
+                const rawCarryMult = prevAchMult1 * prevAchMult2;
+                const playerTournamentData = this.getIndividualPlayerData(tournament, playerName);
+                const position = playerTournamentData ? playerTournamentData.position : null;
+
+                if (!playerTournamentData) {
+                    // Carry persists across non-participation: do NOT shift/reset carry window.
                     return;
                 }
 
                 participated = true;
-                const position = playerTournamentData.position;
 
                 let basePoints = positionPoints[position] || 10;
                 if (position > 12) basePoints = 10;
@@ -4477,22 +4638,36 @@ class TournamentEngine {
 
                 let tournamentPoints = basePoints * recencyWeight;
 
-                if (tournamentIndex <= 5) tournamentsInPeriod++;
+                tournamentsInPeriod++;
+
+                let achSignal = 1.0;
+                const isAchievement = position === 1 || position === 2 || position === 3;
                 if (position === 1) {
                     championshipCount++;
                     hasHistoricalWin = true;
-                    tournamentPoints *= 1.25;
-                }
-                if (position && position <= 3) {
+                    achSignal = SEED_CHAMPIONSHIP_MULTIPLIER;
+                } else if (position === 2 || position === 3) {
                     podiumCount++;
-                    tournamentPoints *= 1.15;
+                    achSignal = SEED_PODIUM_MULTIPLIER;
                 }
+
+                const carryMult = rawCarryMult;
+                tournamentPoints *= carryMult;
+
                 if (position) {
                     totalFinishSum += position;
                     finishCount++;
+                    if (descIdx < SEED_CONSISTENCY_WINDOW) {
+                        recentFinishSum += position;
+                        recentFinishCount++;
+                    }
                 }
 
                 totalPoints += tournamentPoints;
+
+                // Shift the carry window for the next (newer) tournament in chronological order.
+                prevAchMult2 = prevAchMult1;
+                prevAchMult1 = achSignal;
             });
 
             // Skip players who have not participated in any included tournament period.
@@ -4500,17 +4675,35 @@ class TournamentEngine {
                 continue;
             }
 
-            if (tournamentsInPeriod < 3) {
-                totalPoints *= 0.5;
-            }
-            if (finishCount > 0) {
-                const avgFinish = totalFinishSum / finishCount;
-                if (avgFinish <= 6) {
-                    totalPoints *= 1.10;
+            // No participation penalty: not playing already reduces points via missing tournaments + recency weighting.
+
+            const MIN_RECENT_TOURNEYS_FOR_CONSISTENCY = 4;
+            if (recentFinishCount >= MIN_RECENT_TOURNEYS_FOR_CONSISTENCY) {
+                const avgRecentFinish = recentFinishSum / recentFinishCount;
+                if (avgRecentFinish <= 4) {
+                    totalPoints *= 1.30;
+                } else if (avgRecentFinish <= 6) {
+                    totalPoints *= 1.20;
+                }
+                if (avgRecentFinish >= 12) {
+                    totalPoints *= 0.75;
+                } else if (avgRecentFinish >= 10) {
+                    totalPoints *= 0.85;
                 }
             }
-            if (hasHistoricalWin) {
-                totalPoints *= 1.10;
+
+            // Legacy multipliers (outside the recency window)
+            if (legacyWinsOutsideWindow > 0) {
+                const applyCount = Math.min(legacyWinsOutsideWindow, LEGACY_WIN_STEPS.length);
+                for (let i = 0; i < applyCount; i++) {
+                    totalPoints *= LEGACY_WIN_STEPS[i];
+                }
+            }
+            if (legacyPodiumsOutsideWindow > 0) {
+                const applyCount = Math.min(legacyPodiumsOutsideWindow, LEGACY_PODIUM_STEPS.length);
+                for (let i = 0; i < applyCount; i++) {
+                    totalPoints *= LEGACY_PODIUM_STEPS[i];
+                }
             }
 
             rankings.push({
@@ -4529,6 +4722,228 @@ class TournamentEngine {
             player.seed_rank = index + 1;
         });
         return rankings;
+    }
+
+    /**
+     * Explain how a player's official seed points were calculated (human-readable inputs for UI/tooltips).
+     * This mirrors the logic in computeOfficialSeedRankingsForTournaments/getOfficialSeedRankings.
+     */
+    explainOfficialSeedPointsForPlayer(playerName, includeSharedHands = true) {
+        if (!playerName) {
+            return null;
+        }
+
+        // Keep these constants in sync with the official seed algorithm above.
+        const SEED_RECENCY_WINDOW = 7;
+        const SEED_CONSISTENCY_WINDOW = 6;
+        const SEED_MIN_TOURNEYS_IN_WINDOW = 3;
+        const RECENCY_WEIGHTS = [1.00, 0.90, 0.82, 0.74, 0.62, 0.48, 0.30];
+
+        const SEED_CHAMPIONSHIP_MULTIPLIER = 1.25; // 1st
+        const SEED_PODIUM_MULTIPLIER = 1.10;       // 2nd/3rd
+
+        // Legacy multipliers (outside recency window)
+        const LEGACY_WIN_STEPS = [1.05, 1.04, 1.03, 1.02, 1.01];
+        const LEGACY_PODIUM_STEPS = [1.03, 1.025, 1.02, 1.015, 1.01, 1.005];
+        const LEGACY_PODIUM_MIN_AGE_YEARS = 8;
+        const LEGACY_PODIUM_MAX_AGE_YEARS = 15;
+
+        const positionPoints = {
+            1: 500, 2: 300, 3: 200, 4: 120, 5: 80,
+            6: 50, 7: 50, 8: 50, 9: 25, 10: 25, 11: 25, 12: 25
+        };
+
+        const ordered = (typeof this.getAllTournamentsUnique === 'function')
+            ? this.getAllTournamentsUnique('desc')
+            : [];
+
+        const mostRecentYear = (Array.isArray(ordered) && ordered.length > 0 && Number.isFinite(ordered[0].year))
+            ? ordered[0].year
+            : null;
+
+        const withinLegacyPodiumWindow = (year) => {
+            if (!Number.isFinite(mostRecentYear) || !Number.isFinite(year)) {
+                return false;
+            }
+            const ageYears = mostRecentYear - year;
+            return ageYears >= LEGACY_PODIUM_MIN_AGE_YEARS && ageYears <= LEGACY_PODIUM_MAX_AGE_YEARS;
+        };
+
+        const lastWindow = Array.isArray(ordered) ? ordered.slice(0, SEED_RECENCY_WINDOW) : [];
+
+        // Achievement smoothing (carry forward):
+        // - A win/podium does NOT multiply the tournament where it happened.
+        // - It creates a carry signal that boosts the player's NEXT 2 tournaments played (chronological future).
+        // - Carry persists across non-participation and stacks.
+        let prevAchMult1 = 1.0;
+        let prevAchMult2 = 1.0;
+
+        let tournamentsInPeriod = 0;
+        let recentFinishSum = 0;
+        let recentFinishCount = 0;
+
+        let legacyWinsOutsideWindow = 0;
+        let legacyPodiumsOutsideWindow = 0;
+
+        let subtotal = 0;
+        const contributions = new Array(lastWindow.length);
+
+        // Legacy (outside the recency window) — does NOT feed into carry
+        for (let tournamentIndex = SEED_RECENCY_WINDOW; tournamentIndex < (ordered ? ordered.length : 0); tournamentIndex++) {
+            const tournament = ordered[tournamentIndex];
+            if (!tournament) {
+                continue;
+            }
+            const playerTournamentData = this.getIndividualPlayerData(tournament, playerName);
+            const position = playerTournamentData ? playerTournamentData.position : null;
+            if (!playerTournamentData) {
+                continue;
+            }
+            if (position === 1) {
+                legacyWinsOutsideWindow += 1;
+            } else if ((position === 2 || position === 3) && withinLegacyPodiumWindow(tournament.year)) {
+                legacyPodiumsOutsideWindow += 1;
+            }
+        }
+
+        // Score last-7 window oldest -> newest so carry flows forward.
+        const windowMeta = lastWindow.map((t, descIdx) => ({
+            tournament: t,
+            descIdx,
+            recencyWeight: RECENCY_WEIGHTS[descIdx] ?? 0.0
+        }));
+        const windowAsc = [...windowMeta].reverse();
+
+        windowAsc.forEach(({ tournament, descIdx, recencyWeight }) => {
+            const rawCarryMult = prevAchMult1 * prevAchMult2;
+            const playerTournamentData = this.getIndividualPlayerData(tournament, playerName);
+            const position = playerTournamentData ? playerTournamentData.position : null;
+
+            if (!playerTournamentData) {
+                contributions[descIdx] = {
+                    idx: descIdx,
+                    year: tournament.year || null,
+                    tournamentTitle: tournament.title || tournament.name || tournament.id || null,
+                    played: false,
+                    position: null,
+                    carry: rawCarryMult,
+                    recencyWeight,
+                    points: 0
+                };
+                return;
+            }
+
+            tournamentsInPeriod += 1;
+            if (position && descIdx < SEED_CONSISTENCY_WINDOW) {
+                recentFinishSum += position;
+                recentFinishCount += 1;
+            }
+
+            let basePoints = positionPoints[position] || 10;
+            if (position > 12) basePoints = 10;
+            if (!position) basePoints = 5;
+
+            let achSignal = 1.0;
+            let achLabel = null;
+            if (position === 1) {
+                achSignal = SEED_CHAMPIONSHIP_MULTIPLIER;
+                achLabel = `win→carry×${SEED_CHAMPIONSHIP_MULTIPLIER.toFixed(2)}`;
+            } else if (position === 2 || position === 3) {
+                achSignal = SEED_PODIUM_MULTIPLIER;
+                achLabel = `podium→carry×${SEED_PODIUM_MULTIPLIER.toFixed(2)}`;
+            }
+
+            const carryMult = rawCarryMult;
+            const points = basePoints * recencyWeight * carryMult;
+            subtotal += points;
+
+            contributions[descIdx] = {
+                idx: descIdx,
+                year: tournament.year || null,
+                tournamentTitle: tournament.title || tournament.name || tournament.id || null,
+                played: true,
+                position: position || null,
+                basePoints,
+                recencyWeight,
+                carry: carryMult,
+                achMultiplier: achSignal,
+                achLabel,
+                points,
+                shared: !!playerTournamentData.is_partnership_member
+            };
+
+            // Shift carry window only on participation.
+            prevAchMult2 = prevAchMult1;
+            prevAchMult1 = achSignal;
+        });
+
+        // End multipliers
+        let total = subtotal;
+        const endMultipliers = [];
+
+        // No participation penalty: not playing already reduces points via missing tournaments + recency weighting.
+
+        let avgRecentFinish = null;
+        const MIN_RECENT_TOURNEYS_FOR_CONSISTENCY = 4;
+        if (recentFinishCount >= MIN_RECENT_TOURNEYS_FOR_CONSISTENCY) {
+            avgRecentFinish = recentFinishSum / recentFinishCount;
+            if (avgRecentFinish <= 4) {
+                endMultipliers.push({ label: `Recent consistency (avg≤4 over ${SEED_CONSISTENCY_WINDOW})`, mult: 1.30 });
+                total *= 1.30;
+            } else if (avgRecentFinish <= 6) {
+                endMultipliers.push({ label: `Recent consistency (avg≤6 over ${SEED_CONSISTENCY_WINDOW})`, mult: 1.20 });
+                total *= 1.20;
+            }
+
+            if (avgRecentFinish >= 12) {
+                endMultipliers.push({ label: `Bad-finish penalty (avg≥12 over ${SEED_CONSISTENCY_WINDOW})`, mult: 0.75 });
+                total *= 0.75;
+            } else if (avgRecentFinish >= 10) {
+                endMultipliers.push({ label: `Bad-finish penalty (avg≥10 over ${SEED_CONSISTENCY_WINDOW})`, mult: 0.85 });
+                total *= 0.85;
+            }
+        }
+
+        if (legacyWinsOutsideWindow > 0) {
+            const applyCount = Math.min(legacyWinsOutsideWindow, LEGACY_WIN_STEPS.length);
+            for (let i = 0; i < applyCount; i++) {
+                const mult = LEGACY_WIN_STEPS[i];
+                endMultipliers.push({ label: `Legacy win (#${i + 1}/${applyCount})`, mult });
+                total *= mult;
+            }
+        }
+
+        if (legacyPodiumsOutsideWindow > 0) {
+            const applyCount = Math.min(legacyPodiumsOutsideWindow, LEGACY_PODIUM_STEPS.length);
+            for (let i = 0; i < applyCount; i++) {
+                const mult = LEGACY_PODIUM_STEPS[i];
+                endMultipliers.push({ label: `Legacy podium 8–15y ago (#${i + 1}/${applyCount})`, mult });
+                total *= mult;
+            }
+        }
+
+        const seedPoints = Math.round(total);
+
+        return {
+            playerName,
+            displayName: typeof this.getDisplayName === 'function' ? this.getDisplayName(playerName) : playerName,
+            mostRecentYear,
+            recencyWindow: SEED_RECENCY_WINDOW,
+            recencyWeights: RECENCY_WEIGHTS.slice(),
+            lastWindowYears: lastWindow.map(t => (t && Number.isFinite(t.year) ? t.year : null)),
+            lastWindowPositions: lastWindow.map(t => {
+                const d = t ? this.getIndividualPlayerData(t, playerName) : null;
+                return d && d.position ? d.position : null;
+            }),
+            subtotal,
+            avgRecentFinish,
+            tournamentsInPeriod,
+            legacyWinsOutsideWindow,
+            legacyPodiumsOutsideWindow,
+            endMultipliers,
+            contributions,
+            seedPoints
+        };
     }
 
     getSeedRankingsByYear(includeSharedHands = true) {
