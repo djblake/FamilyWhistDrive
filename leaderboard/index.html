@@ -219,10 +219,12 @@
                 
                 <div class="analytics-card" style="margin-bottom: var(--spacing-xl);">
                     <div style="display:flex; gap: 0.5rem; flex-wrap: wrap; align-items:center; justify-content: space-between;">
-                        <div class="muted">One row per tournament. Sort by year or champion avg tricks.</div>
-                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                            <button class="btn btn-secondary" type="button" id="btn-sort-history-year">Sort: Year</button>
-                            <button class="btn btn-secondary" type="button" id="btn-sort-history-avg">Sort: Champ Avg</button>
+                        <div class="muted">
+                            One row per tournament. Winner avg/round is shown as a heat bar (lowest→highest across all tournament winners). Lower scores suggest a more competitive tournament; higher scores suggest a more dominant winner.
+                        </div>
+                        <div class="hof-history-microstats" aria-label="Championship history summary">
+                            <span class="hof-microstat"><span class="hof-microstat__label">Total championships</span> <span class="hof-microstat__value" id="hof-total-championships">—</span></span>
+                            <span class="hof-microstat"><span class="hof-microstat__label">Total champions</span> <span class="hof-microstat__value" id="hof-total-champions">—</span></span>
                         </div>
                     </div>
                     <div style="overflow:auto; margin-top: 0.75rem;">
@@ -243,44 +245,6 @@
                                 </tr>
                             </tbody>
                         </table>
-                    </div>
-                </div>
-                
-                <div class="championship-stats">
-                    <div class="stat-card">
-                        <div class="stat-icon">🏆</div>
-                        <div class="stat-content">
-                            <h4>Total Championships</h4>
-                            <div class="stat-number" id="hof-total-championships">—</div>
-                            <div class="stat-detail">Four Decades of Excellence</div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">👥</div>
-                        <div class="stat-content">
-                            <h4>Total Champions</h4>
-                            <div class="stat-number" id="hof-total-champions">—</div>
-                            <div class="stat-detail">Different Winners</div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">🔄</div>
-                        <div class="stat-content">
-                            <h4>Most Consecutive</h4>
-                            <div class="stat-number" id="hof-most-consecutive">—</div>
-                            <div class="stat-detail" id="hof-most-consecutive-detail">Loading…</div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">📈</div>
-                        <div class="stat-content">
-                            <h4>Avg Entrants</h4>
-                            <div class="stat-number" id="hof-avg-entrants">—</div>
-                            <div class="stat-detail">Average tournament size</div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -634,32 +598,12 @@
                     setFootnotesHtml('insight-win-streak-footnotes', '');
                 }
 
-                // --- Championship history stats
+                // --- Championship history stats (subtle, above the table)
                 setText('hof-total-championships', totalTournaments);
                 setText('hof-total-champions', uniqueChampionSet.size);
 
-                const streak = typeof tournamentEngine.getLongestChampionStreak === 'function'
-                    ? tournamentEngine.getLongestChampionStreak()
-                    : { winner: null, streak: 0, fromYear: null, toYear: null };
-                setText('hof-most-consecutive', streak && streak.streak ? streak.streak : 0);
-                const streakDetail = document.getElementById('hof-most-consecutive-detail');
-                if (streakDetail) {
-                    if (streak && streak.winner && streak.streak > 0) {
-                        streakDetail.textContent = `${tournamentEngine.getDisplayName(streak.winner)} (${streak.fromYear}–${streak.toYear})`;
-                    } else {
-                        streakDetail.textContent = '—';
-                    }
-                }
-
-                const avgEntrants = tournaments.length > 0
-                    ? (tournaments.reduce((sum, t) => sum + (t.total_players || 0), 0) / tournaments.length)
-                    : 0;
-                setText('hof-avg-entrants', tournaments.length > 0 ? avgEntrants.toFixed(1) : '—');
-
                 // --- Championship history table (1st/2nd/3rd + champ avg tricks)
                 const historyBody = document.getElementById('championship-history-body');
-                const sortYearBtn = document.getElementById('btn-sort-history-year');
-                const sortAvgBtn = document.getElementById('btn-sort-history-avg');
 
                 if (historyBody) {
                     const rows = tournaments
@@ -688,51 +632,46 @@
                             };
                         });
 
-                    let sortMode = 'year_desc';
-                    const renderHistory = () => {
-                        const sorted = rows.slice().sort((a, b) => {
-                            if (sortMode === 'avg_desc') {
-                                const av = a.firstAvg === null ? -Infinity : a.firstAvg;
-                                const bv = b.firstAvg === null ? -Infinity : b.firstAvg;
-                                if (bv !== av) return bv - av;
-                                return b.year - a.year;
-                            }
-                            // year_desc
-                            return b.year - a.year;
-                        });
+                    const winners = rows.map(r => r.firstAvg).filter(v => Number.isFinite(v));
+                    const rangeMin = winners.length ? Math.min(...winners) : 0;
+                    const rangeMax = winners.length ? Math.max(...winners) : 0;
+                    const rangeSpan = (rangeMax - rangeMin);
+                    const clamp01 = (x) => Math.max(0, Math.min(1, x));
 
-                        const nameCell = (name) => (name && name !== '—')
-                            ? `<span class="hof-name">${name}</span>`
-                            : '—';
-                        historyBody.innerHTML = sorted.map(r => {
-                            const avg = r.firstAvg === null ? '—' : r.firstAvg.toFixed(2);
-                            return `
-                                <tr>
-                                    <td>${r.year}</td>
-                                    <td>${r.title}</td>
-                                    <td>${nameCell(r.firstName)}</td>
-                                    <td>${nameCell(r.secondName)}</td>
-                                    <td>${nameCell(r.thirdName)}</td>
-                                    <td><span class="hof-value">${avg}</span></td>
-                                </tr>
-                            `;
-                        }).join('') || `<tr><td colspan="6" class="muted">No tournaments found.</td></tr>`;
+                    const sorted = rows.slice().sort((a, b) => b.year - a.year);
+
+                    const nameCell = (name) => (name && name !== '—')
+                        ? `<span class="hof-name">${name}</span>`
+                        : '—';
+
+                    const avgCell = (avgValue) => {
+                        if (!Number.isFinite(avgValue)) return `<span class="hof-value">—</span>`;
+                        const pct = rangeSpan > 0 ? clamp01((avgValue - rangeMin) / rangeSpan) : 0.5;
+                        const barPct = pct * 100;
+                        const title = `${avgValue.toFixed(2)} avg/round (winner range ${rangeMin.toFixed(2)}–${rangeMax.toFixed(2)})`;
+                        return `
+                            <div class="hof-avgcell" title="${title}">
+                                <div class="hof-avgvalue"><span class="hof-value">${avgValue.toFixed(2)}</span></div>
+                                <div class="hof-perfbar" aria-hidden="true">
+                                    <div class="hof-perfbar-mask" style="left:${barPct.toFixed(1)}%"></div>
+                                    <div class="hof-perfbar-marker" style="left:${barPct.toFixed(1)}%"></div>
+                                </div>
+                            </div>
+                        `;
                     };
 
-                    renderHistory();
-
-                    if (sortYearBtn) {
-                        sortYearBtn.addEventListener('click', () => {
-                            sortMode = 'year_desc';
-                            renderHistory();
-                        });
-                    }
-                    if (sortAvgBtn) {
-                        sortAvgBtn.addEventListener('click', () => {
-                            sortMode = 'avg_desc';
-                            renderHistory();
-                        });
-                    }
+                    historyBody.innerHTML = sorted.map(r => {
+                        return `
+                            <tr>
+                                <td>${r.year}</td>
+                                <td>${r.title}</td>
+                                <td>${nameCell(r.firstName)}</td>
+                                <td>${nameCell(r.secondName)}</td>
+                                <td>${nameCell(r.thirdName)}</td>
+                                <td class="hof-avgcol">${avgCell(r.firstAvg)}</td>
+                            </tr>
+                        `;
+                    }).join('') || `<tr><td colspan="6" class="muted">No tournaments found.</td></tr>`;
                 }
 
                 // --- Records (render Top 3 for each record into a single table)
@@ -3707,6 +3646,86 @@
             font-weight: 900;
             font-variant-numeric: tabular-nums;
             white-space: nowrap;
+        }
+
+        /* Championship History: subtle top-of-table stats */
+        .hof-history-microstats {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            margin-left: auto;
+        }
+        .hof-microstat {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            background: rgba(15, 23, 42, 0.03);
+            color: var(--text-secondary-dark);
+            font-weight: 750;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        .hof-microstat__label { font-weight: 750; }
+        .hof-microstat__value {
+            font-weight: 950;
+            color: var(--primary-dark);
+            font-variant-numeric: tabular-nums;
+        }
+        @media (max-width: 768px) {
+            .hof-history-microstats {
+                width: 100%;
+                justify-content: flex-start;
+            }
+        }
+
+        /* Championship History: winner avg/round heat bar (match Player Profile "avg/round" barometer) */
+        .hof-avgcol {
+            text-align: right;
+            white-space: nowrap;
+        }
+        .hof-avgcell {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.35rem;
+            min-width: 190px;
+        }
+        .hof-avgvalue {
+            line-height: 1;
+        }
+        .hof-perfbar {
+            width: 180px;
+            height: 10px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(239, 68, 68, 0.85) 0%, rgba(245, 158, 11, 0.85) 55%, rgba(34, 197, 94, 0.9) 100%);
+            overflow: hidden;
+            border: 1px solid rgba(26, 26, 26, 0.10);
+            position: relative;
+        }
+        .hof-perfbar-mask {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            /* left is set inline (same as marker percentage) */
+            background: rgba(238, 238, 238, 0.92);
+        }
+        .hof-perfbar-marker {
+            position: absolute;
+            top: -2px;
+            bottom: -2px;
+            width: 2px;
+            background: rgba(26, 26, 26, 0.55);
+            transform: translateX(-1px);
+            border-radius: 2px;
+        }
+        @media (max-width: 768px) {
+            .hof-avgcell { min-width: 150px; }
+            .hof-perfbar { width: 140px; }
         }
 
         .hof-detail {
