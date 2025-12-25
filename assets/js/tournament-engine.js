@@ -4728,7 +4728,7 @@ class TournamentEngine {
      * Explain how a player's official seed points were calculated (human-readable inputs for UI/tooltips).
      * This mirrors the logic in computeOfficialSeedRankingsForTournaments/getOfficialSeedRankings.
      */
-    explainOfficialSeedPointsForPlayer(playerName, includeSharedHands = true) {
+    explainOfficialSeedPointsForPlayer(playerName, includeSharedHands = true, asOfYear = null) {
         if (!playerName) {
             return null;
         }
@@ -4753,9 +4753,14 @@ class TournamentEngine {
             6: 50, 7: 50, 8: 50, 9: 25, 10: 25, 11: 25, 12: 25
         };
 
-        const ordered = (typeof this.getAllTournamentsUnique === 'function')
+        let ordered = (typeof this.getAllTournamentsUnique === 'function')
             ? this.getAllTournamentsUnique('desc')
             : [];
+
+        // When viewing historical seed tables, explain points "as of" that year by restricting the tournament set.
+        if (Number.isFinite(asOfYear)) {
+            ordered = (ordered || []).filter(t => t && Number.isFinite(t.year) && t.year <= asOfYear);
+        }
 
         const mostRecentYear = (Array.isArray(ordered) && ordered.length > 0 && Number.isFinite(ordered[0].year))
             ? ordered[0].year

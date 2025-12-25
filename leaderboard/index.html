@@ -113,15 +113,7 @@
                     </div>
                 </div>
 
-                <div class="seed-points-explained" id="seed-points-explained">
-                    <details class="seed-points-details">
-                        <summary>How seed points are calculated</summary>
-                        <div class="seed-points-details__body">
-                            <p><strong>Seed points</strong> come from the last <strong>7</strong> tournaments (weighted by recency), with a smoothing rule that lets recent wins/podiums lift the next two <strong>future</strong> tournaments’ points (the next two tournaments that player plays). Older tournaments contribute <strong>0 base points</strong> (only small legacy multipliers apply).</p>
-                            <p>Click the <strong>(?)</strong> next to any player’s seed points to see the exact breakdown used for that row.</p>
-                        </div>
-                    </details>
-                </div>
+                <!-- Removed per request: duplicate "How seed points are calculated" copy under the table -->
             </div>
         </section>
 
@@ -641,9 +633,13 @@
                             const second = standings.find(s => s.position === 2) || standings[1] || null;
                             const third = standings.find(s => s.position === 3) || standings[2] || null;
 
-                            const firstName = first ? tournamentEngine.getDisplayName(first.player) : '—';
-                            const secondName = second ? tournamentEngine.getDisplayName(second.player) : '—';
-                            const thirdName = third ? tournamentEngine.getDisplayName(third.player) : '—';
+                            const firstId = first && first.player ? String(first.player) : null;
+                            const secondId = second && second.player ? String(second.player) : null;
+                            const thirdId = third && third.player ? String(third.player) : null;
+
+                            const firstName = firstId ? tournamentEngine.getDisplayName(firstId) : '—';
+                            const secondName = secondId ? tournamentEngine.getDisplayName(secondId) : '—';
+                            const thirdName = thirdId ? tournamentEngine.getDisplayName(thirdId) : '—';
 
                             const firstAvg = first && (first.average_tricks !== null && typeof first.average_tricks !== 'undefined')
                                 ? parseFloat(first.average_tricks)
@@ -652,6 +648,9 @@
                             return {
                                 year: t.year,
                                 title: t.title || t.name || t.id,
+                                firstId,
+                                secondId,
+                                thirdId,
                                 firstName,
                                 secondName,
                                 thirdName,
@@ -667,9 +666,18 @@
 
                     const sorted = rows.slice().sort((a, b) => b.year - a.year);
 
-                    const nameCell = (name) => (name && name !== '—')
-                        ? `<span class="hof-name">${name}</span>`
-                        : '—';
+                    const isSharedHandEntry = (playerId) => {
+                        const s = String(playerId || '');
+                        return s.includes('/') || s.includes('&') || s.includes('+');
+                    };
+                    const nameCell = (playerId, displayName) => {
+                        const name = (displayName && displayName !== '—') ? String(displayName) : '';
+                        if (!playerId || !name) return '—';
+                        if (isSharedHandEntry(playerId)) {
+                            return `<span class="hof-name">${name}</span>`;
+                        }
+                        return `<a href="../players/profile.html?player=${encodeURIComponent(String(playerId))}" class="player-link"><span class="hof-name">${name}</span></a>`;
+                    };
 
                     const avgCell = (avgValue) => {
                         if (!Number.isFinite(avgValue)) return `<span class="hof-value">—</span>`;
@@ -692,9 +700,9 @@
                             <tr>
                                 <td>${r.year}</td>
                                 <td>${r.title}</td>
-                                <td>${nameCell(r.firstName)}</td>
-                                <td>${nameCell(r.secondName)}</td>
-                                <td>${nameCell(r.thirdName)}</td>
+                                <td>${nameCell(r.firstId, r.firstName)}</td>
+                                <td>${nameCell(r.secondId, r.secondName)}</td>
+                                <td>${nameCell(r.thirdId, r.thirdName)}</td>
                                 <td class="hof-avgcol">${avgCell(r.firstAvg)}</td>
                             </tr>
                         `;
@@ -2699,7 +2707,7 @@
                 if (!tournamentEngine || typeof tournamentEngine.explainOfficialSeedPointsForPlayer !== 'function') {
                     return;
                 }
-                const info = tournamentEngine.explainOfficialSeedPointsForPlayer(playerId, true);
+                const info = tournamentEngine.explainOfficialSeedPointsForPlayer(playerId, true, selectedYear);
                 if (!info) {
                     return;
                 }
@@ -2746,7 +2754,8 @@
                     })
                     .join('');
 
-                title.textContent = `${info.displayName} • ${info.seedPoints} pts`;
+                const asOfLabel = (latestYear !== null && selectedYear === latestYear) ? 'Latest' : (selectedYear || 'Latest');
+                title.textContent = `${info.displayName} • ${info.seedPoints} pts (Year: ${asOfLabel})`;
                 body.innerHTML = `
                     <div class="seed-explain-meta">
                         <div><strong>Subtotal</strong>: ${Number(info.subtotal || 0).toFixed(2)}</div>
@@ -3251,6 +3260,10 @@
         }
 
         .player-link:hover .player-name {
+            color: var(--primary);
+        }
+
+        .player-link:hover .hof-name {
             color: var(--primary);
         }
 
