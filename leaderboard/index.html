@@ -2418,6 +2418,7 @@
                                 <a href="../players/profile.html?player=${encodeURIComponent(player.name)}" class="player-link">
                                     <span class="player-name">${tournamentEngine.getDisplayName(player.name)}</span>
                                 </a>
+                                <span class="streak-range-inline">${rangeTxt}</span>
                             </div>
                             <div class="streak-range-col">${rangeTxt}</div>
                             <div class="streak-longest-col">${longest}</div>
@@ -3215,6 +3216,18 @@
             white-space: nowrap;
         }
 
+        .streak-range-inline {
+            display: none;
+            margin-top: 0.2rem;
+            font-size: 0.78rem;
+            font-weight: 750;
+            color: var(--text-secondary-dark);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
         .ranking-row .streak-longest-col,
         .ranking-row .streak-current-col {
             font-variant-numeric: tabular-nums;
@@ -3855,20 +3868,110 @@
                 font-size: 0.9rem;
             }
             
+            /* Default (recent form / other simple tabs): show Rank, Player, Score, Wins */
             .rankings-table-header,
             .ranking-row {
-                grid-template-columns: 60px 1fr 80px 60px;
+                grid-template-columns: 60px 1fr 90px 70px;
+            }
+            .rankings-table-header .tournaments-col,
+            .ranking-row .tournaments-col,
+            .rankings-table-header .percentage-col,
+            .ranking-row .percentage-col,
+            .rankings-table-header .trend-col,
+            .ranking-row .trend-col {
+                display: none;
             }
 
+            /* Official seed ranking: hide extra columns so grid stays 4-wide */
+            .seed-stats .rankings-table-header,
+            .seed-stats .ranking-row {
+                grid-template-columns: 60px 1fr 90px 70px;
+            }
+            .seed-stats .rankings-table-header .recent-col,
+            .seed-stats .ranking-row .recent-col,
+            .seed-stats .rankings-table-header .podium-col,
+            .seed-stats .ranking-row .podium-col,
+            .seed-stats .rankings-table-header .avg-finish-col,
+            .seed-stats .ranking-row .avg-finish-col,
+            .seed-stats .rankings-table-header .trend-col,
+            .seed-stats .ranking-row .trend-col {
+                display: none;
+            }
+
+            /* Championships: keep Wins + Top 3 */
+            .championships-layout .rankings-table-header,
+            .championships-layout .ranking-row {
+                grid-template-columns: 60px 1fr 80px 80px;
+            }
+            .championships-layout .rankings-table-header .tournaments-col,
+            .championships-layout .ranking-row .tournaments-col,
+            .championships-layout .rankings-table-header .trend-col,
+            .championships-layout .ranking-row .trend-col {
+                display: none;
+            }
+
+            /* Booby: keep Booby Wins + Booby % */
+            .booby-stats .rankings-table-header,
+            .booby-stats .ranking-row {
+                grid-template-columns: 60px 1fr 90px 90px;
+            }
+            .booby-stats .rankings-table-header .tournaments-col,
+            .booby-stats .ranking-row .tournaments-col,
+            .booby-stats .rankings-table-header .trend-col,
+            .booby-stats .ranking-row .trend-col {
+                display: none;
+            }
+
+            /* Career wins: keep Rounds Won + Win % */
+            .career-stats .rankings-table-header,
+            .career-stats .ranking-row {
+                grid-template-columns: 60px 1fr 90px 90px;
+            }
+            .career-stats .rankings-table-header .rounds-played-col,
+            .career-stats .ranking-row .rounds-played-col,
+            .career-stats .rankings-table-header .trend-col,
+            .career-stats .ranking-row .trend-col {
+                display: none;
+            }
+
+            /* Performance: keep Rank, Player, Score */
+            .performance-stats .rankings-table-header,
+            .performance-stats .ranking-row {
+                grid-template-columns: 60px 1fr 120px;
+            }
+            .performance-stats .rankings-table-header .tournaments-col,
+            .performance-stats .ranking-row .tournaments-col,
+            .performance-stats .rankings-table-header .trend-col,
+            .performance-stats .ranking-row .trend-col {
+                display: none;
+            }
+
+            /* Win streaks: keep Longest + Current; show Range under the player name */
             .win-streaks .rankings-table-header,
             .win-streaks .ranking-row {
-                grid-template-columns: 60px 1fr 72px 72px;
+                grid-template-columns: 60px 1fr 86px 86px;
             }
-            
-            .tournaments-col,
-            .percentage-col,
-            .trend-col {
+            .win-streaks .rankings-table-header .streak-range-col,
+            .win-streaks .ranking-row .streak-range-col {
                 display: none;
+            }
+            .win-streaks .streak-range-inline {
+                display: block;
+            }
+
+            /* Prevent long names from breaking the grid on any tab */
+            .ranking-row .player-col {
+                min-width: 0;
+            }
+            .ranking-row .player-link {
+                display: block;
+                min-width: 0;
+            }
+            .ranking-row .player-name {
+                display: block;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             
             .records-grid {
