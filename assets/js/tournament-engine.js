@@ -47,13 +47,27 @@ class TournamentEngine {
         // Official 20-player tournament schedule (from devenezia.com)
         this.officialSchedule = this.generateOfficialSchedule();
 
-        // Add "Update data" link into footer across the site
+        // Footer links are owned by assets/js/footer-nav.js (single source of truth).
+        // We intentionally do NOT inject "Update data" into the public footer.
+        // Safety net: remove any legacy "Update data" link if it exists (older builds injected it).
         try {
             if (typeof document !== 'undefined') {
+                const removeLegacyUpdateDataLink = () => {
+                    const nodes = Array.from(document.querySelectorAll('a[href*="update-data.html"], a[data-update-data-link]'));
+                    for (const n of nodes) {
+                        try {
+                            const prev = n.previousSibling;
+                            if (prev && prev.nodeType === Node.TEXT_NODE && String(prev.textContent || '').includes('|')) {
+                                prev.parentNode && prev.parentNode.removeChild(prev);
+                            }
+                        } catch (_) {}
+                        try { n.parentNode && n.parentNode.removeChild(n); } catch (_) {}
+                    }
+                };
                 if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', () => this.injectUpdateDataFooterLink(), { once: true });
+                    document.addEventListener('DOMContentLoaded', () => setTimeout(removeLegacyUpdateDataLink, 0), { once: true });
                 } else {
-                    this.injectUpdateDataFooterLink();
+                    setTimeout(removeLegacyUpdateDataLink, 0);
                 }
             }
         } catch (error) {
@@ -460,43 +474,8 @@ class TournamentEngine {
         return `fnv1a32:${hash.toString(16).padStart(8, '0')}`;
     }
 
-    injectUpdateDataFooterLink() {
-        // Adds an "Update data" link to the footer bottom.
-        // Footer navigation is owned by assets/js/footer-nav.js (single source of truth).
-        try {
-            if (typeof document === 'undefined') {
-                return;
-            }
-            const footerContent = document.querySelector('.footer .footer-content');
-            const rootUrl = this.cacheInfo && this.cacheInfo.rootUrl ? this.cacheInfo.rootUrl : '';
-            if (!rootUrl) {
-                return;
-            }
-
-            // Add "Update data" link into footer bottom.
-            const footerBottom = document.querySelector('.footer-bottom');
-            if (!footerBottom) {
-                return;
-            }
-            if (footerBottom.querySelector('[data-update-data-link]')) {
-                return;
-            }
-            const link = document.createElement('a');
-            link.href = `${rootUrl}update-data.html`;
-            link.textContent = 'Update data';
-            link.setAttribute('data-update-data-link', 'true');
-
-            const p = footerBottom.querySelector('p');
-            if (p) {
-                p.appendChild(document.createTextNode(' | '));
-                p.appendChild(link);
-            } else {
-                footerBottom.appendChild(link);
-            }
-        } catch (error) {
-            // ignore
-        }
-    }
+    // Back-compat: older code called this; keep as a no-op.
+    injectUpdateDataFooterLink() {}
 
     /**
      * Parse a CSV line properly handling quoted fields that may contain commas

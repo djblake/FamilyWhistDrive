@@ -11,6 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="/assets/js/footer-nav.js?v=2" defer></script>
+    <script src="/assets/js/media.js?v=2" defer></script>
+    <script src="/assets/js/lightbox.js?v=11" defer></script>
 </head>
 <body>
     <header class="header">
@@ -129,22 +131,10 @@
                         </div>
                     </div>
 
-                    <div class="latest-extra-card latest-seed-card">
-                        <div class="latest-extra-title">Seed watch</div>
-                        <div class="seed-mini-table" role="table" aria-label="Seed watch">
-                            <div class="seed-mini-row" role="row">
-                                <div class="seed-mini-rank" id="latest-seed-row-1-rank">#1</div>
-                                <div class="seed-mini-name" id="latest-seed-row-1-name">—</div>
-                                <div class="seed-mini-points" id="latest-seed-row-1-points">—</div>
-                                <div class="seed-mini-trend" id="latest-seed-row-1-trend" aria-label="Trend graph"></div>
-                            </div>
-                            <div class="seed-mini-row seed-mini-row--highlight" role="row">
-                                <div class="seed-mini-rank" id="latest-seed-row-winner-rank">—</div>
-                                <div class="seed-mini-name" id="latest-seed-row-winner-name">—</div>
-                                <div class="seed-mini-points" id="latest-seed-row-winner-points">—</div>
-                                <div class="seed-mini-trend" id="latest-seed-row-winner-trend" aria-label="Trend graph"></div>
-                            </div>
-                        </div>
+                    <div class="latest-extra-card" id="latest-day-notes-card" style="display:none;">
+                        <div class="latest-extra-title">From the day</div>
+                        <div class="latest-day-notes" id="latest-day-notes"></div>
+                        <div class="latest-cover-strip" id="latest-cover-strip" aria-label="Cover photos" style="display:none;"></div>
                     </div>
 
                     <div class="latest-cta">
@@ -159,6 +149,104 @@
                 <h2 class="section-title">A Brief History</h2>
                 <div class="history-card">
                     <div class="history-text" id="home-history-description">Loading history…</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="home-seedwatch-section" id="home-seedwatch-section" style="display:none;">
+            <div class="container">
+                <div class="feature-grid seedwatch-grid">
+                    <div class="feature-copy seedwatch-copy">
+                        <h2 class="section-title">Seed watch</h2>
+                        <p class="section-subtitle" id="home-seedwatch-summary">Loading seed watch…</p>
+                    </div>
+                    <div class="seedwatch-card">
+                        <div class="seed-mini-table" role="table" aria-label="Current seed table">
+                            <div class="seed-mini-row" role="row">
+                                <div class="seed-mini-rank" id="home-seed-row-1-rank">#1</div>
+                                <div class="seed-mini-name" id="home-seed-row-1-name">—</div>
+                                <div class="seed-mini-points" id="home-seed-row-1-points">—</div>
+                                <div class="seed-mini-trend" id="home-seed-row-1-trend" aria-label="Movement">—</div>
+                            </div>
+                            <div class="seed-mini-row" role="row">
+                                <div class="seed-mini-rank" id="home-seed-row-2-rank">#2</div>
+                                <div class="seed-mini-name" id="home-seed-row-2-name">—</div>
+                                <div class="seed-mini-points" id="home-seed-row-2-points">—</div>
+                                <div class="seed-mini-trend" id="home-seed-row-2-trend" aria-label="Movement">—</div>
+                            </div>
+                            <div class="seed-mini-row" role="row">
+                                <div class="seed-mini-rank" id="home-seed-row-3-rank">#3</div>
+                                <div class="seed-mini-name" id="home-seed-row-3-name">—</div>
+                                <div class="seed-mini-points" id="home-seed-row-3-points">—</div>
+                                <div class="seed-mini-trend" id="home-seed-row-3-trend" aria-label="Movement">—</div>
+                            </div>
+                            <div class="seed-mini-row seed-mini-row--highlight" role="row" id="home-seed-row-winner" style="display:none;">
+                                <div class="seed-mini-rank" id="home-seed-row-winner-rank">—</div>
+                                <div class="seed-mini-name" id="home-seed-row-winner-name">—</div>
+                                <div class="seed-mini-points" id="home-seed-row-winner-points">—</div>
+                                <div class="seed-mini-trend" id="home-seed-row-winner-trend" aria-label="Movement">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="home-feature-section home-feature-section--tables">
+            <div class="container">
+                <h2 class="section-title">Era &amp; Decade Standings</h2>
+                <p class="section-subtitle">A snapshot of who’s dominated different eras of the drive. Here’s the 2020s so far.</p>
+                <div class="feature-panel" style="margin-top: 1rem;">
+                    <div class="feature-panel-title">2020s decade standings</div>
+                    <div class="home-decade-table-wrap">
+                        <table class="home-decade-table" aria-label="2020s decade standings">
+                            <thead>
+                                <tr>
+                                    <th class="col-rank">Rank</th>
+                                    <th class="col-name">Player</th>
+                                    <th class="col-n">1sts</th>
+                                    <th class="col-n">2nds</th>
+                                    <th class="col-n">3rds</th>
+                                    <th class="col-tricks">Total tricks</th>
+                                    <th class="col-points home-decade-table__points">Points</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="col-rank" id="home-2020s-row-1-rank">#1</td>
+                                    <td class="col-name" id="home-2020s-row-1-name">—</td>
+                                    <td class="col-n" id="home-2020s-row-1-wins">—</td>
+                                    <td class="col-n" id="home-2020s-row-1-seconds">—</td>
+                                    <td class="col-n" id="home-2020s-row-1-thirds">—</td>
+                                    <td class="col-tricks" id="home-2020s-row-1-tricks">—</td>
+                                    <td class="col-points home-decade-table__points" id="home-2020s-row-1-points">—</td>
+                                </tr>
+                                <tr>
+                                    <td class="col-rank" id="home-2020s-row-2-rank">#2</td>
+                                    <td class="col-name" id="home-2020s-row-2-name">—</td>
+                                    <td class="col-n" id="home-2020s-row-2-wins">—</td>
+                                    <td class="col-n" id="home-2020s-row-2-seconds">—</td>
+                                    <td class="col-n" id="home-2020s-row-2-thirds">—</td>
+                                    <td class="col-tricks" id="home-2020s-row-2-tricks">—</td>
+                                    <td class="col-points home-decade-table__points" id="home-2020s-row-2-points">—</td>
+                                </tr>
+                                <tr>
+                                    <td class="col-rank" id="home-2020s-row-3-rank">#3</td>
+                                    <td class="col-name" id="home-2020s-row-3-name">—</td>
+                                    <td class="col-n" id="home-2020s-row-3-wins">—</td>
+                                    <td class="col-n" id="home-2020s-row-3-seconds">—</td>
+                                    <td class="col-n" id="home-2020s-row-3-thirds">—</td>
+                                    <td class="col-tricks" id="home-2020s-row-3-tricks">—</td>
+                                    <td class="col-points home-decade-table__points" id="home-2020s-row-3-points">—</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="small" style="margin-top:0.5rem;">Points: 1st=5, 2nd=3, 3rd=1 (per tournament). Tie-break: total tricks. Shared hands split tricks evenly.</div>
+                </div>
+
+                <div class="feature-actions" style="margin-top: 0.9rem;">
+                    <a class="btn btn-primary" href="tables/">See all Eras and Decades</a>
                 </div>
             </div>
         </section>
@@ -355,14 +443,18 @@
                 tournaments.sort((a, b) => (Number(b.year) || 0) - (Number(a.year) || 0));
                 const totalRounds = tournaments.reduce((sum, t) => sum + t.total_rounds, 0);
                 
-                // Fix tricks calculation - avoid double counting by only counting unique hands
+                // Fix tricks calculation - avoid double counting by only counting unique hands.
+                // Note: TournamentEngine keeps raw sheet header names (e.g. "Tricks Won"),
+                // so prefer that over legacy "Tricks_Won".
                 const uniqueHands = new Set();
                 const totalTricks = tournamentEngine.rawScorecards.reduce((sum, sc) => {
                     const handKey = `${sc.Tournament}-${sc.Year}-${sc.Round}-${sc.Player1}-${sc.Player2}`;
                     if (!uniqueHands.has(handKey)) {
                         uniqueHands.add(handKey);
-                        // Convert string to number to avoid concatenation
-                        const tricks = parseInt(sc.Tricks_Won) || 0;
+                        // Convert string to number to avoid concatenation.
+                        const rawTricks =
+                            (sc && (sc['Tricks Won'] ?? sc.Tricks_Won ?? sc['Tricks_Won'] ?? sc.TricksWon ?? sc['TricksWon'])) ?? '';
+                        const tricks = parseInt(rawTricks, 10) || 0;
                         return sum + tricks;
                     }
                     return sum;
@@ -412,6 +504,132 @@
                     li.textContent = text;
                     ul.appendChild(li);
                 };
+
+                async function renderLatestDayNotesAndCovers({ year, metaLatest }) {
+                    const card = document.getElementById('latest-day-notes-card');
+                    const notesEl = document.getElementById('latest-day-notes');
+                    const strip = document.getElementById('latest-cover-strip');
+                    if (!card || !notesEl || !strip) return;
+                    if (!year || !/^\d{4}$/.test(String(year))) return;
+
+                    // Day notes (stories + quotes)
+                    let notes = null;
+                    try {
+                        const res = await fetch(`/api/day-notes?year=${encodeURIComponent(String(year))}`, { cache: 'no-store' });
+                        notes = res.ok ? await res.json().catch(() => null) : null;
+                    } catch (_) {
+                        notes = null;
+                    }
+
+                    const stories = Array.isArray(notes?.stories) ? notes.stories : [];
+                    const quotes = Array.isArray(notes?.quotes) ? notes.quotes : [];
+                    const items = []
+                        .concat(stories.map(x => ({ type: 'story', author: x?.author, text: x?.text })))
+                        .concat(quotes.map(x => ({ type: 'quote', author: x?.author, text: x?.text })));
+
+                    const escapeHtml = (value) => String(value ?? '')
+                        .replaceAll('&', '&amp;')
+                        .replaceAll('<', '&lt;')
+                        .replaceAll('>', '&gt;')
+                        .replaceAll('"', '&quot;')
+                        .replaceAll("'", '&#39;');
+
+                    if (items.length) {
+                        notesEl.innerHTML = items.map(it => {
+                            const kind = it.type === 'quote' ? '💬 Quote' : '✨ Story';
+                            const author = String(it.author || '').trim();
+                            const text = String(it.text || '').trim();
+                            if (!text) return '';
+                            return `
+                                <div class="latest-note">
+                                    <div class="latest-note__kicker">${kind}</div>
+                                    <div class="latest-note__body">${escapeHtml(text)}</div>
+                                    ${author ? `<div class="latest-note__meta">— ${escapeHtml(author)}</div>` : ``}
+                                </div>
+                            `;
+                        }).join('');
+                        card.style.display = 'block';
+                    } else {
+                        notesEl.innerHTML = '';
+                        // Keep card hidden unless we have photos to show.
+                    }
+
+                    // Cover thumbnails row (6)
+                    if (!(window.WhistMedia && typeof window.WhistMedia.getTournamentMeta === 'function')) return;
+                    if (!(window.WhistMedia && typeof window.WhistMedia.publicUrlForKey === 'function')) return;
+
+                    let meta = metaLatest;
+                    if (!meta) {
+                        try { meta = await window.WhistMedia.getTournamentMeta(String(year)); } catch (_) { meta = null; }
+                    }
+                    const photos = Array.isArray(meta?.photos) ? meta.photos : [];
+                    const coverPicks = Array.isArray(meta?.coverPicks) ? meta.coverPicks.slice(0, 6) : [];
+                    const picks = coverPicks.length
+                        ? coverPicks
+                        : photos.slice().sort((a, b) => String(b?.uploadedAt || '').localeCompare(String(a?.uploadedAt || ''))).map(p => String(p?.key || '')).filter(Boolean).slice(0, 6);
+
+                    if (!picks.length) {
+                        if (!items.length) card.style.display = 'none';
+                        strip.style.display = 'none';
+                        strip.innerHTML = '';
+                        return;
+                    }
+
+                    // Build lightbox sequence: cover picks first, then rest (oldest-first), skipping duplicates.
+                    const byKey = new Map(photos.map(p => [String(p?.key || ''), p]));
+                    const highlightSet = new Set(picks.map(k => String(k || '')).filter(Boolean));
+                    const oldestFirst = photos.slice().sort((a, b) => String(a?.uploadedAt || '').localeCompare(String(b?.uploadedAt || '')));
+                    const rest = [];
+                    for (const p of oldestFirst) {
+                        const k = String(p?.key || '');
+                        if (!k || highlightSet.has(k)) continue;
+                        rest.push(k);
+                    }
+                    const sequenceKeys = picks.concat(rest);
+
+                    const lightboxItems = [];
+                    for (const k of sequenceKeys) {
+                        const fullUrl = await window.WhistMedia.publicUrlForKey(k);
+                        if (!fullUrl) continue;
+                        const entry = byKey.get(k);
+                        const thumbKey = String(entry?.thumbKey || '').trim();
+                        const thumbUrl = thumbKey ? await window.WhistMedia.publicUrlForKey(thumbKey) : '';
+                        const uploader = String(entry?.uploaderName || entry?.uploaderSlug || '').trim();
+                        const captionParts = [];
+                        if (uploader) captionParts.push(`Uploader: ${uploader}`);
+                        if (k) captionParts.push(`Key: ${k}`);
+                        lightboxItems.push({ url: fullUrl, thumbUrl: thumbUrl || '', caption: captionParts.join(' • ') });
+                    }
+
+                    const thumbs = [];
+                    for (let i = 0; i < picks.length; i++) {
+                        const k = String(picks[i] || '');
+                        if (!k) continue;
+                        const fullUrl = await window.WhistMedia.publicUrlForKey(k);
+                        if (!fullUrl) continue;
+                        const entry = byKey.get(k);
+                        const thumbKey = String(entry?.thumbKey || '').trim();
+                        const thumbUrl = thumbKey ? await window.WhistMedia.publicUrlForKey(thumbKey) : '';
+                        const imgUrl = thumbUrl || fullUrl;
+                        thumbs.push(`<a href="${fullUrl.replaceAll('"', '&quot;')}" data-index="${i}" rel="noopener"><img alt="Cover photo" loading="lazy" src="${imgUrl.replaceAll('"', '&quot;')}"></a>`);
+                    }
+                    strip.innerHTML = thumbs.join('');
+                    strip.style.display = 'grid';
+                    card.style.display = 'block';
+
+                    if (window.WhistLightbox && typeof window.WhistLightbox.open === 'function') {
+                        const goToHref = `tournaments/photos.html?year=${encodeURIComponent(String(year))}`;
+                        const goToLabel = `Go to ${year} gallery`;
+                        strip.querySelectorAll('a[data-index]').forEach(a => {
+                            a.addEventListener('click', (e) => {
+                                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                                e.preventDefault();
+                                const start = Number(a.getAttribute('data-index') || '0') || 0;
+                                window.WhistLightbox.open(lightboxItems, start, { goToHref, goToLabel });
+                            });
+                        });
+                    }
+                }
 
                 const extractParticipantIds = (tournamentObj) => {
                     const ids = [];
@@ -491,89 +709,205 @@
                     if (winnerSeedEl) winnerSeedEl.textContent = champSeedText;
 
                     // Hall of Fame: seed watch mini table (top seed + latest champion)
-                    const sparklineSvg = (values, opts = {}) => {
-                        const w = Number(opts.width) || 92;
-                        const h = Number(opts.height) || 26;
-                        const pad = Number(opts.pad) || 3;
-                        const stroke = opts.stroke || 'rgba(15, 23, 42, 0.72)';
-                        const fill = opts.fill || 'rgba(217, 175, 61, 0.20)';
-                        const dot = opts.dot || 'rgba(15, 23, 42, 0.85)';
-                        const pts = Array.isArray(values) ? values.filter(v => Number.isFinite(Number(v))).map(v => Number(v)) : [];
-                        if (pts.length === 0) {
-                            return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="${w}" height="${h}" rx="6" fill="rgba(15, 23, 42, 0.03)"/></svg>`;
-                        }
-                        if (pts.length === 1) {
-                            const cx = (w / 2).toFixed(1);
-                            const cy = (h / 2).toFixed(1);
-                            return `
-                                <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Trend">
-                                    <line x1="${pad}" y1="${cy}" x2="${w - pad}" y2="${cy}" stroke="rgba(15, 23, 42, 0.18)" stroke-width="2" stroke-linecap="round" />
-                                    <circle cx="${cx}" cy="${cy}" r="2.8" fill="${dot}" />
-                                </svg>
-                            `.trim();
-                        }
-                        const min = Math.min(...pts);
-                        const max = Math.max(...pts);
-                        const range = (max - min) || 1;
-                        const usableW = w - pad * 2;
-                        const usableH = h - pad * 2;
-                        const xy = pts.map((v, i) => {
-                            const x = pad + (i * (usableW / (pts.length - 1)));
-                            const y = pad + ((v - min) / range) * usableH;
-                            return { x, y };
-                        });
-                        const line = xy.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-                        const last = xy[xy.length - 1];
-                        const area = `${pad},${h - pad} ${line} ${w - pad},${h - pad}`;
-                        return `
-                            <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Trend">
-                                <path d="M ${area}" fill="${fill}" stroke="none" />
-                                <polyline points="${line}" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                <circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="2.6" fill="${dot}" />
-                            </svg>
-                        `.trim();
+                    const seedChangeLabel = (curRank, prevRank) => {
+                        const c = Number(curRank);
+                        if (!Number.isFinite(c)) return '—';
+                        if (prevRank === null || prevRank === undefined) return 'new';
+                        const p = Number(prevRank);
+                        if (!Number.isFinite(p)) return '—';
+                        const delta = p - c;
+                        if (delta === 0) return '—';
+                        if (delta > 0) return `↑${delta}`;
+                        return `↓${Math.abs(delta)}`;
                     };
 
-                    const seedRankSeries = (playerId) => {
+                    const findPrevRank = (playerId) => {
                         const id = String(playerId || '').trim();
-                        if (!id) return [];
-                        const series = [];
-                        for (let i = 0; i < allForSeed.length; i++) {
-                            const slice = allForSeed.slice(0, i + 1);
-                            const snap = (typeof tournamentEngine.computeOfficialSeedRankingsForTournaments === 'function')
-                                ? tournamentEngine.computeOfficialSeedRankingsForTournaments(slice, true)
-                                : [];
-                            const rec = snap.find(r => r && r.name === id);
-                            if (rec && Number.isFinite(Number(rec.seed_rank))) {
-                                series.push(Number(rec.seed_rank));
-                            }
-                        }
-                        const keep = 10;
-                        return series.length > keep ? series.slice(series.length - keep) : series;
+                        if (!id) return null;
+                        const rec = seedBefore.find(r => r && r.name === id);
+                        return rec && Number.isFinite(Number(rec.seed_rank)) ? Number(rec.seed_rank) : null;
                     };
 
-                    const fillSeedRow = (prefix, rankText, playerId, pointsText) => {
+                    const fillSeedRowSimple = (prefix, entry) => {
                         const rankEl = document.getElementById(`${prefix}-rank`);
                         const nameEl = document.getElementById(`${prefix}-name`);
                         const ptsEl = document.getElementById(`${prefix}-points`);
                         const trendEl = document.getElementById(`${prefix}-trend`);
-                        if (rankEl) rankEl.textContent = rankText || '—';
-                        if (nameEl) nameEl.textContent = playerId ? safeName(playerId) : '—';
-                        if (ptsEl) ptsEl.textContent = pointsText || '—';
-                        if (trendEl) {
-                            const series = seedRankSeries(playerId);
-                            trendEl.innerHTML = sparklineSvg(series);
+                        if (!entry) {
+                            if (rankEl) rankEl.textContent = '—';
+                            if (nameEl) nameEl.textContent = '—';
+                            if (ptsEl) ptsEl.textContent = '—';
+                            if (trendEl) trendEl.textContent = '—';
+                            return;
                         }
+                        const prevRank = findPrevRank(entry.name);
+                        if (rankEl) rankEl.textContent = entry.seed_rank ? `#${entry.seed_rank}` : '—';
+                        if (nameEl) nameEl.textContent = entry.name ? safeName(entry.name) : '—';
+                        if (ptsEl) ptsEl.textContent = Number.isFinite(Number(entry.seed_points)) ? `${entry.seed_points} pts` : '—';
+                        if (trendEl) trendEl.textContent = seedChangeLabel(entry.seed_rank, prevRank);
                     };
 
-                    const topSeed = seedCurrent && seedCurrent.length ? seedCurrent[0] : null;
-                    fillSeedRow('latest-seed-row-1', '#1', topSeed?.name, topSeed ? `${topSeed.seed_points} pts` : '—');
-                    fillSeedRow(
-                        'latest-seed-row-winner',
-                        champSeed ? `#${champSeed.seed_rank}` : '—',
-                        champ?.player || null,
-                        champSeed ? `${champSeed.seed_points} pts` : '—'
-                    );
+                    // Seed watch section (moved below Brief history)
+                    const seedSection = document.getElementById('home-seedwatch-section');
+                    const seedSummaryEl = document.getElementById('home-seedwatch-summary');
+                    if (seedSection) seedSection.style.display = 'block';
+
+                    const topNow = seedCurrent && seedCurrent.length ? seedCurrent[0] : null;
+                    const topPrev = seedBefore && seedBefore.length ? seedBefore[0] : null;
+                    let summaryBits = [];
+                    if (topNow && topNow.name) {
+                        if (topPrev && topPrev.name === topNow.name) {
+                            summaryBits.push(`${safeName(topNow.name)} retains #1 from last year.`);
+                        } else {
+                            const was = findPrevRank(topNow.name);
+                            summaryBits.push(`${safeName(topNow.name)} takes #1${Number.isFinite(Number(was)) ? ` (from #${was})` : ''}.`);
+                        }
+                    }
+                    if (champ && champ.player) {
+                        const now = champSeed && champSeed.seed_rank ? Number(champSeed.seed_rank) : null;
+                        const was = findPrevRank(champ.player);
+                        if (Number.isFinite(now) && Number.isFinite(was)) {
+                            if (now !== was) summaryBits.push(`${safeName(champ.player)} moves from #${was} to #${now} after winning.`);
+                            else summaryBits.push(`${safeName(champ.player)} stays at #${now} after winning.`);
+                        } else if (Number.isFinite(now)) {
+                            summaryBits.push(`${safeName(champ.player)} enters at #${now} after winning.`);
+                        }
+                    }
+                    if (seedSummaryEl) {
+                        seedSummaryEl.textContent = summaryBits.length
+                            ? `${summaryBits.join(' ')} Showing top 3 plus the champion.`
+                            : 'Current seed table (top 3 plus the champion).';
+                    }
+
+                    fillSeedRowSimple('home-seed-row-1', seedCurrent[0] || null);
+                    fillSeedRowSimple('home-seed-row-2', seedCurrent[1] || null);
+                    fillSeedRowSimple('home-seed-row-3', seedCurrent[2] || null);
+
+                    const winnerRow = document.getElementById('home-seed-row-winner');
+                    const champInTop3 = Boolean(champ?.player && seedCurrent.slice(0, 3).some(r => r && r.name === champ.player));
+                    if (winnerRow) winnerRow.style.display = (!champInTop3 && champSeed) ? 'grid' : 'none';
+                    if (!champInTop3 && champSeed) {
+                        // Map champSeed to the expected entry shape for fillSeedRowSimple
+                        fillSeedRowSimple('home-seed-row-winner', champSeed);
+                    }
+
+                    // 2020s decade snapshot (match `tournaments/period.html` logic, but top 3 only)
+                    const computePeriodRows = (startYear, endYear) => {
+                        const start = Number(startYear);
+                        const end = Number(endYear);
+                        if (!Number.isFinite(start) || !Number.isFinite(end)) return [];
+
+                        const pointsByPos = { 1: 5, 2: 3, 3: 1 };
+                        const stats = new Map(); // id -> {id, points, tricks, wins, seconds, thirds}
+
+                        const ensure = (id) => {
+                            const key = String(id || '').trim();
+                            if (!key) return null;
+                            if (!stats.has(key)) stats.set(key, { id: key, points: 0, tricks: 0, wins: 0, seconds: 0, thirds: 0 });
+                            return stats.get(key);
+                        };
+
+                        const idsForStanding = (standing) => {
+                            if (!standing) return [];
+                            if (standing.is_partnership && Array.isArray(standing.partnership_players) && standing.partnership_players.length) {
+                                return standing.partnership_players.map(x => String(x || '').trim()).filter(Boolean);
+                            }
+                            const p = String(standing.player || '').trim();
+                            return p ? [p] : [];
+                        };
+
+                        const tours = Array.isArray(tournamentsAsc) ? tournamentsAsc : [];
+                        const inRange = tours.filter(t => Number.isFinite(Number(t?.year)) && Number(t.year) >= start && Number(t.year) <= end);
+                        for (const t of inRange) {
+                            const standings = Array.isArray(t?.final_standings) ? t.final_standings : [];
+                            for (const s of standings) {
+                                const pos = Number.isFinite(Number(s?.position)) ? Number(s.position) : null;
+                                const ids = idsForStanding(s);
+                                if (!ids.length) continue;
+
+                                const rawTr = Number(s?.total_tricks);
+                                const tr = Number.isFinite(rawTr) ? rawTr : 0;
+                                const isShared = !!(s?.is_partnership && Array.isArray(s?.partnership_players) && s.partnership_players.length > 1);
+                                const splitTr = isShared ? (tr / Math.max(1, ids.length)) : tr;
+
+                                const pts = (pos && pointsByPos[pos]) ? pointsByPos[pos] : 0;
+                                for (const id of ids) {
+                                    const rec = ensure(id);
+                                    if (!rec) continue;
+                                    rec.points += pts;
+                                    rec.tricks += splitTr;
+                                    if (pos === 1) rec.wins += 1;
+                                    if (pos === 2) rec.seconds += 1;
+                                    if (pos === 3) rec.thirds += 1;
+                                }
+                            }
+                        }
+
+                        const rows = Array.from(stats.values()).map(r => ({
+                            ...r,
+                            name: (tournamentEngine && typeof tournamentEngine.getDisplayName === 'function')
+                                ? tournamentEngine.getDisplayName(r.id)
+                                : safeName(r.id)
+                        }));
+                        rows.sort((a, b) =>
+                            (b.points - a.points) ||
+                            (b.tricks - a.tricks) ||
+                            (b.wins - a.wins) ||
+                            (b.seconds - a.seconds) ||
+                            (b.thirds - a.thirds) ||
+                            String(a.name).localeCompare(String(b.name))
+                        );
+
+                        // Rank with ties on (points, tricks)
+                        let currentRank = 0;
+                        let prevKey = null;
+                        rows.forEach((r, idx) => {
+                            const key = `${r.points}|${Number(r.tricks).toFixed(4)}`;
+                            if (key !== prevKey) {
+                                currentRank = idx + 1;
+                                prevKey = key;
+                            }
+                            r.rank = currentRank;
+                        });
+                        return rows;
+                    };
+
+                    const fillHome2020sRow = (i, row) => {
+                        const rankEl = document.getElementById(`home-2020s-row-${i}-rank`);
+                        const nameEl = document.getElementById(`home-2020s-row-${i}-name`);
+                        const winsEl = document.getElementById(`home-2020s-row-${i}-wins`);
+                        const secondsEl = document.getElementById(`home-2020s-row-${i}-seconds`);
+                        const thirdsEl = document.getElementById(`home-2020s-row-${i}-thirds`);
+                        const tricksEl = document.getElementById(`home-2020s-row-${i}-tricks`);
+                        const ptsEl = document.getElementById(`home-2020s-row-${i}-points`);
+
+                        if (!row) {
+                            if (rankEl) rankEl.textContent = `#${i}`;
+                            if (nameEl) nameEl.textContent = '—';
+                            if (winsEl) winsEl.textContent = '—';
+                            if (secondsEl) secondsEl.textContent = '—';
+                            if (thirdsEl) thirdsEl.textContent = '—';
+                            if (tricksEl) tricksEl.textContent = '—';
+                            if (ptsEl) ptsEl.textContent = '—';
+                            return;
+                        }
+
+                        if (rankEl) rankEl.textContent = `#${row.rank || i}`;
+                        if (nameEl) nameEl.textContent = row.name || '—';
+                        if (winsEl) winsEl.textContent = Number.isFinite(Number(row.wins)) ? String(row.wins) : '0';
+                        if (secondsEl) secondsEl.textContent = Number.isFinite(Number(row.seconds)) ? String(row.seconds) : '0';
+                        if (thirdsEl) thirdsEl.textContent = Number.isFinite(Number(row.thirds)) ? String(row.thirds) : '0';
+                        if (tricksEl) {
+                            const tricks = Number.isFinite(Number(row.tricks)) ? Math.round(Number(row.tricks)) : null;
+                            tricksEl.textContent = (tricks !== null) ? tricks.toLocaleString() : '—';
+                        }
+                        if (ptsEl) ptsEl.textContent = Number.isFinite(Number(row.points)) ? String(row.points) : '—';
+                    };
+
+                    const rows2020s = computePeriodRows(2020, 2029);
+                    fillHome2020sRow(1, rows2020s[0] || null);
+                    fillHome2020sRow(2, rows2020s[1] || null);
+                    fillHome2020sRow(3, rows2020s[2] || null);
 
                     // Hall of Fame panel: current #1 seed (simple standout stats)
                     const hofSeedEl = document.getElementById('hof-current-seed-1');
@@ -608,6 +942,9 @@
                     };
                     setPodiumMini('second', second);
                     setPodiumMini('third', third);
+
+                    // Latest: show day notes (stories/quotes) + cover thumbs row
+                    await renderLatestDayNotesAndCovers({ year, metaLatest: null });
 
                     // Podium meta (date/entrants/rounds) above the 2nd/3rd cards (not in the story)
                     const podiumMetaEl = document.getElementById('latest-podium-meta');
@@ -1540,6 +1877,164 @@
             color: var(--text-secondary-dark);
             font-weight: 750;
         }
+
+        .home-seedwatch-section {
+            /* Match the site's poker-green section styling (same as Tournament Archive background) */
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-accent) 100%);
+            padding: var(--spacing-3xl) 0;
+        }
+        .home-seedwatch-section .section-title,
+        .home-seedwatch-section .section-subtitle {
+            color: #ffffff;
+        }
+        .seedwatch-card {
+            margin-top: 0.75rem;
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: var(--border-radius-lg);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            box-shadow: var(--shadow-card);
+            padding: var(--spacing-lg);
+            backdrop-filter: none;
+        }
+
+        /* Keep the section header white, but make the table readable on the white card */
+        .home-seedwatch-section .seedwatch-card .seed-mini-row {
+            background: rgba(15, 23, 42, 0.04);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+        }
+        .home-seedwatch-section .seedwatch-card .seed-mini-row--highlight {
+            background: rgba(217, 175, 61, 0.12);
+            border-color: rgba(217, 175, 61, 0.28);
+        }
+        .home-seedwatch-section .seedwatch-card .seed-mini-rank,
+        .home-seedwatch-section .seedwatch-card .seed-mini-name,
+        .home-seedwatch-section .seedwatch-card .seed-mini-points {
+            color: var(--text-primary-dark);
+        }
+        .home-seedwatch-section .seedwatch-card .seed-mini-trend {
+            color: var(--text-secondary-dark);
+            font-weight: 900;
+        }
+
+        /* Center-align the descriptions for Seed watch and Era/Decade sections */
+        .home-seedwatch-section .section-title,
+        .home-seedwatch-section .section-subtitle,
+        .home-feature-section--tables .section-title,
+        .home-feature-section--tables .section-subtitle {
+            text-align: center;
+        }
+
+        .home-decade-table-wrap {
+            overflow: auto;
+            margin-top: 0.35rem;
+            border-radius: var(--border-radius-md);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+        }
+        .home-decade-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 640px;
+            background: rgba(255, 255, 255, 0.96);
+        }
+        .home-decade-table th,
+        .home-decade-table td {
+            padding: 0.65rem 0.75rem;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            color: var(--text-primary-dark);
+            font-weight: 700;
+            font-size: 0.92rem;
+            white-space: nowrap;
+        }
+        .home-decade-table thead th {
+            background: rgba(15, 23, 42, 0.03);
+            font-weight: 900;
+            color: rgba(15, 23, 42, 0.70);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-size: 0.78rem;
+        }
+        .home-decade-table thead th.col-name,
+        .home-decade-table td.col-name {
+            text-align: left;
+        }
+        .home-decade-table .col-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 220px;
+        }
+        .home-decade-table .col-n,
+        .home-decade-table .col-rank,
+        .home-decade-table .col-tricks,
+        .home-decade-table .col-points {
+            text-align: right;
+        }
+        .home-decade-table__points {
+            font-weight: 950 !important;
+            color: var(--gold) !important;
+        }
+
+        .seedwatch-grid {
+            grid-template-columns: 1.05fr 0.95fr;
+        }
+
+        /* Tables feature section should be white (alternate background) */
+        .home-feature-section--tables {
+            background: #ffffff;
+            color: var(--text-primary-dark);
+        }
+        .home-feature-section--tables .section-title,
+        .home-feature-section--tables .section-subtitle {
+            color: var(--text-primary-dark);
+        }
+
+        .latest-day-notes {
+            display: grid;
+            gap: 0.6rem;
+            margin-top: 0.6rem;
+        }
+        .latest-note {
+            padding: 0.65rem 0.75rem;
+            border-radius: 14px;
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            background: rgba(15, 23, 42, 0.03);
+        }
+        .latest-note__kicker {
+            font-weight: 950;
+            color: var(--text-primary-dark);
+            font-size: 0.85rem;
+            margin-bottom: 0.2rem;
+        }
+        .latest-note__body {
+            color: var(--text-secondary-dark);
+            font-weight: 600;
+            font-size: 0.92rem;
+            line-height: 1.35;
+            white-space: pre-wrap;
+        }
+        .latest-note__meta {
+            margin-top: 0.35rem;
+            font-size: 0.85rem;
+            color: rgba(15, 23, 42, 0.65);
+            font-weight: 700;
+        }
+        .latest-cover-strip {
+            margin-top: 0.75rem;
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 0.6rem;
+        }
+        .latest-cover-strip a {
+            display: block;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            background: rgba(15, 23, 42, 0.04);
+            aspect-ratio: 16 / 10;
+        }
+        .latest-cover-strip a img { width: 100%; height: 100%; object-fit: cover; display:block; }
+        @media (max-width: 980px) { .latest-cover-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        @media (max-width: 520px) { .latest-cover-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
         /* Feature sections: default is dark background (white text). Only force dark text on the white sections. */
         .home-feature-section--players,
