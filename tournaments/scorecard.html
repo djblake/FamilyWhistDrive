@@ -116,7 +116,6 @@
                                     <th>Round</th>
                                     <th>Trump</th>
                                     <th>Table</th>
-                                    <th>Scan</th>
                                     <th>Partner</th>
                                     <th>Our Tricks</th>
                                     <th>Their Tricks</th>
@@ -1090,9 +1089,6 @@
                             <span class="trump-symbol ${round.trump.toLowerCase()}">${trumpSymbol}</span>
                         </td>
                         <td class="table-number">${round.table}</td>
-                        <td class="scan-cell">
-                            <a href="#" class="scan-btn" data-year="${escapeHtmlAttribute(yearParam)}" data-round="${escapeHtmlAttribute(round.round)}" data-table="${escapeHtmlAttribute(round.table)}" aria-label="View original scan for round ${escapeHtmlAttribute(round.round)} table ${escapeHtmlAttribute(round.table)}">📷</a>
-                        </td>
                         <td class="partner-name">
                             ${Array.isArray(round.partnerDetails) && round.partnerDetails.length > 0
                                 ? round.partnerDetails.map(partner => 
@@ -1126,52 +1122,6 @@
             }).join('');
 
             tbody.innerHTML = html;
-
-            // Round/table scan link handler (lazy probe + graceful fallback).
-            if (tbody && !tbody.dataset.scanLinkInit) {
-                tbody.dataset.scanLinkInit = 'true';
-                tbody.addEventListener('click', async (e) => {
-                    const a = e.target && e.target.closest ? e.target.closest('.scan-btn') : null;
-                    if (!a) return;
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    if (!(window.WhistMedia && typeof window.WhistMedia.scorecardScanUrl === 'function')) {
-                        alert('Scan viewer is not available (media config not loaded).');
-                        return;
-                    }
-
-                    const year = a.getAttribute('data-year') || '';
-                    const round = a.getAttribute('data-round') || '';
-                    const table = a.getAttribute('data-table') || '';
-                    if (!year || !round || !table) return;
-
-                    a.textContent = '⏳';
-                    a.setAttribute('aria-busy', 'true');
-
-                    try {
-                        const url = await window.WhistMedia.scorecardScanUrl(year, round, table);
-                        if (!url) throw new Error('No media base URL configured');
-
-                        const img = new Image();
-                        img.onload = () => {
-                            a.textContent = '📷';
-                            a.removeAttribute('aria-busy');
-                            window.open(url, '_blank', 'noopener');
-                        };
-                        img.onerror = () => {
-                            a.textContent = '📷';
-                            a.removeAttribute('aria-busy');
-                            alert(`No scan uploaded yet for ${year} round ${round}, table ${table}.`);
-                        };
-                        img.src = `${url}${url.includes('?') ? '&' : '?'}probe=${Date.now()}`;
-                    } catch (err) {
-                        a.textContent = '📷';
-                        a.removeAttribute('aria-busy');
-                        alert(err && err.message ? err.message : 'Unable to load scan.');
-                    }
-                });
-            }
 
             // Click-to-toggle tooltip (useful on touch devices / when hover tooltips are disabled).
             if (tbody && !tbody.dataset.inconsistencyTooltipInit) {
@@ -1880,29 +1830,7 @@
             background-color: rgba(79, 70, 229, 0.1);
         }
 
-        .scan-cell {
-            text-align: center;
-        }
-
-        .scan-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px;
-            height: 32px;
-            border-radius: 999px;
-            border: 1px solid rgba(15, 23, 42, 0.14);
-            background: rgba(255, 255, 255, 0.85);
-            text-decoration: none;
-            cursor: pointer;
-            transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-        }
-
-        .scan-btn:hover {
-            border-color: rgba(15, 23, 42, 0.22);
-            background: rgba(255, 255, 255, 1);
-            transform: translateY(-1px);
-        }
+        /* Scan column removed (scorecard scan is handled in the Scorecard Verification section below) */
 
         /* Header: "See player profile" CTA */
         .player-actions {

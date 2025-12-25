@@ -525,7 +525,7 @@
                     const quotes = Array.isArray(notes?.quotes) ? notes.quotes : [];
                     const items = []
                         .concat(stories.map(x => ({ type: 'story', author: x?.author, text: x?.text })))
-                        .concat(quotes.map(x => ({ type: 'quote', author: x?.author, text: x?.text })));
+                        .concat(quotes.map(x => ({ type: 'quote', author: x?.author, saidBy: x?.saidBy, text: x?.text })));
 
                     const escapeHtml = (value) => String(value ?? '')
                         .replaceAll('&', '&amp;')
@@ -537,9 +537,22 @@
                     if (items.length) {
                         notesEl.innerHTML = items.map(it => {
                             const kind = it.type === 'quote' ? '💬 Quote' : '✨ Story';
-                            const author = String(it.author || '').trim();
+                            const author = String(it.author || '').trim(); // submitter
+                            const saidBy = String(it.saidBy || '').trim(); // quoter / speaker (quotes only)
                             const text = String(it.text || '').trim();
                             if (!text) return '';
+
+                            if (it.type === 'quote') {
+                                const speaker = saidBy || author;
+                                const body = speaker ? `${escapeHtml(speaker)}: ${escapeHtml(text)}` : escapeHtml(text);
+                                return `
+                                    <div class="latest-note">
+                                        <div class="latest-note__kicker">${kind}</div>
+                                        <div class="latest-note__body">${body}</div>
+                                        ${speaker ? `<div class="latest-note__meta">— ${escapeHtml(speaker)}</div>` : ``}
+                                    </div>
+                                `;
+                            }
                             return `
                                 <div class="latest-note">
                                     <div class="latest-note__kicker">${kind}</div>
