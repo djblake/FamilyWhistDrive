@@ -19,9 +19,32 @@
             padding: var(--spacing-xl);
             border: 1px solid rgba(15, 23, 42, 0.10);
             box-shadow: var(--shadow-card);
+            color: var(--text-primary-dark);
         }
         .upload-title { font-size: 1.6rem; margin-bottom: 0.25rem; color: var(--text-primary-dark); font-weight: 950; }
         .upload-sub { color: var(--text-secondary-dark); margin-bottom: var(--spacing-lg); }
+        .upload-steps {
+            margin-top: 0.75rem;
+            margin-bottom: var(--spacing-lg);
+            background: rgba(15, 23, 42, 0.03);
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 14px;
+            padding: 0.85rem 0.95rem;
+        }
+        .upload-steps-title {
+            font-weight: 950;
+            letter-spacing: 0.02em;
+            color: var(--text-primary-dark);
+            margin-bottom: 0.45rem;
+        }
+        .upload-steps ol {
+            margin: 0;
+            padding-left: 1.2rem;
+            color: var(--text-secondary-dark);
+            font-weight: 650;
+            line-height: 1.55;
+        }
+        .upload-steps li { margin: 0.25rem 0; }
         .row { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
         .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
         @media (max-width: 720px) { .row-2 { grid-template-columns: 1fr; } }
@@ -60,6 +83,7 @@
             background: rgba(15, 23, 42, 0.04);
             font-weight: 800;
             font-size: 0.8rem;
+            color: var(--text-primary-dark);
         }
         .pill.ok { border-color: rgba(34, 197, 94, 0.25); background: rgba(34, 197, 94, 0.08); }
         .pill.bad { border-color: rgba(239, 68, 68, 0.25); background: rgba(239, 68, 68, 0.08); }
@@ -91,6 +115,15 @@
                 <div class="upload-card">
                     <div class="upload-title">Upload tournament photos</div>
                     <div class="upload-sub">Add your tournament-day photos to the gallery. We’ll group them under your name.</div>
+                    <div class="upload-steps" aria-label="How to upload photos">
+                        <div class="upload-steps-title">How to upload</div>
+                        <ol>
+                            <li>Enter the password and press 'Unlock uploads'</li>
+                            <li>Enter the tournament year and your name</li>
+                            <li>Choose the photos you want to upload</li>
+                            <li>Press 'Upload photos'</li>
+                        </ol>
+                    </div>
 
                     <div class="row">
                         <label for="family-password">Family password</label>

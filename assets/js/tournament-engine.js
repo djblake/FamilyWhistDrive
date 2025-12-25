@@ -1784,21 +1784,7 @@ class TournamentEngine {
                 });
 
 
-                if (scorecard.Tie_Break !== undefined && scorecard.Tie_Break !== '') {
-                    const tieBreakValue = parseFloat(scorecard.Tie_Break);
-                    if (!isNaN(tieBreakValue)) {
-                        scorecard.Tie_Break = tieBreakValue;
-                        const tieKey = this.getCombinationKeyFromPlayerName(scorecard.Player);
-                        if (tieKey) {
-                            const existing = this.tieBreakers.get(tieKey);
-                            if (existing === undefined || tieBreakValue < existing) {
-                                this.tieBreakers.set(tieKey, tieBreakValue);
-                            }
-                        }
-                    } else {
-                        delete scorecard.Tie_Break;
-                    }
-                }
+                // Tie_Break is parsed later; tie-break ordering must be per-tournament (not global across all years).
                 
                 if (scorecard.Id) {
                     scorecardIdsDebug.add(`${scorecard.Id} (len=${scorecard.Id.length})`);
@@ -1834,6 +1820,20 @@ class TournamentEngine {
                     }
                 } else {
                     scorecard.Tie_Break = null;
+                }
+
+                // Persist tie-break value for THIS tournament only (keyed by TournamentId + combination key).
+                // This ensures editing a single year's Tie_Break values affects that year, rather than being overwritten by other years.
+                if (typeof scorecard.Tie_Break === 'number' && Number.isFinite(scorecard.Tie_Break)) {
+                    const tieKey = this.getCombinationKeyFromPlayerName(scorecard.Player);
+                    const tournamentId = String(scorecard.TournamentId || '').trim();
+                    if (tieKey && tournamentId) {
+                        const mapKey = `${tournamentId}|${tieKey}`;
+                        const existing = this.tieBreakers.get(mapKey);
+                        if (existing === undefined || scorecard.Tie_Break < existing) {
+                            this.tieBreakers.set(mapKey, scorecard.Tie_Break);
+                        }
+                    }
                 }
 
                 // Track inconsistencies
@@ -3114,7 +3114,7 @@ class TournamentEngine {
         }
         
         // Calculate final standings
-        const finalStandings = this.calculateFinalStandings(playerScores);
+        const finalStandings = this.calculateFinalStandings(playerScores, canonicalTournamentId || tournamentId);
         
         
         // Store tournament data
@@ -3371,7 +3371,7 @@ class TournamentEngine {
      * Calculate final tournament standings
      * Only includes actual tournament entries (partnerships and individuals), not individual trackers
      */
-    calculateFinalStandings(playerScores) {
+    calculateFinalStandings(playerScores, tournamentId) {
         const standings = [];
         
         for (const [player, data] of playerScores) {
@@ -3392,7 +3392,8 @@ class TournamentEngine {
             }
             
             const combinationKey = data.combination_key || this.getCombinationKeyFromPlayerName(player);
-            const tieBreakValue = combinationKey ? this.tieBreakers.get(combinationKey) : undefined;
+            const tid = String(tournamentId || '').trim();
+            const tieBreakValue = (tid && combinationKey) ? this.tieBreakers.get(`${tid}|${combinationKey}`) : undefined;
             
             standings.push({
                 player: player,
@@ -3409,7 +3410,7 @@ class TournamentEngine {
             });
         }
         
-        // Sort by combined tricks (descending) with tie-break support
+        // Sort by combined tricks (descending) with tie-break support (ascending tie-break value wins)
         standings.sort((a, b) => {
             if (b.total_tricks !== a.total_tricks) {
                 return b.total_tricks - a.total_tricks;
