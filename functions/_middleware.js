@@ -240,6 +240,18 @@ function gatePage({ next = '/' } = {}) {
       height: auto;
       display: block;
     }
+    .parrot-btn {
+      border: none;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      line-height: 0;
+    }
+    .parrot-btn:focus-visible {
+      outline: 3px solid rgba(59, 130, 246, 0.25);
+      outline-offset: 6px;
+      border-radius: 16px;
+    }
     .parrot-caption {
       font-size: 22px;
       font-weight: 650;
@@ -324,13 +336,15 @@ function gatePage({ next = '/' } = {}) {
 <body>
   <div class="wrap">
     <div class="card">
-      <img
-        class="parrot"
-        src="${parrotSrc}"
-        srcset="${parrotSrcSet}"
-        sizes="(max-width: 640px) 70vw, 320px"
-        alt="Parrot mascot"
-      />
+      <button class="parrot-btn" id="parrotBtn" type="button" aria-label="Play parrot sound">
+        <img
+          class="parrot"
+          src="${parrotSrc}"
+          srcset="${parrotSrcSet}"
+          sizes="(max-width: 640px) 70vw, 320px"
+          alt="Parrot mascot"
+        />
+      </button>
       <div class="parrot-caption">"Hello, talk to me?"</div>
       <form id="gateForm" autocomplete="off">
         <div class="pw-row pw-stack">
@@ -368,6 +382,17 @@ function gatePage({ next = '/' } = {}) {
         helloAttempted = true;
         return Promise.resolve(false);
       }
+    }
+
+    function playHelloNow() {
+      try {
+        const a = new Audio(helloUrl);
+        a.volume = 1.0;
+        const p = a.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch(() => {});
+        }
+      } catch (_) {}
     }
 
     function retryHelloUntilItPlays() {
@@ -459,7 +484,15 @@ function gatePage({ next = '/' } = {}) {
     const form = document.getElementById('gateForm');
     const pw = document.getElementById('pw');
     const msg = document.getElementById('msg');
+    const parrotBtn = document.getElementById('parrotBtn');
     if (pw) setTimeout(() => pw.focus(), 50);
+
+    if (parrotBtn) {
+      parrotBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        playHelloNow();
+      });
+    }
 
     async function submit() {
       if (!pw) return;

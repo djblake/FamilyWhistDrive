@@ -1,4 +1,61 @@
 (() => {
+  const DEFAULT_SUBTITLE = `Est. 1985 • The World's Most Elite Family Tournament`;
+  const subtitleForPath = (pathname) => {
+    const p = String(pathname || '/');
+    if (p.startsWith('/admin')) return 'Admin';
+    if (p.startsWith('/upload')) return 'Uploads';
+    return DEFAULT_SUBTITLE;
+  };
+
+  const isActiveLink = (hrefPath, currentPath) => {
+    const cur = String(currentPath || '/');
+    const target = String(hrefPath || '/');
+
+    // Home: active on "/" or "/index.html"
+    if (target === '/') {
+      return cur === '/' || cur === '/index.html';
+    }
+
+    // Directory pages: treat "/tournaments/" active for "/tournaments/..." etc.
+    if (target.endsWith('/')) {
+      return cur === target || cur.startsWith(target);
+    }
+
+    return cur === target;
+  };
+
+  const buildHeaderHtml = () => {
+    const path = (typeof window !== 'undefined' && window.location) ? window.location.pathname : '/';
+    const subtitle = subtitleForPath(path);
+
+    const links = [
+      { label: 'Home', href: '/' },
+      { label: 'Tournaments', href: '/tournaments/' },
+      { label: 'Tables', href: '/tables/' },
+      { label: 'Players', href: '/players/' },
+      { label: 'Hall of Fame', href: '/leaderboard/' },
+      { label: 'Statistics', href: '/stats/' },
+    ];
+
+    const nav = links.map(l => {
+      const active = isActiveLink(l.href, path) ? ' active' : '';
+      return `<a href="${l.href}" class="nav-link${active}">${l.label}</a>`;
+    }).join('');
+
+    return `
+      <div class="header-content">
+        <div class="logo-section">
+          <div class="card-suits"><span class="heart">♥</span> <span class="club">♣</span> <span class="diamond">♦</span> <span class="spade">♠</span></div>
+          <h1 class="site-title">Ruston Family Whist Drive</h1>
+          <p class="site-subtitle">${subtitle}</p>
+        </div>
+        <nav class="main-nav">
+          ${nav}
+        </nav>
+      </div>
+    `.trim();
+  };
+
   const NAV_HTML = `
     <div class="footer-section">
       <h4>Explore</h4>
@@ -22,7 +79,7 @@
     </div>
   `.trim();
 
-  const FOOTER_BOTTOM_TEXT = 'Ruston Family Whist Drive. Est. 1984. © 2024 David Blake. Site created by David Blake.';
+  const FOOTER_BOTTOM_TEXT = 'Ruston Family Whist Drive. Est. 1985. © 2024 David Blake. Site created by David Blake.';
 
   const pickWeighted = (items) => {
     // items: [{ value, weight }]
@@ -106,53 +163,31 @@
   };
 
   const injectHeaderParrot = () => {
-    const titles = Array.from(document.querySelectorAll('.site-title'));
-    if (!titles.length) return;
+    const headerContainer = document.querySelector('.header .container');
+    if (!headerContainer) return;
+    if (headerContainer.querySelector('.header-parrot-btn')) return;
 
-    for (const titleEl of titles) {
-      if (!titleEl || !(titleEl instanceof HTMLElement)) continue;
-      if (titleEl.dataset && titleEl.dataset.parrotInjected === '1') continue;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'header-parrot-btn';
+    btn.setAttribute('aria-label', 'Play parrot sound');
 
-      // Avoid double-inject if markup already contains a parrot button.
-      const existing = titleEl.parentElement?.querySelector('.site-parrot-btn');
-      if (existing) {
-        titleEl.dataset.parrotInjected = '1';
-        continue;
-      }
+    const img = document.createElement('img');
+    img.className = 'header-parrot-img';
+    img.alt = '';
+    img.decoding = 'async';
+    img.loading = 'eager';
+    img.src = '/assets/images/WhistParrot_64.png';
+    img.srcset = '/assets/images/WhistParrot_64.png 64w, /assets/images/WhistParrot_256.png 256w, /assets/images/WhistParrot.png 1024w';
+    img.sizes = '84px';
 
-      const row = document.createElement('div');
-      row.className = 'site-title-row';
+    btn.appendChild(img);
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      playParrotSound();
+    });
 
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'site-parrot-btn';
-      btn.setAttribute('aria-label', 'Play parrot sound');
-
-      const img = document.createElement('img');
-      img.className = 'site-parrot-img';
-      img.alt = '';
-      img.decoding = 'async';
-      img.loading = 'eager';
-      img.src = '/assets/images/WhistParrot_64.png';
-      img.srcset = '/assets/images/WhistParrot_64.png 64w, /assets/images/WhistParrot_256.png 256w, /assets/images/WhistParrot.png 1024w';
-      img.sizes = '56px';
-
-      btn.appendChild(img);
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        playParrotSound();
-      });
-
-      const parent = titleEl.parentElement;
-      if (!parent) continue;
-
-      // Replace the title with a row that contains [parrot][title]
-      parent.insertBefore(row, titleEl);
-      row.appendChild(btn);
-      row.appendChild(titleEl);
-
-      titleEl.dataset.parrotInjected = '1';
-    }
+    headerContainer.insertBefore(btn, headerContainer.firstChild);
   };
 
   const injectFooterBottom = () => {
@@ -180,18 +215,48 @@
     // No extra footer-bottom links; navigation is fully defined above.
   };
 
+  const injectHeaderNav = () => {
+    const placeholders = Array.from(document.querySelectorAll('[data-header-nav]'));
+    if (!placeholders.length) return;
+    const html = buildHeaderHtml();
+    for (const el of placeholders) {
+      try {
+        el.outerHTML = html;
+      } catch (_) {
+        el.innerHTML = html;
+      }
+    }
+  };
+
+  const updateHeaderCompactMode = () => {
+    const header = document.querySelector('.header');
+    const nav = document.querySelector('.main-nav');
+    if (!header || !nav) return;
+
+    const links = Array.from(nav.querySelectorAll('.nav-link'));
+    if (!links.length) return;
+
+    const firstTop = links[0].offsetTop;
+    const wrapped = links.some(a => a.offsetTop > firstTop + 2);
+    header.classList.toggle('header--compact', wrapped);
+  };
+
   if (document.readyState === 'loading') {
     // Run after other DOMContentLoaded handlers (some pages mutate footer late).
     document.addEventListener('DOMContentLoaded', () => setTimeout(() => {
       maybePlayPostLoginTune();
+      injectHeaderNav();
       injectHeaderParrot();
+      updateHeaderCompactMode();
       injectFooterNav();
       injectFooterBottom();
     }, 0));
   } else {
     setTimeout(() => {
       maybePlayPostLoginTune();
+      injectHeaderNav();
       injectHeaderParrot();
+      updateHeaderCompactMode();
       injectFooterNav();
       injectFooterBottom();
     }, 0);
@@ -201,10 +266,17 @@
   // overwrites footer content after DOMContentLoaded.
   window.addEventListener('load', () => setTimeout(() => {
     maybePlayPostLoginTune();
+    injectHeaderNav();
     injectHeaderParrot();
+    updateHeaderCompactMode();
     injectFooterNav();
     injectFooterBottom();
   }, 0), { once: true });
+
+  window.addEventListener('resize', () => {
+    // Recompute after layout settles.
+    requestAnimationFrame(updateHeaderCompactMode);
+  });
 })();
 
 
