@@ -455,8 +455,30 @@
                     return `${arr.slice(0, -1).join(', ')} & ${arr[arr.length - 1]}`;
                 };
 
+                const escapeHtml = (s) => String(s ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+
+                const isSharedHandEntry = (playerId) => {
+                    const s = String(playerId || '');
+                    return s.includes('/') || s.includes('&') || s.includes('+');
+                };
+
+                const playerProfileHref = (playerId) => `../players/profile.html?player=${encodeURIComponent(String(playerId))}`;
+                const tournamentResultsHref = (year) => `../tournaments/results.html?year=${encodeURIComponent(String(year))}`;
+                const scorecardHref = (year, playerId) => `../tournaments/scorecard.html?year=${encodeURIComponent(String(year))}&player=${encodeURIComponent(String(playerId))}`;
+
+                const playerNameSpanHtml = (playerId) => `<span class="hof-name">${escapeHtml(tournamentEngine.getDisplayName(playerId))}</span>`;
+                const playerProfileLinkHtml = (playerId) => {
+                    if (!playerId || isSharedHandEntry(playerId)) return playerNameSpanHtml(playerId);
+                    return `<a class="player-link" href="${playerProfileHref(playerId)}">${playerNameSpanHtml(playerId)}</a>`;
+                };
+
                 const formatNamesInlineHtml = (names) => {
-                    const parts = (names || []).filter(Boolean).map(n => `<span class="hof-name">${tournamentEngine.getDisplayName(n)}</span>`);
+                    const parts = (names || []).filter(Boolean).map(n => playerProfileLinkHtml(n));
                     return joinHtmlList(parts);
                 };
 
@@ -490,11 +512,14 @@
 
                 const latest = champions.length > 0 ? champions[champions.length - 1] : null;
                 if (latest && latest.winner) {
-                    const champName = tournamentEngine.getDisplayName(latest.winner);
+                    const champId = latest.winner;
+                    const champName = tournamentEngine.getDisplayName(champId);
                     const title = latest.title ? `“${latest.title}”` : 'the tournament';
                     const p = document.getElementById('insight-current-dynasty-text');
                     if (p) {
-                        p.innerHTML = `<strong>${champName}</strong> won ${latest.year} ${title}.`;
+                        // Best evidence: link to that tournament’s results (podium + context)
+                        const champHtml = `<a class="player-link" href="${tournamentResultsHref(latest.year)}"><strong class="hof-name">${escapeHtml(champName)}</strong></a>`;
+                        p.innerHTML = `${champHtml} won ${escapeHtml(latest.year)} ${escapeHtml(title)}.`;
                     }
                     setText('insight-current-dynasty-number', latest.year);
                     setText('insight-current-dynasty-label', 'Most recent champion');
@@ -517,7 +542,8 @@
                 if (allTime) {
                     const p = document.getElementById('insight-all-time-champ-text');
                     if (p) {
-                        p.innerHTML = `<strong>${tournamentEngine.getDisplayName(allTime.name)}</strong> leads with the most championships.`;
+                        const leaderId = allTime.name;
+                        p.innerHTML = `${playerProfileLinkHtml(leaderId)} leads with the most championships.`;
                     }
                     setText('insight-all-time-champ-number', allTime.tournament_wins || 0);
                     setText('insight-all-time-champ-label', 'Total championships');
@@ -547,7 +573,7 @@
                 if (top3Leader) {
                     const p = document.getElementById('insight-consistency-text');
                     if (p) {
-                        p.innerHTML = `<strong>${tournamentEngine.getDisplayName(top3Leader.name)}</strong> has the most top-3 finishes.`;
+                        p.innerHTML = `${playerProfileLinkHtml(top3Leader.name)} has the most top-3 finishes.`;
                     }
                     setText('insight-consistency-number', top3Leader.top_three_finishes || 0);
                     setText('insight-consistency-label', 'Top-3 finishes');
@@ -580,10 +606,16 @@
                     if (eligible.length > 0) {
                         eligible.sort((a, b) => (b.longest - a.longest) || (b.current - a.current) || a.playerName.localeCompare(b.playerName));
                         const leader = eligible[0];
-                        const leaderName = leader.playerId ? tournamentEngine.getDisplayName(leader.playerId) : (leader.playerName || '—');
+                        const leaderId = leader.playerId || null;
+                        const leaderName = leaderId ? tournamentEngine.getDisplayName(leaderId) : (leader.playerName || '—');
+                        const endYear = leader && leader.longestTo && Number.isFinite(Number(leader.longestTo.year)) ? Number(leader.longestTo.year) : null;
                         const p = document.getElementById('insight-win-streak-text');
                         if (p) {
-                            p.innerHTML = `<strong>${leaderName}</strong> holds the longest win streak.`;
+                            // Best evidence: link to the scorecard for the year where the streak ended (shows the rounds).
+                            const leaderHtml = (leaderId && endYear)
+                                ? `<a class="player-link" href="${scorecardHref(endYear, leaderId)}"><strong class="hof-name">${escapeHtml(leaderName)}</strong></a>`
+                                : (leaderId ? `<a class="player-link" href="${playerProfileHref(leaderId)}"><strong class="hof-name">${escapeHtml(leaderName)}</strong></a>` : `<strong class="hof-name">${escapeHtml(leaderName)}</strong>`);
+                            p.innerHTML = `${leaderHtml} holds the longest win streak.`;
                         }
                         setText('insight-win-streak-number', leader.longest || 0);
                         setText('insight-win-streak-label', 'Round wins in a row (7+ tricks)');
@@ -713,11 +745,13 @@
                 const recordsPanels = document.getElementById('hof-records-panels');
                 const fmtPlayer = (playerId) => playerId ? tournamentEngine.getDisplayName(playerId) : '—';
                 const fmt = (text) => (text === null || typeof text === 'undefined' || text === '') ? '—' : String(text);
-                const makeEntry = (name, valueText, labelText, extraText) => ({
+                const makeEntry = (name, valueText, labelText, extraText, options = {}) => ({
                     name: name || '—',
                     valueText: (valueText === null || typeof valueText === 'undefined') ? '' : String(valueText),
                     labelText: (labelText === null || typeof labelText === 'undefined') ? '' : String(labelText),
-                    extraText: (extraText === null || typeof extraText === 'undefined') ? '' : String(extraText)
+                    extraText: (extraText === null || typeof extraText === 'undefined') ? '' : String(extraText),
+                    playerId: options && options.playerId ? String(options.playerId) : null,
+                    href: options && options.href ? String(options.href) : null
                 });
 
                 const ordinal = (n) => {
@@ -771,9 +805,18 @@
                     const head = isTie ? arr : arr.slice(0, max);
                     const more = isTie ? 0 : (arr.length - head.length);
                     const parts = head.map(i => {
-                        const base = `<span class="hof-name">${i.name}</span>`;
-                        if (!includeExtra || !i.extraText) return base;
-                        return `${base} <span class="hof-detail">(${i.extraText})</span>`;
+                        const safeExtra = i && i.extraText ? escapeHtml(i.extraText) : '';
+                        const nameHtml = (() => {
+                            if (i && i.href) {
+                                return `<a class="player-link" href="${escapeHtml(i.href)}"><span class="hof-name">${escapeHtml(i.name)}</span></a>`;
+                            }
+                            if (i && i.playerId) {
+                                return playerProfileLinkHtml(i.playerId);
+                            }
+                            return `<span class="hof-name">${escapeHtml(i.name)}</span>`;
+                        })();
+                        if (!includeExtra || !safeExtra) return nameHtml;
+                        return `${nameHtml} <span class="hof-detail">(${safeExtra})</span>`;
                     });
                     const joined = joinList(parts);
                     const moreHtml = more > 0 ? ` <span class="hof-detail">+${more} more</span>` : '';
@@ -1049,7 +1092,7 @@
                             .filter(p => p && (p.tournament_wins || 0) > 0)
                             .map(p => {
                                 const wins = p.tournament_wins || 0;
-                                return { key: String(wins), sortValue: wins, item: makeEntry(fmtPlayer(p.name), wins, 'wins', '') };
+                                return { key: String(wins), sortValue: wins, item: makeEntry(fmtPlayer(p.name), wins, 'wins', '', { playerId: p.name }) };
                             });
                         championshipCards.push(renderRecordCard('Most Championships', entries));
                     }
@@ -1077,7 +1120,12 @@
 
                         const entries = (tournamentScores || [])
                             .filter(x => x && Number.isFinite(x.tricks))
-                            .map(x => ({ key: String(x.tricks), sortValue: x.tricks, item: makeEntry(fmtPlayer(x.player), x.tricks, 'tricks', `Year ${x.year}`) }));
+                            .map(x => {
+                                const year = x && Number.isFinite(Number(x.year)) ? Number(x.year) : null;
+                                const playerId = x && x.player ? String(x.player) : null;
+                                const href = (playerId && year) ? scorecardHref(year, playerId) : null;
+                                return { key: String(x.tricks), sortValue: x.tricks, item: makeEntry(fmtPlayer(x.player), x.tricks, 'tricks', `Year ${x.year}`, { playerId, href }) };
+                            });
                         performanceCards.push(renderRecordCard('Highest Tournament Score', entries));
                         performanceInsightCards.push(renderInsightFromRecordCompact('Single-tournament explosion', '💥', 'Highest Tournament Score', entries, {
                             primarySentence: 'the highest tournament score'
@@ -1094,7 +1142,7 @@
                             .filter(x => x && typeof x.pct === 'number')
                             .map(x => {
                                 const pctText = x.pct.toFixed(1);
-                                return { key: pctText, sortValue: x.pct, item: makeEntry(fmtPlayer(x.playerId), `${pctText}%`, 'win rate', '') };
+                                return { key: pctText, sortValue: x.pct, item: makeEntry(fmtPlayer(x.playerId), `${pctText}%`, 'win rate', '', { playerId: x.playerId }) };
                             });
                         performanceCards.push(renderRecordCard(`Best Win Percentage (7+ tricks, min ${minRoundsForPct} rounds)`, entries));
                         performanceInsightCards.push(renderInsightFromRecordCompact('Deadliest closer', '🎯', `Best Win Percentage (7+ tricks, min ${minRoundsForPct} rounds)`, entries, {
@@ -1109,7 +1157,7 @@
                             .filter(p => p && (p.rounds_won || 0) > 0)
                             .map(p => {
                                 const wins = Math.floor(parseFloat(p.rounds_won ?? 0) || 0);
-                                return { key: String(wins), sortValue: wins, item: makeEntry(fmtPlayer(p.name), wins, 'round wins', '') };
+                                return { key: String(wins), sortValue: wins, item: makeEntry(fmtPlayer(p.name), wins, 'round wins', '', { playerId: p.name }) };
                             });
                         performanceCards.push(renderRecordCard('Most Career Round Wins (7+ tricks)', entries));
                         performanceInsightCards.push(renderInsightFromRecordCompact('Relentless winner', '🧱', 'Most Career Round Wins (7+ tricks)', entries, {
@@ -1123,7 +1171,7 @@
                                 .filter(x => x && (x.count || 0) > 0)
                                 .map(x => {
                                     const value = (x.count === 1) ? '1 round' : `${x.count} rounds`;
-                                    return { key: String(x.count), sortValue: x.count, item: makeEntry(x.playerName, value, '', 'where they scored 11 tricks or more') };
+                                    return { key: String(x.count), sortValue: x.count, item: makeEntry(x.playerName, value, '', 'where they scored 11 tricks or more', { playerId: x.playerId }) };
                                 });
                             performanceCards.push(renderRecordCard('Most 11+ Trick Rounds', entries));
                             performanceInsightCards.push(renderInsightFromRecordCompact('Big-round specialist', '🔥', 'Most 11+ Trick Rounds', entries, {
@@ -1136,7 +1184,7 @@
                                 .filter(x => x && (x.count || 0) > 0)
                                 .map(x => {
                                     const value = (x.count === 1) ? '1 round' : `${x.count} rounds`;
-                                    return { key: String(x.count), sortValue: x.count, item: makeEntry(x.playerName, value, '', 'where they scored 12 tricks or more') };
+                                    return { key: String(x.count), sortValue: x.count, item: makeEntry(x.playerName, value, '', 'where they scored 12 tricks or more', { playerId: x.playerId }) };
                                 });
                             performanceCards.push(renderRecordCard('Most 12+ Trick Rounds', entries));
                             performanceInsightCards.push(renderInsightFromRecordCompact('Monster rounds', '🐉', 'Most 12+ Trick Rounds', entries, {
@@ -1161,7 +1209,9 @@
                                 const from = s.from ? `Year ${s.from.year} R${s.from.round}` : '—';
                                 const to = s.to ? `Year ${s.to.year} R${s.to.round}` : '—';
                                 const streak = Math.floor(parseFloat(s.streak ?? 0) || 0);
-                                return { key: String(streak), sortValue: streak, item: makeEntry(s.playerName, streak, 'rounds', `from ${from} to ${to}`) };
+                                const endYear = s && s.to && Number.isFinite(Number(s.to.year)) ? Number(s.to.year) : null;
+                                const href = (s && s.playerId && endYear) ? scorecardHref(endYear, s.playerId) : null;
+                                return { key: String(streak), sortValue: streak, item: makeEntry(s.playerName, streak, 'rounds', `from ${from} to ${to}`, { playerId: s.playerId, href }) };
                             });
                         performanceCards.push(renderRecordCard('Longest Majority-Win Streak (7+ tricks)', entries));
                         performanceInsightCards.push(renderInsightFromRecordCompact('On a heater', '🚀', 'Longest Majority-Win Streak (7+ tricks)', entries, {
@@ -1215,7 +1265,10 @@
                             .filter(x => x && typeof x.avgTricks === 'number' && Number.isFinite(x.avgTricks))
                             .map(x => {
                                 const key = x.avgTricks.toFixed(2);
-                                return { key, sortValue: x.avgTricks, item: makeEntry(fmtPlayer(x.playerId), key, 'avg tricks', `Year ${x.year}`) };
+                                const year = x && Number.isFinite(Number(x.year)) ? Number(x.year) : null;
+                                const playerId = x && x.playerId ? String(x.playerId) : null;
+                                const href = (playerId && year) ? scorecardHref(year, playerId) : null;
+                                return { key, sortValue: x.avgTricks, item: makeEntry(fmtPlayer(x.playerId), key, 'avg tricks', `Year ${x.year}`, { playerId, href }) };
                             });
                         performanceCards.push(renderRecordCard('Best Avg Tricks (single tournament)', entries));
                         performanceInsightCards.push(renderInsightFromRecordCompact('Peak performance', '📈', 'Best Avg Tricks (single tournament)', entries, {
@@ -1230,7 +1283,7 @@
                             .filter(p => p && (p.tournaments_played || 0) > 0)
                             .map(p => {
                                 const played = p.tournaments_played || 0;
-                                return { key: String(played), sortValue: played, item: makeEntry(fmtPlayer(p.name), played, 'tournaments', '') };
+                                return { key: String(played), sortValue: played, item: makeEntry(fmtPlayer(p.name), played, 'tournaments', '', { playerId: p.name }) };
                             });
                         participationCards.push(renderRecordCard('Most Tournaments Played', entries));
                         participationInsightCards.push(renderInsightFromRecordCompact('The ironman', '🧳', 'Most Tournaments Played', entries, {
@@ -1243,7 +1296,7 @@
                             .filter(p => p && (p.top_three_finishes || 0) > 0)
                             .map(p => {
                                 const top3 = p.top_three_finishes || 0;
-                                return { key: String(top3), sortValue: top3, item: makeEntry(fmtPlayer(p.name), top3, 'top-3 finishes', '') };
+                                return { key: String(top3), sortValue: top3, item: makeEntry(fmtPlayer(p.name), top3, 'top-3 finishes', '', { playerId: p.name }) };
                             });
                         participationCards.push(renderRecordCard('Most Top-3 Finishes', entries));
                     }
@@ -1252,7 +1305,7 @@
                             .filter(p => (p.tournaments_played || 0) >= 10 && (p.booby_prizes || 0) === 0)
                             .map(p => {
                                 const played = p.tournaments_played || 0;
-                                return { key: String(played), sortValue: played, item: makeEntry(fmtPlayer(p.name), played, 'tournaments', 'and 0 last-place finishes') };
+                                return { key: String(played), sortValue: played, item: makeEntry(fmtPlayer(p.name), played, 'tournaments', 'and 0 last-place finishes', { playerId: p.name }) };
                             });
                         participationCards.push(renderRecordCard('Never Last Place (min 10 tournaments)', entries));
                         participationInsightCards.push(renderInsightFromRecordCompact('Never the booby', '🛡️', 'Never Last Place (min 10 tournaments)', entries, {
@@ -1307,7 +1360,9 @@
                                 const avg = (p.total_tricks / p.rounds_played);
                                 const names = p.players.map(id => tournamentEngine.getDisplayName(id)).join(' & ');
                                 const winRate = winRateForPlayers(p.players);
-                                return { names, avg, rounds: p.rounds_played, winRate };
+                                const p1 = p.players && p.players[0] ? String(p.players[0]) : null;
+                                const p2 = p.players && p.players[1] ? String(p.players[1]) : null;
+                                return { names, avg, rounds: p.rounds_played, winRate, p1, p2 };
                             })
                         {
                             const entries = (partnershipAvgs || [])
@@ -1323,7 +1378,10 @@
                                     const key = `${avg.toFixed(4)}|${rounds}|${winRate.toFixed(6)}`;
                                     // Also bake tie-breakers into sortValue so rank ordering is deterministic.
                                     const sortValue = (avg * 1e9) + (rounds * 1e6) + (winRate * 1e3);
-                                    return { key, sortValue, item: makeEntry(x.names, avg.toFixed(2), 'avg tricks', `over ${rounds} rounds`) };
+                                    const href = (x.p1 && x.p2)
+                                        ? `../players/partnership-games.html?player=${encodeURIComponent(String(x.p1))}&partner=${encodeURIComponent(String(x.p2))}`
+                                        : null;
+                                    return { key, sortValue, item: makeEntry(x.names, avg.toFixed(2), 'avg tricks', `over ${rounds} rounds`, { href }) };
                                 });
                             partnershipCards.push(renderRecordCard('Best Partnership (avg tricks)', entries));
                             partnershipInsightCards.push(renderInsightFromRecordCompact('Dream team', '🤝', 'Best Partnership (avg tricks)', entries, {
@@ -1347,7 +1405,7 @@
                             const entries = (mostPartnersAll || [])
                                 .filter(x => x && (x.count || 0) > 0)
                                 .sort((a, b) => (b.count - a.count) || fmtPlayer(a.playerId).localeCompare(fmtPlayer(b.playerId)))
-                                .map(x => ({ key: String(x.count), sortValue: x.count, item: makeEntry(fmtPlayer(x.playerId), x.count, 'partners', '') }));
+                                .map(x => ({ key: String(x.count), sortValue: x.count, item: makeEntry(fmtPlayer(x.playerId), x.count, 'partners', '', { playerId: x.playerId }) }));
                             partnershipCards.push(renderRecordCard('Most Different Partners', entries));
                             partnershipInsightCards.push(renderInsightFromRecordCompact('Social connector', '🕸️', 'Most Different Partners', entries, {
                                 primarySentence: 'the most different partners'
@@ -3257,6 +3315,7 @@
         .player-link {
             text-decoration: none;
             color: inherit;
+            cursor: pointer;
         }
 
         .player-link:hover .player-name {
@@ -3265,6 +3324,14 @@
 
         .player-link:hover .hof-name {
             color: var(--primary);
+        }
+
+        .player-link:hover .hof-name,
+        .player-link:hover .player-name {
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            text-decoration-thickness: 1px;
+            text-decoration-color: rgba(16, 185, 129, 0.55);
         }
 
         .player-name {
