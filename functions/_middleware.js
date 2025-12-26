@@ -3,7 +3,8 @@ function htmlResponse(html, { status = 200 } = {}) {
     status,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-store'
+      'Cache-Control': 'no-store',
+      'X-Robots-Tag': 'noindex, nofollow, noarchive, nosnippet'
     }
   });
 }
@@ -120,6 +121,42 @@ async function verifyAdminCookie(cookieValue, env) {
   return { ok: true };
 }
 
+async function verifySiteCookie(cookieValue, env) {
+  const password = env && env.WHIST_SITE_PASSWORD ? String(env.WHIST_SITE_PASSWORD) : '';
+  if (!password) return { ok: false, reason: 'WHIST_SITE_PASSWORD not configured' };
+
+  const raw = String(cookieValue || '');
+  const parts = raw.split('.');
+  if (parts.length !== 2) return { ok: false, reason: 'Malformed cookie' };
+  const payloadB64 = parts[0];
+  const sigB64 = parts[1];
+  if (!payloadB64 || !sigB64) return { ok: false, reason: 'Malformed cookie' };
+
+  let payloadJson = null;
+  try {
+    payloadJson = new TextDecoder().decode(base64UrlDecodeToBytes(payloadB64));
+  } catch (_) {
+    return { ok: false, reason: 'Bad payload' };
+  }
+
+  let payload = null;
+  try {
+    payload = JSON.parse(payloadJson);
+  } catch (_) {
+    return { ok: false, reason: 'Bad payload JSON' };
+  }
+
+  const exp = Number(payload && payload.exp);
+  if (!Number.isFinite(exp)) return { ok: false, reason: 'Bad exp' };
+  if (Date.now() > exp) return { ok: false, reason: 'Expired' };
+
+  const expectedSig = await hmacSha256(password, payloadB64);
+  const expectedB64 = base64UrlEncode(expectedSig);
+  if (expectedB64 !== sigB64) return { ok: false, reason: 'Bad signature' };
+
+  return { ok: true };
+}
+
 function loginPage({ redirectTo = '/admin/media-upload.html', error = '' } = {}) {
   const safeRedirect = String(redirectTo || '').startsWith('/admin/') ? String(redirectTo) : '/admin/media-upload.html';
   const err = error ? `<p style="margin:0 0 0.75rem; color:#991b1b; font-weight:700;">${error}</p>` : '';
@@ -162,12 +199,226 @@ function loginPage({ redirectTo = '/admin/media-upload.html', error = '' } = {})
 </html>`;
 }
 
+function gatePage({ next = '/' } = {}) {
+  const safeNext = String(next || '/').startsWith('/') ? String(next) : '/';
+  const parrotSrc = '/assets/images/WhistParrot_256.png';
+  const parrotSrcSet = [
+    '/assets/images/WhistParrot_256.png 256w',
+    '/assets/images/WhistParrot.png 1024w'
+  ].join(', ');
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+  <title>Ruston Family Whist Drive</title>
+  <style>
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: #fff;
+      color: #111;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    .wrap {
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    .card {
+      width: min(520px, 92vw);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .parrot {
+      width: min(320px, 70vw);
+      height: auto;
+      display: block;
+    }
+    input {
+      width: min(360px, 80vw);
+      font-size: 18px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(15, 23, 42, 0.2);
+      background: #fff;
+      color: #111;
+      outline: none;
+    }
+    input:focus {
+      border-color: rgba(15, 23, 42, 0.4);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    .msg { min-height: 20px; font-weight: 700; color: #991b1b; }
+    .hint { font-size: 13px; color: rgba(15, 23, 42, 0.55); text-align: center; }
+    .continue {
+      display: none;
+      font-size: 14px;
+      font-weight: 800;
+      color: #111;
+      text-decoration: underline;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <img
+        class="parrot"
+        src="${parrotSrc}"
+        srcset="${parrotSrcSet}"
+        sizes="(max-width: 640px) 70vw, 320px"
+        alt="Parrot mascot"
+      />
+      <form id="gateForm" autocomplete="off">
+        <input id="pw" type="password" inputmode="text" autocomplete="current-password" aria-label="Password" placeholder="Password" />
+      </form>
+      <div class="msg" id="msg"></div>
+      <button class="continue" id="continueBtn" type="button">Continue</button>
+      <div class="hint">Enter the password to continue.</div>
+    </div>
+  </div>
+  <script>
+    const NEXT = ${JSON.stringify(safeNext)};
+    const helloUrl = '/assets/audio/ParrotHelloTTM.m4a';
+    const tuneUrl = '/assets/audio/ParrotTune1.m4a';
+
+    let helloAttempted = false;
+    function tryPlayHello() {
+      if (helloAttempted) return;
+      helloAttempted = true;
+      try {
+        const a = new Audio(helloUrl);
+        a.volume = 1.0;
+        const p = a.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch(() => {
+            // Autoplay blocked; allow retry on first gesture.
+            helloAttempted = false;
+          });
+        }
+      } catch (_) {
+        helloAttempted = true;
+      }
+    }
+
+    function retryHelloOnFirstGesture() {
+      const onFirst = () => {
+        tryPlayHello();
+        window.removeEventListener('pointerdown', onFirst);
+        window.removeEventListener('keydown', onFirst);
+      };
+      window.addEventListener('pointerdown', onFirst, { once: true });
+      window.addEventListener('keydown', onFirst, { once: true });
+    }
+
+    async function playTuneAndContinue() {
+      let done = false;
+      const go = () => {
+        if (done) return;
+        done = true;
+        window.location.href = NEXT;
+      };
+      const btn = document.getElementById('continueBtn');
+      if (btn) {
+        btn.style.display = 'inline';
+        btn.addEventListener('click', go, { once: true });
+      }
+
+      try {
+        const a = new Audio(tuneUrl);
+        a.volume = 1.0;
+        a.addEventListener('ended', go, { once: true });
+        const p = a.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch(go);
+        }
+      } catch (_) {
+        go();
+      }
+
+      setTimeout(go, 3500);
+    }
+
+    tryPlayHello();
+    retryHelloOnFirstGesture();
+
+    const form = document.getElementById('gateForm');
+    const pw = document.getElementById('pw');
+    const msg = document.getElementById('msg');
+    if (pw) setTimeout(() => pw.focus(), 50);
+
+    async function submit() {
+      if (!pw) return;
+      const password = String(pw.value || '').trim();
+      if (!password) return;
+      if (msg) msg.textContent = '';
+
+      try {
+        const res = await fetch('/api/site/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ password })
+        });
+        if (!res.ok) {
+          if (msg) msg.textContent = 'Wrong password';
+          pw.select();
+          return;
+        }
+        pw.disabled = true;
+        await playTuneAndContinue();
+      } catch (e) {
+        if (msg) msg.textContent = 'Unable to sign in';
+      }
+    }
+
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        submit();
+      });
+    }
+  </script>
+</body>
+</html>`;
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
   const path = url.pathname || '/';
 
-  // Same-origin media gateway: /media/<key> -> R2 WHIST_MEDIA
+  // Allowlist for assets and site-login API so the gate can function.
+  const allowUnauthed = (
+    path.startsWith('/assets/') ||
+    path === '/robots.txt' ||
+    path === '/api/site/login' ||
+    path === '/api/site/status' ||
+    path === '/api/site/logout'
+  );
+  if (allowUnauthed) {
+    return context.next();
+  }
+
+  // Site-wide gate (everything else).
+  const cookies = parseCookies(request.headers.get('Cookie'));
+  const siteCookie = cookies.whist_site || '';
+  const siteOk = await verifySiteCookie(siteCookie, env);
+  if (!siteOk.ok) {
+    return htmlResponse(gatePage({ next: path + url.search }));
+  }
+
+  // Same-origin media gateway: /media/<key> -> R2 WHIST_MEDIA (only after site gate).
   if (path.startsWith('/media/')) {
     const method = String(request.method || 'GET').toUpperCase();
     if (method !== 'GET' && method !== 'HEAD') {
@@ -189,6 +440,7 @@ export async function onRequest(context) {
     const ct = obj.httpMetadata && obj.httpMetadata.contentType ? String(obj.httpMetadata.contentType) : 'application/octet-stream';
     headers.set('Content-Type', ct);
     headers.set('Cache-Control', cacheControlForMediaKey(key));
+    headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
     if (obj.httpEtag) headers.set('ETag', obj.httpEtag);
 
     const inm = request.headers.get('If-None-Match');
@@ -199,25 +451,19 @@ export async function onRequest(context) {
     return new Response(method === 'HEAD' ? null : obj.body, { status: 200, headers });
   }
 
-  // Only protect /admin/* paths.
-  if (!path.startsWith('/admin/')) {
-    return context.next();
-  }
-
-  // Allow login endpoint through.
+  // Admin gate still applies (but only reachable after site gate).
   if (path === '/admin/login') {
     return context.next();
   }
 
-  // Check cookie
-  const cookies = parseCookies(request.headers.get('Cookie'));
-  const authCookie = cookies.whist_admin || '';
-  const ok = await verifyAdminCookie(authCookie, env);
-  if (ok.ok) {
-    return context.next();
+  if (path.startsWith('/admin/')) {
+    const authCookie = cookies.whist_admin || '';
+    const ok = await verifyAdminCookie(authCookie, env);
+    if (ok.ok) return context.next();
+    return htmlResponse(loginPage({ redirectTo: path }));
   }
 
-  return htmlResponse(loginPage({ redirectTo: path }));
+  return context.next();
 }
 
 

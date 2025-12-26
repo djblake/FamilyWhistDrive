@@ -146,12 +146,33 @@ export async function requireFamily(request, env) {
   return { ok: false, status: 401, message: 'Unauthorized' };
 }
 
+export async function requireSite(request, env) {
+  const sitePw = env && env.WHIST_SITE_PASSWORD ? String(env.WHIST_SITE_PASSWORD) : '';
+  if (!sitePw) return { ok: false, status: 501, message: 'WHIST_SITE_PASSWORD not configured' };
+  const cookies = parseCookies(request.headers.get('Cookie'));
+  const c = cookies.whist_site || '';
+  const verified = await verifySignedCookie(c, sitePw);
+  if (verified.ok) return { ok: true, exp: verified.exp };
+  return { ok: false, status: 401, message: 'Unauthorized' };
+}
+
 export async function issueFamilyCookie(env, { ttlSeconds = 60 * 60 * 24 * 14 } = {}) {
   const familyPw = env && env.WHIST_FAMILY_PASSWORD ? String(env.WHIST_FAMILY_PASSWORD) : '';
   if (!familyPw) return { ok: false, status: 501, message: 'WHIST_FAMILY_PASSWORD not configured' };
   const exp = Date.now() + (Math.max(60, Number(ttlSeconds) || 0) * 1000);
   const payloadB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify({ exp, v: 1 })));
   const sig = await hmacSha256(familyPw, payloadB64);
+  const sigB64 = base64UrlEncode(sig);
+  const cookieValue = `${payloadB64}.${sigB64}`;
+  return { ok: true, exp, cookieValue, maxAge: Math.floor((exp - Date.now()) / 1000) };
+}
+
+export async function issueSiteCookie(env, { ttlSeconds = 60 * 60 * 24 * 30 } = {}) {
+  const sitePw = env && env.WHIST_SITE_PASSWORD ? String(env.WHIST_SITE_PASSWORD) : '';
+  if (!sitePw) return { ok: false, status: 501, message: 'WHIST_SITE_PASSWORD not configured' };
+  const exp = Date.now() + (Math.max(60, Number(ttlSeconds) || 0) * 1000);
+  const payloadB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify({ exp, v: 1 })));
+  const sig = await hmacSha256(sitePw, payloadB64);
   const sigB64 = base64UrlEncode(sig);
   const cookieValue = `${payloadB64}.${sigB64}`;
   return { ok: true, exp, cookieValue, maxAge: Math.floor((exp - Date.now()) / 1000) };

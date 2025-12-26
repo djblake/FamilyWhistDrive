@@ -899,7 +899,7 @@
                         : raw;
                 }
 
-                function sharedHandFirstInitialFromName(playerName) {
+                function sharedHandTwoInitialsFromName(playerName) {
                     const raw = String(playerName || '').trim();
                     if (!raw) return '';
                     const parts = raw.split(/[\/+&]/g).map(x => String(x || '').trim()).filter(Boolean);
@@ -913,30 +913,36 @@
                     if (!ids.length) return '';
                     ids.sort((a, b) => String(a).localeCompare(String(b)));
 
-                    const firstId = ids[0];
-                    const display = (tournamentEngine && typeof tournamentEngine.getDisplayName === 'function')
-                        ? tournamentEngine.getDisplayName(firstId)
-                        : String(firstId);
-                    const ch = String(display || '').trim().charAt(0);
-                    return ch ? ch.toUpperCase() : '';
+                    const firstTwo = ids.slice(0, 2);
+                    const letters = firstTwo.map((id) => {
+                        const display = (tournamentEngine && typeof tournamentEngine.getDisplayName === 'function')
+                            ? tournamentEngine.getDisplayName(id)
+                            : String(id);
+                        const ch = String(display || '').trim().charAt(0);
+                        return ch ? ch.toUpperCase() : '';
+                    }).filter(Boolean);
+                    return letters.join('');
                 }
 
-                function sharedHandFirstInitialFromPlayers(partnershipPlayers, fallbackName) {
+                function sharedHandTwoInitialsFromPlayers(partnershipPlayers, fallbackName) {
                     const ids = Array.isArray(partnershipPlayers) ? partnershipPlayers.map(x => String(x || '').trim()).filter(Boolean) : [];
                     if (ids.length) {
                         ids.sort((a, b) => a.localeCompare(b));
-                        const firstId = ids[0];
-                        const display = (tournamentEngine && typeof tournamentEngine.getDisplayName === 'function')
-                            ? tournamentEngine.getDisplayName(firstId)
-                            : String(firstId);
-                        const ch = String(display || '').trim().charAt(0);
-                        return ch ? ch.toUpperCase() : '';
+                        const firstTwo = ids.slice(0, 2);
+                        const letters = firstTwo.map((id) => {
+                            const display = (tournamentEngine && typeof tournamentEngine.getDisplayName === 'function')
+                                ? tournamentEngine.getDisplayName(id)
+                                : String(id);
+                            const ch = String(display || '').trim().charAt(0);
+                            return ch ? ch.toUpperCase() : '';
+                        }).filter(Boolean);
+                        return letters.join('');
                     }
-                    return sharedHandFirstInitialFromName(fallbackName);
+                    return sharedHandTwoInitialsFromName(fallbackName);
                 }
 
                 function sharedHandAvatarHtml(partnershipPlayers, fallbackName, sizeClass) {
-                    const initial = sharedHandFirstInitialFromPlayers(partnershipPlayers, fallbackName) || '?';
+                    const initial = sharedHandTwoInitialsFromPlayers(partnershipPlayers, fallbackName) || '?';
                     return `
                         <div class="avatar-placeholder ${sizeClass}">
                             <span class="avatar-initial">${encodeHtml(initial)}</span>
@@ -949,7 +955,7 @@
                     const raw = String(playerName || '').trim();
                     const isSharedHand = raw.includes('/') || raw.includes('+') || raw.includes('&');
                     const initials = isSharedHand
-                        ? (sharedHandFirstInitialFromName(raw) || '?')
+                        ? (sharedHandTwoInitialsFromName(raw) || '?')
                         : getInitials(String(displayName || ''));
                     if (!key) {
                         return `
@@ -1807,7 +1813,12 @@
         .avatar-placeholder.table {
             width: 36px;
             height: 36px;
-            font-size: 0.95rem;
+            font-size: 0.8rem;
+        }
+
+        .avatar-initial {
+            line-height: 1;
+            letter-spacing: 0.02em;
         }
 
         .player-cell__wrap {

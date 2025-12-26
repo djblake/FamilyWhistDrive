@@ -1,3 +1,6 @@
+/*
+  X-Robots-Tag: noindex, nofollow, noarchive, nosnippet
+
 /assets/js/*
   Cache-Control: public, max-age=0, must-revalidate
 

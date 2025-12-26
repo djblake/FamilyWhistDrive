@@ -225,6 +225,45 @@ a:hover {
     text-align: center;
 }
 
+.site-title-row {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+}
+
+.site-parrot-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 999px;
+}
+
+.site-parrot-btn:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.55);
+    outline-offset: 3px;
+}
+
+.site-parrot-img {
+    width: 28px;
+    height: 28px;
+    border-radius: 10px;
+    display: block;
+    object-fit: cover;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+}
+
+@media (min-width: 768px) {
+    .site-parrot-img {
+        width: 26px;
+        height: 26px;
+    }
+}
+
 .card-suits {
     font-size: 1.5rem;
     margin-bottom: var(--spacing-sm);

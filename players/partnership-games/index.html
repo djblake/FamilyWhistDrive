@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Redirecting…</title>
+    <meta http-equiv="refresh" content="0; url=../partnership-games.html" />
+    <script>
+      // Support "pretty" local URLs like /players/partnership-games?player=...&partner=...
+      // by redirecting to the real file /players/partnership-games.html while preserving query/hash.
+      (function () {
+        try {
+          const target = '../partnership-games.html' + window.location.search + window.location.hash;
+          window.location.replace(target);
+        } catch (_) {
+          // ignore
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <p>Redirecting…</p>
+    <noscript>
+      <p><a href="../partnership-games.html">Continue</a></p>
+    </noscript>
+  </body>
+</html>
+
+
