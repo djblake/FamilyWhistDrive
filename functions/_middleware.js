@@ -250,7 +250,7 @@ function gatePage({ next = '/' } = {}) {
     }
     .pw-row {
       position: relative;
-      width: min(360px, 80vw);
+      width: min(300px, 78vw);
     }
     input {
       width: 100%;
@@ -261,17 +261,15 @@ function gatePage({ next = '/' } = {}) {
       background: #fff;
       color: #111;
       outline: none;
+      height: 48px;
     }
     input:focus {
       border-color: rgba(15, 23, 42, 0.4);
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
     }
     .submit-btn {
-      position: absolute;
-      left: 100%;
-      top: 0;
-      margin-left: 12px;
-      height: 100%;
+      width: 100%;
+      height: 48px;
       padding: 0 18px;
       border-radius: 12px;
       border: 1px solid rgba(15, 23, 42, 0.22);
@@ -305,20 +303,11 @@ function gatePage({ next = '/' } = {}) {
       border: none;
       padding: 0;
     }
-    @media (max-width: 520px) {
-      /* If the button would collide on very small widths, stack it below. */
-      .pw-row {
-        width: min(360px, 86vw);
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-      .submit-btn {
-        position: static;
-        width: 100%;
-        height: 44px;
-        margin-left: 0;
-      }
+    .pw-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: stretch;
     }
   </style>
 </head>
@@ -332,12 +321,12 @@ function gatePage({ next = '/' } = {}) {
         sizes="(max-width: 640px) 70vw, 320px"
         alt="Parrot mascot"
       />
-      <div class="parrot-caption">Hello, talk to me?</div>
+      <div class="parrot-caption">"Hello, talk to me?"</div>
       <form id="gateForm" autocomplete="off">
-        <div class="pw-row">
+        <div class="pw-row pw-stack">
           <input id="pw" type="password" inputmode="text" autocomplete="current-password" aria-label="Password" placeholder="Password" />
-          <button class="submit-btn" type="submit">Open Sesame</button>
           <div class="hint">Enter the password to continue.</div>
+          <button class="submit-btn" type="submit">Open Sesame</button>
         </div>
       </form>
       <div class="msg" id="msg"></div>
