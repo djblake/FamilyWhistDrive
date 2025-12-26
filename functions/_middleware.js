@@ -248,6 +248,11 @@ function gatePage({ next = '/' } = {}) {
       margin-top: -8px;
       margin-bottom: 2px;
     }
+    #gateForm {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
     .pw-row {
       position: relative;
       width: min(300px, 78vw);
@@ -255,13 +260,14 @@ function gatePage({ next = '/' } = {}) {
     input {
       width: 100%;
       font-size: 18px;
-      padding: 12px 14px;
+      box-sizing: border-box;
+      height: 48px;
+      padding: 0 14px;
       border-radius: 12px;
       border: 1px solid rgba(15, 23, 42, 0.2);
       background: #fff;
       color: #111;
       outline: none;
-      height: 48px;
     }
     input:focus {
       border-color: rgba(15, 23, 42, 0.4);
@@ -269,6 +275,7 @@ function gatePage({ next = '/' } = {}) {
     }
     .submit-btn {
       width: 100%;
+      box-sizing: border-box;
       height: 48px;
       padding: 0 18px;
       border-radius: 12px;
@@ -279,6 +286,7 @@ function gatePage({ next = '/' } = {}) {
       font-weight: 900;
       cursor: pointer;
       white-space: nowrap;
+      margin-top: 14px;
     }
     .submit-btn:hover {
       background: rgba(15, 23, 42, 0.04);
@@ -291,7 +299,7 @@ function gatePage({ next = '/' } = {}) {
       outline-offset: 3px;
     }
     .msg { min-height: 20px; font-weight: 700; color: #991b1b; }
-    .hint { font-size: 13px; color: rgba(15, 23, 42, 0.55); text-align: center; margin-top: 6px; }
+    .hint { font-size: 13px; color: rgba(15, 23, 42, 0.55); text-align: center; margin-top: 4px; }
     .continue {
       display: none;
       font-size: 14px;
@@ -306,7 +314,7 @@ function gatePage({ next = '/' } = {}) {
     .pw-stack {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 0;
       align-items: stretch;
     }
   </style>
@@ -340,31 +348,55 @@ function gatePage({ next = '/' } = {}) {
 
     let helloAttempted = false;
     function tryPlayHello() {
-      if (helloAttempted) return;
+      if (helloAttempted) return Promise.resolve(false);
       helloAttempted = true;
       try {
         const a = new Audio(helloUrl);
         a.volume = 1.0;
         const p = a.play();
         if (p && typeof p.catch === 'function') {
-          p.catch(() => {
+          return p.then(() => true).catch(() => {
             // Autoplay blocked; allow retry on first gesture.
             helloAttempted = false;
+            return false;
           });
         }
+        return Promise.resolve(true);
       } catch (_) {
         helloAttempted = true;
+        return Promise.resolve(false);
       }
     }
 
-    function retryHelloOnFirstGesture() {
-      const onFirst = () => {
-        tryPlayHello();
-        window.removeEventListener('pointerdown', onFirst);
-        window.removeEventListener('keydown', onFirst);
+    function retryHelloUntilItPlays() {
+      let tries = 0;
+      const maxTries = 6;
+      const onGesture = async () => {
+        tries += 1;
+        const ok = await tryPlayHello();
+        if (ok || tries >= maxTries) {
+          window.removeEventListener('pointerdown', onGesture);
+          window.removeEventListener('keydown', onGesture);
+        }
       };
-      window.addEventListener('pointerdown', onFirst, { once: true });
-      window.addEventListener('keydown', onFirst, { once: true });
+      window.addEventListener('pointerdown', onGesture);
+      window.addEventListener('keydown', onGesture);
+    }
+
+    // Some browsers require a user gesture, but you can "unlock" audio on the submit click
+    // so the success tune can play even after an async fetch.
+    async function unlockAudioForThisPage() {
+      try {
+        const a = new Audio(helloUrl);
+        a.muted = true;
+        a.volume = 0;
+        const p = a.play();
+        if (p && typeof p.catch === 'function') {
+          await p.catch(() => {});
+        }
+        try { a.pause(); } catch (_) {}
+        try { a.currentTime = 0; } catch (_) {}
+      } catch (_) {}
     }
 
     async function playTuneAndContinue() {
@@ -386,17 +418,19 @@ function gatePage({ next = '/' } = {}) {
         a.addEventListener('ended', go, { once: true });
         const p = a.play();
         if (p && typeof p.catch === 'function') {
-          p.catch(go);
+          // If play fails (policy), don't instantly redirect; user can press Continue.
+          p.catch(() => {});
         }
       } catch (_) {
-        go();
+        // If audio cannot play, fall back to the Continue button.
       }
 
-      setTimeout(go, 3500);
+      // Safety net: don't trap the user if audio never fires ended.
+      setTimeout(go, 12000);
     }
 
     tryPlayHello();
-    retryHelloOnFirstGesture();
+    retryHelloUntilItPlays();
 
     const form = document.getElementById('gateForm');
     const pw = document.getElementById('pw');
@@ -408,6 +442,9 @@ function gatePage({ next = '/' } = {}) {
       const password = String(pw.value || '').trim();
       if (!password) return;
       if (msg) msg.textContent = '';
+
+      // User-gesture phase (before any await): unlock audio so success tune can play later.
+      unlockAudioForThisPage();
 
       try {
         const res = await fetch('/api/site/login', {
