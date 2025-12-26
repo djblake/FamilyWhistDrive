@@ -241,13 +241,19 @@ function gatePage({ next = '/' } = {}) {
       display: block;
     }
     .parrot-caption {
-      font-size: 16px;
-      font-weight: 700;
+      font-size: 22px;
+      font-weight: 650;
+      font-style: italic;
       color: #111;
-      margin-top: -6px;
+      margin-top: -8px;
+      margin-bottom: 2px;
+    }
+    .pw-row {
+      position: relative;
+      width: min(360px, 80vw);
     }
     input {
-      width: min(360px, 80vw);
+      width: 100%;
       font-size: 18px;
       padding: 12px 14px;
       border-radius: 12px;
@@ -260,8 +266,34 @@ function gatePage({ next = '/' } = {}) {
       border-color: rgba(15, 23, 42, 0.4);
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
     }
+    .submit-btn {
+      position: absolute;
+      left: 100%;
+      top: 0;
+      margin-left: 12px;
+      height: 100%;
+      padding: 0 18px;
+      border-radius: 12px;
+      border: 1px solid rgba(15, 23, 42, 0.22);
+      background: #fff;
+      color: #111;
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .submit-btn:hover {
+      background: rgba(15, 23, 42, 0.04);
+    }
+    .submit-btn:active {
+      transform: translateY(1px);
+    }
+    .submit-btn:focus-visible {
+      outline: 3px solid rgba(59, 130, 246, 0.25);
+      outline-offset: 3px;
+    }
     .msg { min-height: 20px; font-weight: 700; color: #991b1b; }
-    .hint { font-size: 13px; color: rgba(15, 23, 42, 0.55); text-align: center; }
+    .hint { font-size: 13px; color: rgba(15, 23, 42, 0.55); text-align: center; margin-top: 6px; }
     .continue {
       display: none;
       font-size: 14px;
@@ -272,6 +304,21 @@ function gatePage({ next = '/' } = {}) {
       background: none;
       border: none;
       padding: 0;
+    }
+    @media (max-width: 520px) {
+      /* If the button would collide on very small widths, stack it below. */
+      .pw-row {
+        width: min(360px, 86vw);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .submit-btn {
+        position: static;
+        width: 100%;
+        height: 44px;
+        margin-left: 0;
+      }
     }
   </style>
 </head>
@@ -285,13 +332,16 @@ function gatePage({ next = '/' } = {}) {
         sizes="(max-width: 640px) 70vw, 320px"
         alt="Parrot mascot"
       />
-      <div class="parrot-caption">- "Hello, talk to me?"</div>
+      <div class="parrot-caption">Hello, talk to me?</div>
       <form id="gateForm" autocomplete="off">
-        <input id="pw" type="password" inputmode="text" autocomplete="current-password" aria-label="Password" placeholder="Password" />
+        <div class="pw-row">
+          <input id="pw" type="password" inputmode="text" autocomplete="current-password" aria-label="Password" placeholder="Password" />
+          <button class="submit-btn" type="submit">Open Sesame</button>
+          <div class="hint">Enter the password to continue.</div>
+        </div>
       </form>
       <div class="msg" id="msg"></div>
       <button class="continue" id="continueBtn" type="button">Continue</button>
-      <div class="hint">Enter the password to continue.</div>
     </div>
   </div>
   <script>
