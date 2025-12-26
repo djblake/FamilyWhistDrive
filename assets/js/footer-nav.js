@@ -68,6 +68,43 @@
     }
   };
 
+  const maybePlayPostLoginTune = () => {
+    let tune = null;
+    try {
+      tune = sessionStorage.getItem('whist_post_login_tune');
+    } catch (_) {
+      tune = null;
+    }
+    if (tune !== 'ParrotTune1Short') return;
+
+    const urlM4a = '/assets/audio/ParrotTune1Short.m4a';
+    const urlMp3 = '/assets/audio/ParrotTune1Short.mp3';
+
+    const clear = () => {
+      try { sessionStorage.removeItem('whist_post_login_tune'); } catch (_) {}
+    };
+
+    // Try immediately; if blocked, retry on first interaction.
+    playAudioUrl(urlM4a).then((ok) => {
+      if (ok) {
+        clear();
+        return;
+      }
+      playAudioUrl(urlMp3).then((ok2) => {
+        if (ok2) {
+          clear();
+          return;
+        }
+        const onFirst = async () => {
+          const ok3 = await playAudioUrl(urlM4a) || await playAudioUrl(urlMp3);
+          if (ok3) clear();
+        };
+        window.addEventListener('pointerdown', onFirst, { once: true });
+        window.addEventListener('keydown', onFirst, { once: true });
+      });
+    });
+  };
+
   const injectHeaderParrot = () => {
     const titles = Array.from(document.querySelectorAll('.site-title'));
     if (!titles.length) return;
@@ -146,12 +183,14 @@
   if (document.readyState === 'loading') {
     // Run after other DOMContentLoaded handlers (some pages mutate footer late).
     document.addEventListener('DOMContentLoaded', () => setTimeout(() => {
+      maybePlayPostLoginTune();
       injectHeaderParrot();
       injectFooterNav();
       injectFooterBottom();
     }, 0));
   } else {
     setTimeout(() => {
+      maybePlayPostLoginTune();
       injectHeaderParrot();
       injectFooterNav();
       injectFooterBottom();
@@ -161,6 +200,7 @@
   // Safety net: run once more after full load in case another script
   // overwrites footer content after DOMContentLoaded.
   window.addEventListener('load', () => setTimeout(() => {
+    maybePlayPostLoginTune();
     injectHeaderParrot();
     injectFooterNav();
     injectFooterBottom();

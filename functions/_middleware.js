@@ -274,10 +274,11 @@ function gatePage({ next = '/' } = {}) {
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
     }
     .submit-btn {
-      width: 100%;
+      width: fit-content;
+      max-width: 100%;
       box-sizing: border-box;
       height: 48px;
-      padding: 0 18px;
+      padding: 0 22px;
       border-radius: 12px;
       border: 1px solid rgba(15, 23, 42, 0.22);
       background: #fff;
@@ -287,6 +288,7 @@ function gatePage({ next = '/' } = {}) {
       cursor: pointer;
       white-space: nowrap;
       margin-top: 14px;
+      align-self: center;
     }
     .submit-btn:hover {
       background: rgba(15, 23, 42, 0.04);
@@ -344,7 +346,7 @@ function gatePage({ next = '/' } = {}) {
   <script>
     const NEXT = ${JSON.stringify(safeNext)};
     const helloUrl = '/assets/audio/ParrotHelloTTM.m4a';
-    const tuneUrl = '/assets/audio/ParrotTune1.m4a';
+    const tuneUrl = '/assets/audio/ParrotTune1Short.m4a';
 
     let helloAttempted = false;
     function tryPlayHello() {
@@ -401,9 +403,16 @@ function gatePage({ next = '/' } = {}) {
 
     async function playTuneAndContinue() {
       let done = false;
+      let ended = false;
+      let playStarted = false;
       const go = () => {
         if (done) return;
         done = true;
+        try {
+          if (!ended) {
+            sessionStorage.setItem('whist_post_login_tune', 'ParrotTune1Short');
+          }
+        } catch (_) {}
         window.location.href = NEXT;
       };
       const btn = document.getElementById('continueBtn');
@@ -415,18 +424,33 @@ function gatePage({ next = '/' } = {}) {
       try {
         const a = new Audio(tuneUrl);
         a.volume = 1.0;
-        a.addEventListener('ended', go, { once: true });
+        a.addEventListener('ended', () => {
+          ended = true;
+          go();
+        }, { once: true });
         const p = a.play();
         if (p && typeof p.catch === 'function') {
           // If play fails (policy), don't instantly redirect; user can press Continue.
-          p.catch(() => {});
+          playStarted = true;
+          p.catch(() => {
+            try { sessionStorage.setItem('whist_post_login_tune', 'ParrotTune1Short'); } catch (_) {}
+          });
+        } else {
+          playStarted = true;
         }
       } catch (_) {
         // If audio cannot play, fall back to the Continue button.
+        try { sessionStorage.setItem('whist_post_login_tune', 'ParrotTune1Short'); } catch (_) {}
       }
 
       // Safety net: don't trap the user if audio never fires ended.
-      setTimeout(go, 12000);
+      setTimeout(() => {
+        // If audio never started, make sure next page can try.
+        try {
+          if (!playStarted) sessionStorage.setItem('whist_post_login_tune', 'ParrotTune1Short');
+        } catch (_) {}
+        go();
+      }, 12000);
     }
 
     tryPlayHello();
