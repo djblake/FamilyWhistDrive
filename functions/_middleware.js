@@ -240,6 +240,12 @@ function gatePage({ next = '/' } = {}) {
       height: auto;
       display: block;
     }
+    .parrot-caption {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111;
+      margin-top: -6px;
+    }
     input {
       width: min(360px, 80vw);
       font-size: 18px;
@@ -279,6 +285,7 @@ function gatePage({ next = '/' } = {}) {
         sizes="(max-width: 640px) 70vw, 320px"
         alt="Parrot mascot"
       />
+      <div class="parrot-caption">- "Hello, talk to me?"</div>
       <form id="gateForm" autocomplete="off">
         <input id="pw" type="password" inputmode="text" autocomplete="current-password" aria-label="Password" placeholder="Password" />
       </form>
@@ -397,6 +404,12 @@ export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
   const path = url.pathname || '/';
+
+  // Dedicated login page (always show gate, even if already signed in).
+  if (path === '/login' || path === '/login/') {
+    const next = url.searchParams.get('next') || '/';
+    return htmlResponse(gatePage({ next }));
+  }
 
   // Allowlist for assets and site-login API so the gate can function.
   const allowUnauthed = (

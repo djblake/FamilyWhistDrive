@@ -240,7 +240,8 @@ a:hover {
     border: none;
     background: transparent;
     cursor: pointer;
-    border-radius: 999px;
+    border-radius: 0;
+    overflow: visible;
 }
 
 .site-parrot-btn:focus-visible {
@@ -249,18 +250,18 @@ a:hover {
 }
 
 .site-parrot-img {
-    width: 28px;
-    height: 28px;
-    border-radius: 10px;
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
     display: block;
     object-fit: cover;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.22);
 }
 
 @media (min-width: 768px) {
     .site-parrot-img {
-        width: 26px;
-        height: 26px;
+        width: 56px;
+        height: 56px;
     }
 }
 

@@ -98,7 +98,7 @@
       img.loading = 'eager';
       img.src = '/assets/images/WhistParrot_64.png';
       img.srcset = '/assets/images/WhistParrot_64.png 64w, /assets/images/WhistParrot_256.png 256w, /assets/images/WhistParrot.png 1024w';
-      img.sizes = '28px';
+      img.sizes = '56px';
 
       btn.appendChild(img);
       btn.addEventListener('click', (e) => {
