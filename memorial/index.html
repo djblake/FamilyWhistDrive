@@ -125,10 +125,12 @@
             return `
                 <div class="memorial-trophy-row" role="list" aria-label="Trophy cabinet">
                     ${flat.map(x => `
-                        <div class="memorial-trophy-piece memorial-trophy-piece--${x.place}" role="listitem">
-                            <div class="memorial-trophy-piece-emoji">${x.emoji}</div>
-                            <div class="memorial-trophy-piece-year">${escapeHtml(x.year)}</div>
-                        </div>
+                        <a class="memorial-trophy-link" href="/tournaments/results.html?year=${encodeURIComponent(String(x.year))}" aria-label="View ${escapeHtml(x.year)} tournament results">
+                            <div class="memorial-trophy-piece memorial-trophy-piece--${x.place}" role="listitem">
+                                <div class="memorial-trophy-piece-emoji">${x.emoji}</div>
+                                <div class="memorial-trophy-piece-year">${escapeHtml(x.year)}</div>
+                            </div>
+                        </a>
                     `).join('')}
                 </div>
             `;
@@ -507,6 +509,27 @@
             border-radius: 0;
             background: transparent;
             box-shadow: none;
+        }
+
+        .memorial-trophy-link {
+            display: inline-block;
+            text-decoration: none;
+            color: inherit;
+            border-radius: 10px;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+        }
+
+        .memorial-trophy-link:focus-visible {
+            outline: 3px solid rgba(249, 115, 22, 0.35);
+            outline-offset: 4px;
+        }
+
+        .memorial-trophy-link:hover .memorial-trophy-piece-emoji {
+            transform: translateY(-1px);
+        }
+
+        .memorial-trophy-piece-emoji {
+            transition: transform 0.12s ease;
         }
 
         .memorial-trophy-piece-emoji {

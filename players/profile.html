@@ -1369,10 +1369,12 @@
             });
 
             const trophies = flat.map(x => `
-                <div class="trophy-piece trophy-piece--${x.place}">
-                    <div class="trophy-piece-emoji">${x.emoji}</div>
-                    <div class="trophy-piece-year">${x.year}</div>
-                </div>
+                <a class="trophy-link" href="/tournaments/results.html?year=${encodeURIComponent(String(x.year))}" aria-label="View ${x.year} tournament results">
+                    <div class="trophy-piece trophy-piece--${x.place}" role="listitem">
+                        <div class="trophy-piece-emoji">${x.emoji}</div>
+                        <div class="trophy-piece-year">${x.year}</div>
+                    </div>
+                </a>
             `).join('');
 
             el.innerHTML = `
@@ -1967,6 +1969,28 @@
             flex: 0 0 auto;
             width: 64px;
             text-align: center;
+        }
+
+        .trophy-link {
+            display: inline-block;
+            text-decoration: none;
+            color: inherit;
+            border-radius: 14px;
+            -webkit-tap-highlight-color: rgba(0,0,0,0);
+        }
+
+        .trophy-link:hover .trophy-piece-emoji {
+            transform: translateY(-1px);
+            filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.18));
+        }
+
+        .trophy-link:focus-visible {
+            outline: 3px solid rgba(255, 255, 255, 0.55);
+            outline-offset: 4px;
+        }
+
+        .trophy-piece-emoji {
+            transition: transform 0.12s ease, filter 0.12s ease;
         }
 
         .trophy-piece-emoji {
