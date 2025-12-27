@@ -1,6 +1,7 @@
 (() => {
   const state = {
     cfgLoaded: false,
+    cfgPromise: null,
     publicBaseUrl: '',
     gatewayBaseUrl: ''
   };
@@ -18,16 +19,36 @@
 
   async function loadConfig() {
     if (state.cfgLoaded) return;
-    state.cfgLoaded = true;
+    if (state.cfgPromise) {
+      try { await state.cfgPromise; } catch (_) { /* ignore */ }
+      return;
+    }
+
+    // Always have a deterministic same-origin gateway fallback.
+    // This avoids flakiness if /api/media/config transiently fails.
     try {
-      const res = await fetch('/api/media/config', { cache: 'no-store' });
-      if (!res.ok) return;
-      const json = await res.json();
-      state.publicBaseUrl = String(json?.publicBaseUrl || '');
-      state.gatewayBaseUrl = String(json?.gatewayBaseUrl || '');
+      state.gatewayBaseUrl = state.gatewayBaseUrl || `${window.location.origin}/media`;
     } catch (_) {
       // ignore
     }
+
+    state.cfgPromise = (async () => {
+      try {
+        const res = await fetch('/api/media/config', { cache: 'no-store' });
+        if (res.ok) {
+          const json = await res.json();
+          state.publicBaseUrl = String(json?.publicBaseUrl || state.publicBaseUrl || '');
+          state.gatewayBaseUrl = String(json?.gatewayBaseUrl || state.gatewayBaseUrl || '');
+        }
+      } catch (_) {
+        // ignore (we keep the /media fallback)
+      } finally {
+        state.cfgLoaded = true;
+        state.cfgPromise = null;
+      }
+    })();
+
+    try { await state.cfgPromise; } catch (_) { /* ignore */ }
   }
 
   async function getPublicBaseUrl() {
