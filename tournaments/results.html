@@ -18,6 +18,26 @@
             margin-bottom: 1.5rem;
         }
 
+        /* Make the page badge clickable (back to tournament archive) */
+        .tournament-badge {
+            background: rgba(212, 175, 55, 0.2);
+            color: var(--gold);
+            padding: var(--spacing-sm) var(--spacing-xl);
+            border-radius: var(--border-radius-lg);
+            font-size: 0.875rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            margin-bottom: var(--spacing-lg);
+            display: inline-block;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+        .tournament-badge:hover {
+            background: rgba(212, 175, 55, 0.28);
+            transform: translateY(-1px);
+        }
+
         .hero-year {
             font-family: 'Playfair Display', serif;
             font-size: clamp(3rem, 12vw, 5.5rem);
@@ -346,7 +366,7 @@
         <section class="tournament-hero" id="tournament-hero">
             <div class="container">
                 <div class="hero-content">
-                    <div class="tournament-badge" id="tournament-badge">🏆 TOURNAMENT RESULTS</div>
+                    <a class="tournament-badge" id="tournament-badge" href="/tournaments/" aria-label="Back to tournament archive">← 🏆 TOURNAMENT RESULTS</a>
                     <div class="hero-heading">
                         <div class="hero-year" id="tournament-year">20XX</div>
                         <h1 class="hero-title" id="tournament-title">Loading Tournament...</h1>
