@@ -275,6 +275,20 @@ a:hover {
         justify-content: space-between;
         align-items: center;
     }
+
+    /* In wide desktop layout the logo block must NOT take full width,
+       otherwise it forces the nav onto a second line and triggers compact mode. */
+    .logo-section {
+        width: auto;
+        flex: 0 1 auto;
+        text-align: left;
+    }
+
+    .main-nav {
+        justify-content: flex-end;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+    }
 }
 
 @media (max-width: 640px) {

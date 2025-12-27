@@ -242,6 +242,46 @@
     header.classList.toggle('header--compact', wrapped);
   };
 
+  const fitSiteTitle = () => {
+    const title = document.querySelector('.site-title');
+    if (!title) return;
+    const parent = title.parentElement;
+    const available = parent ? parent.clientWidth : title.clientWidth;
+    if (!available) return;
+
+    // Reset to stylesheet baseline before measuring.
+    title.style.fontSize = '';
+    title.style.letterSpacing = '';
+
+    const measureAndFit = () => {
+      const needed = title.scrollWidth;
+      if (!needed) return;
+      if (needed <= available) {
+        // If we fit, avoid the ellipsis look.
+        title.style.textOverflow = 'clip';
+        return;
+      }
+
+      const cs = window.getComputedStyle(title);
+      const fs = parseFloat(cs.fontSize) || 16;
+      const ratio = (available / needed) * 0.985;
+      const newFs = Math.max(12, Math.min(fs, fs * ratio));
+      title.style.fontSize = `${newFs.toFixed(2)}px`;
+      title.style.letterSpacing = '-0.01em';
+      title.style.textOverflow = 'clip';
+    };
+
+    // Two-pass: after layout settles, then refine once more.
+    requestAnimationFrame(() => {
+      measureAndFit();
+      requestAnimationFrame(() => {
+        measureAndFit();
+        // Title size changes can affect nav wrapping; re-check compact mode.
+        updateHeaderCompactMode();
+      });
+    });
+  };
+
   if (document.readyState === 'loading') {
     // Run after other DOMContentLoaded handlers (some pages mutate footer late).
     document.addEventListener('DOMContentLoaded', () => setTimeout(() => {
@@ -249,6 +289,7 @@
       injectHeaderNav();
       injectHeaderParrot();
       updateHeaderCompactMode();
+      fitSiteTitle();
       injectFooterNav();
       injectFooterBottom();
     }, 0));
@@ -258,6 +299,7 @@
       injectHeaderNav();
       injectHeaderParrot();
       updateHeaderCompactMode();
+      fitSiteTitle();
       injectFooterNav();
       injectFooterBottom();
     }, 0);
@@ -270,13 +312,17 @@
     injectHeaderNav();
     injectHeaderParrot();
     updateHeaderCompactMode();
+    fitSiteTitle();
     injectFooterNav();
     injectFooterBottom();
   }, 0), { once: true });
 
   window.addEventListener('resize', () => {
     // Recompute after layout settles.
-    requestAnimationFrame(updateHeaderCompactMode);
+    requestAnimationFrame(() => {
+      updateHeaderCompactMode();
+      fitSiteTitle();
+    });
   });
 })();
 
