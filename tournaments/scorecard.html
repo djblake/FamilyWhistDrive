@@ -1768,6 +1768,7 @@
             border-left: 4px solid #f97316;
             position: relative;
             cursor: help;
+            background-color: rgba(249, 115, 22, 0.045); /* subtle always-on tint (no layout impact) */
         }
 
         .round-row.data-inconsistency:hover {
@@ -1797,6 +1798,16 @@
             vertical-align: middle;
             position: relative;
             outline: none;
+            /* Make the 💬 more noticeable without affecting table layout (no padding/margins). */
+            transform: scale(1.35);
+            transform-origin: center;
+            filter: drop-shadow(0 0 2px rgba(249, 115, 22, 0.85)) drop-shadow(0 0 10px rgba(249, 115, 22, 0.35));
+        }
+
+        .inconsistency-indicator:hover,
+        .inconsistency-indicator:focus,
+        .inconsistency-indicator.tooltip-open {
+            filter: drop-shadow(0 0 3px rgba(249, 115, 22, 0.95)) drop-shadow(0 0 14px rgba(249, 115, 22, 0.55));
         }
 
         /* Tooltip bubble */
