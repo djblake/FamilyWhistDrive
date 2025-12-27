@@ -593,22 +593,47 @@
                 tournaments.sort((a, b) => (Number(b.year) || 0) - (Number(a.year) || 0));
                 const totalRounds = tournaments.reduce((sum, t) => sum + t.total_rounds, 0);
                 
-                // Fix tricks calculation - avoid double counting by only counting unique hands.
-                // Note: TournamentEngine keeps raw sheet header names (e.g. "Tricks Won"),
-                // so prefer that over legacy "Tricks_Won".
-                const uniqueHands = new Set();
-                const totalTricks = tournamentEngine.rawScorecards.reduce((sum, sc) => {
-                    const handKey = `${sc.Tournament}-${sc.Year}-${sc.Round}-${sc.Player1}-${sc.Player2}`;
-                    if (!uniqueHands.has(handKey)) {
-                        uniqueHands.add(handKey);
-                        // Convert string to number to avoid concatenation.
-                        const rawTricks =
-                            (sc && (sc['Tricks Won'] ?? sc.Tricks_Won ?? sc['Tricks_Won'] ?? sc.TricksWon ?? sc['TricksWon'])) ?? '';
-                        const tricks = parseInt(rawTricks, 10) || 0;
-                        return sum + tricks;
+                // Tricks Taken: prefer summing parsed tournament tables (more robust across cache/schema differences),
+                // and fall back to raw scorecards if needed.
+                let totalTricks = 0;
+                try {
+                    if (tournamentEngine && tournamentEngine.tournaments) {
+                        for (const t of tournamentEngine.tournaments.values()) {
+                            if (!t || !Array.isArray(t.rounds)) continue;
+                            for (const r of t.rounds) {
+                                if (!r || !Array.isArray(r.tables)) continue;
+                                for (const table of r.tables) {
+                                    const partnerships = table && Array.isArray(table.partnerships) ? table.partnerships : [];
+                                    for (const p of partnerships) {
+                                        const tricks = Number.isFinite(p?.tricks) ? p.tricks : parseFloat(p?.tricks);
+                                        if (!Number.isFinite(tricks)) continue;
+                                        totalTricks += tricks;
+                                    }
+                                }
+                            }
+                        }
                     }
-                    return sum;
-                }, 0);
+                } catch (_) {
+                    totalTricks = 0;
+                }
+
+                if (!totalTricks && tournamentEngine && Array.isArray(tournamentEngine.rawScorecards)) {
+                    // Avoid double counting by only counting unique hands from scorecards.
+                    // Note: TournamentEngine keeps raw sheet header names (e.g. "Tricks Won"),
+                    // so prefer that over legacy "Tricks_Won".
+                    const uniqueHands = new Set();
+                    totalTricks = tournamentEngine.rawScorecards.reduce((sum, sc) => {
+                        const handKey = `${sc.Tournament}-${sc.Year}-${sc.Round}-${sc.Player1}-${sc.Player2}`;
+                        if (!uniqueHands.has(handKey)) {
+                            uniqueHands.add(handKey);
+                            const rawTricks =
+                                (sc && (sc['Tricks Won'] ?? sc.Tricks_Won ?? sc['Tricks_Won'] ?? sc.TricksWon ?? sc['TricksWon'])) ?? '';
+                            const tricks = parseInt(rawTricks, 10) || 0;
+                            return sum + tricks;
+                        }
+                        return sum;
+                    }, 0);
+                }
                 
                 // Player counts:
                 // - rosterCount: rows on the Players sheet (may include people who've never played)
@@ -623,7 +648,7 @@
                 
                 document.getElementById('tournaments-count').textContent = tournaments.length;
                 document.getElementById('rounds-count').textContent = totalRounds;
-                document.getElementById('tricks-count').textContent = totalTricks.toLocaleString();
+                document.getElementById('tricks-count').textContent = Number(totalTricks || 0).toLocaleString();
                 // Home should match the Players page: count individuals who have competed (not shared-hand combos).
                 document.getElementById('players-count').textContent = competedCount || rosterCount || 0;
                 
