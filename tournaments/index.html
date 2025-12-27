@@ -1081,15 +1081,30 @@
             
             .tournament-item {
                 flex-direction: column;
+                position: relative; /* anchor floating icons */
             }
             
             .tournament-year-column {
                 min-width: auto;
                 padding: var(--spacing-lg) var(--spacing-xl);
-                flex-direction: column; /* keep icons beneath year */
+                flex-direction: column; /* keep year centered */
                 justify-content: flex-start;
                 align-items: center;
-                gap: 0.35rem;
+                gap: 0;
+            }
+
+            /* Float the icons in the top-left on mobile (don’t add height under the year). */
+            .tournament-indicators {
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                margin-top: 0;
+                z-index: 3;
+                justify-content: flex-start;
+                color: rgba(15, 23, 42, 0.85);
+            }
+            .tournament-indicators .indicator.on {
+                display: inline-flex;
             }
             
             .tournament-year {
@@ -1099,6 +1114,21 @@
             .tournament-content {
                 padding: var(--spacing-lg);
             }
+
+            /* On narrow screens, put the cover photos on their own row under the description
+               (so they don’t push the title across). */
+            .tournament-covers {
+                position: static;
+                order: 4;
+                margin-top: 0.4rem;
+                align-self: flex-start;
+                justify-content: flex-start;
+            }
+            .tournament-header { order: 1; }
+            .tournament-winner { order: 2; }
+            .tournament-description { order: 3; }
+            .tournament-story { order: 5; }
+            .tournament-content.has-cover .tournament-header { padding-right: 0; }
             
             .tournament-header {
                 margin-bottom: var(--spacing-md);
