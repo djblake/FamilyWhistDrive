@@ -816,6 +816,7 @@
                 const tournamentMetadata = tournamentEngine.getTournamentMetadata(tournament.id) 
                     || tournamentEngine.getTournamentMetadata(tournament.key);
                 const tournamentComment = tournament.comments || tournamentMetadata?.comments || '';
+                const tournamentVenue = tournament.venue || tournamentMetadata?.venue || '';
 
                 const championId = tournament.winner || tournament.final_standings[0]?.player || '';
                 const championDisplay = championId ? getDisplayPlayerName(tournament, championId, tournamentEngine) : 'TBD';
@@ -833,6 +834,10 @@
 
                 if (tournament.date) {
                     stats.push({ label: 'Date', value: formatTournamentDate(tournament.date) });
+                }
+
+                if (tournamentVenue) {
+                    stats.push({ label: 'Venue', value: tournamentVenue });
                 }
 
                 renderHeroStats(stats);

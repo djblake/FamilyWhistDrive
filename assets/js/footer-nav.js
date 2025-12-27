@@ -70,6 +70,7 @@
     </div>
     <div class="footer-section">
       <h4>Family</h4>
+      <p><a href="/history/">History</a></p>
       <p><a href="/memorial/">Memorial</a></p>
       <p><a href="/families/">Family tree</a></p>
     </div>

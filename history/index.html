@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History - Ruston Family Whist Drive</title>
+    <meta name="description" content="The history of the Ruston Family Whist Drive tournament.">
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="/assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="/assets/js/footer-nav.js?v=4" defer></script>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div data-header-nav></div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="history-page">
+            <div class="container">
+                <h1 class="history-page__title">History</h1>
+                <p class="history-page__subtitle">How it started, and how it’s going.</p>
+
+                <div class="history-page__card">
+                    <div class="history-page__text" id="history-full-text">Loading history…</div>
+                </div>
+
+                <div class="history-page__actions">
+                    <a class="btn btn-primary" href="/">Back to home</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div data-footer-nav></div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive. All rights reserved. | The most prestigious family tournament in existence.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/assets/js/tournament-engine.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const textEl = document.getElementById('history-full-text');
+            if (!textEl) return;
+
+            const tournamentEngine = new TournamentEngine();
+            const sheetId = '1HGfdlDOfGHOL6Q4MP_TnF8UNE6YihBW-5gQs6Ykl78k';
+
+            const norm = (v) => String(v || '').trim();
+            const normLower = (v) => norm(v).toLowerCase();
+
+            async function fetchHistoryCSV(sid) {
+                const url = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sid)}/gviz/tq?tqx=out:csv&sheet=History`;
+                const response = await fetch(url, { cache: 'no-store' });
+                if (!response.ok) return '';
+                return await response.text();
+            }
+
+            function parseHistoryFieldsFromRows(rows) {
+                if (!Array.isArray(rows) || rows.length === 0) return { description: '', preview: '' };
+
+                // New format: header row "Description" + "Preview"
+                const headerRow = Array.isArray(rows[0]) ? rows[0] : [];
+                const headers = headerRow.map(h => normLower(h));
+                const descIdx = headers.indexOf('description');
+                const prevIdx = headers.indexOf('preview');
+                if (descIdx !== -1 || prevIdx !== -1) {
+                    for (let i = 1; i < rows.length; i++) {
+                        const r = rows[i];
+                        if (!Array.isArray(r) || r.length === 0) continue;
+                        const description = descIdx >= 0 ? norm(r[descIdx]) : '';
+                        const preview = prevIdx >= 0 ? norm(r[prevIdx]) : '';
+                        if (description || preview) return { description, preview };
+                    }
+                    return { description: '', preview: '' };
+                }
+
+                // Legacy format: a row starting with "Description", followed by inline or subsequent lines
+                const findRowIndex = (needle) => {
+                    const n = normLower(needle);
+                    for (let i = 0; i < rows.length; i++) {
+                        const r = rows[i];
+                        const a = Array.isArray(r) ? normLower(r[0]) : '';
+                        if (a === n) return i;
+                    }
+                    return -1;
+                };
+
+                const idx = findRowIndex('Description');
+                if (idx >= 0) {
+                    const row = rows[idx] || [];
+                    const inline = Array.isArray(row) ? norm(row.slice(1).join(',')) : '';
+                    if (inline) return { description: inline, preview: '' };
+                    const lines = [];
+                    for (let j = idx + 1; j < rows.length; j++) {
+                        const r = rows[j];
+                        if (!Array.isArray(r) || r.length === 0) continue;
+                        const v = String(r[0] ?? '');
+                        lines.push(v);
+                    }
+                    return { description: lines.join('\n').trim(), preview: '' };
+                }
+
+                // Fallback: first non-empty cell
+                for (const r of rows) {
+                    if (!Array.isArray(r) || r.length === 0) continue;
+                    const v = norm(r[0]);
+                    if (v) return { description: v, preview: '' };
+                }
+                return { description: '', preview: '' };
+            }
+
+            try {
+                const csv = await fetchHistoryCSV(sheetId);
+                const rows = (tournamentEngine && typeof tournamentEngine.parseCSVRows === 'function')
+                    ? tournamentEngine.parseCSVRows(String(csv || '').trim())
+                    : [];
+                const fields = parseHistoryFieldsFromRows(rows);
+                const full = (fields.description || '').trim() || (fields.preview || '').trim();
+                textEl.textContent = full || 'History coming soon.';
+            } catch (_) {
+                textEl.textContent = 'History coming soon.';
+            }
+        });
+    </script>
+
+    <style>
+        .history-page {
+            background: white;
+            padding: var(--spacing-3xl) 0;
+        }
+
+        .history-page__title {
+            font-family: var(--font-primary);
+            font-weight: 900;
+            color: var(--text-primary-dark);
+            text-align: center;
+            margin: 0;
+        }
+
+        .history-page__subtitle {
+            text-align: center;
+            margin: 0.5rem 0 0;
+            color: rgba(15, 23, 42, 0.7);
+            font-weight: 650;
+        }
+
+        .history-page__card {
+            margin-top: var(--spacing-xl);
+            background: transparent;
+            border-radius: 0;
+            padding: 0;
+            border: 0;
+            box-shadow: none;
+        }
+
+        .history-page__text {
+            color: var(--text-primary-dark);
+            font-size: 1.12rem;
+            line-height: 1.85;
+            white-space: pre-line;
+            font-style: italic;
+            font-family: "Apple Chancery", "Snell Roundhand", "Brush Script MT", "Playfair Display", Georgia, serif;
+            max-width: 76ch;
+            margin: 0 auto;
+        }
+
+        .history-page__actions {
+            display: flex;
+            justify-content: center;
+            margin-top: var(--spacing-xl);
+        }
+    </style>
+</body>
+</html>
+
+

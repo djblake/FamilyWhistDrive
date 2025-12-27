@@ -402,6 +402,41 @@ a:hover {
     min-height: 100vh;
 }
 
+/* Upcoming tournament banner (home page) */
+.upcoming-banner {
+    background: rgba(255, 255, 255, 0.92);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+}
+.upcoming-banner__inner {
+    padding: 0.45rem 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    column-gap: 0.75rem;
+    row-gap: 0.15rem;
+    text-align: center;
+}
+.upcoming-banner__kicker {
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(15, 23, 42, 0.65);
+}
+.upcoming-banner__title {
+    font-family: var(--font-primary);
+    font-weight: 900;
+    font-size: 1.05rem;
+    color: rgba(15, 23, 42, 0.95);
+}
+.upcoming-banner__meta {
+    font-size: 0.9rem;
+    font-weight: 650;
+    color: rgba(15, 23, 42, 0.75);
+}
+
 /* Hero Section */
 .hero-section {
     background: linear-gradient(135deg, var(--bg-primary) 0%, var(--primary-dark) 100%);

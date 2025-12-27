@@ -21,6 +21,16 @@
         </div>
     </header>
 
+    <section class="upcoming-banner" id="upcoming-banner" style="display:none;">
+        <div class="container">
+            <div class="upcoming-banner__inner">
+                <div class="upcoming-banner__kicker">Upcoming tournament</div>
+                <div class="upcoming-banner__title" id="upcoming-banner-title">—</div>
+                <div class="upcoming-banner__meta" id="upcoming-banner-meta">—</div>
+            </div>
+        </div>
+    </section>
+
     <main class="main-content">
         <section class="hero-section">
             <div class="container">
@@ -135,6 +145,9 @@
                 <h2 class="section-title">A Brief History</h2>
                 <div class="history-card">
                     <div class="history-text" id="home-history-description">Loading history…</div>
+                    <div class="history-actions">
+                        <a class="btn btn-primary" href="/history/">Learn more</a>
+                    </div>
                 </div>
             </div>
         </section>
@@ -369,6 +382,129 @@
                 console.log('🏠 Loading home page data...');
                 await tournamentEngine.loadFromGoogleSheets(sheetId);
 
+                function parseTournamentDateLoose(raw) {
+                    const s = String(raw || '').trim();
+                    if (!s) return null;
+                    // dd/mm/yyyy or d/m/yyyy
+                    const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                    if (m) {
+                        const d = Number(m[1]);
+                        const mo = Number(m[2]);
+                        const y = Number(m[3]);
+                        if (Number.isFinite(d) && Number.isFinite(mo) && Number.isFinite(y)) {
+                            // Use noon to avoid DST edge cases.
+                            return new Date(y, mo - 1, d, 12, 0, 0, 0);
+                        }
+                    }
+                    // ISO-ish (yyyy-mm-dd)
+                    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    if (iso) {
+                        const y = Number(iso[1]);
+                        const mo = Number(iso[2]);
+                        const d = Number(iso[3]);
+                        return new Date(y, mo - 1, d, 12, 0, 0, 0);
+                    }
+                    const parsed = new Date(s);
+                    if (!Number.isNaN(parsed)) return parsed;
+                    return null;
+                }
+
+                function formatDateShort(d) {
+                    if (!(d instanceof Date) || Number.isNaN(d)) return '';
+                    return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                }
+
+                async function renderUpcomingTournamentBanner(engine, sid) {
+                    const banner = document.getElementById('upcoming-banner');
+                    const titleEl = document.getElementById('upcoming-banner-title');
+                    const metaEl = document.getElementById('upcoming-banner-meta');
+                    if (!banner || !titleEl || !metaEl) return;
+
+                    banner.style.display = 'block';
+                    titleEl.textContent = 'Checking upcoming tournament…';
+                    metaEl.textContent = '';
+
+                    let allMeta = (engine && typeof engine.getAllTournamentMetadata === 'function')
+                        ? engine.getAllTournamentMetadata()
+                        : (engine && engine.tournamentMetadata && typeof engine.tournamentMetadata.values === 'function')
+                            ? Array.from(engine.tournamentMetadata.values())
+                            : [];
+
+                    async function fetchTournamentsMetaDirect(sheetId) {
+                        const id = String(sheetId || '').trim();
+                        if (!id) return [];
+                        try {
+                            const url = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq?tqx=out:csv&sheet=Tournaments`;
+                            const response = await fetch(url, { cache: 'no-store' });
+                            if (!response.ok) return [];
+                            const csv = await response.text();
+                            const rows = (engine && typeof engine.parseCSVRows === 'function')
+                                ? engine.parseCSVRows(String(csv || '').trim())
+                                : [];
+                            if (!Array.isArray(rows) || rows.length < 2) return [];
+                            const headers = rows[0].map(h => String(h || '').trim());
+                            const idxOf = (name) => headers.findIndex(h => String(h).trim().toLowerCase() === String(name).trim().toLowerCase());
+                            const idIdx = idxOf('Id');
+                            const dateIdx = idxOf('Date');
+                            const yearIdx = idxOf('Year');
+                            const titleIdx = idxOf('Title');
+                            const venueIdx = idxOf('Venue');
+                            const commentsIdx = idxOf('Comments');
+                            const out = [];
+                            for (let i = 1; i < rows.length; i++) {
+                                const r = rows[i];
+                                if (!Array.isArray(r) || r.length === 0) continue;
+                                const rawId = String(r[idIdx] ?? '').trim();
+                                if (!rawId) continue;
+                                const year = Number.isFinite(Number(r[yearIdx])) ? parseInt(String(r[yearIdx]).trim(), 10) : null;
+                                out.push({
+                                    id: rawId,
+                                    key: rawId,
+                                    title: String(r[titleIdx] ?? '').trim(),
+                                    year,
+                                    date: String(r[dateIdx] ?? '').trim(),
+                                    venue: String(r[venueIdx] ?? '').trim(),
+                                    comments: String(r[commentsIdx] ?? '').trim()
+                                });
+                            }
+                            return out;
+                        } catch (e) {
+                            return [];
+                        }
+                    }
+
+                    if (!Array.isArray(allMeta) || allMeta.length === 0) {
+                        allMeta = await fetchTournamentsMetaDirect(sid);
+                    }
+
+                    const now = new Date();
+                    const upcoming = [];
+                    for (const m of allMeta) {
+                        const dt = parseTournamentDateLoose(m?.date);
+                        if (!dt) continue;
+                        if (dt.getTime() <= now.getTime()) continue;
+                        upcoming.push({ meta: m, dt });
+                    }
+                    if (!upcoming.length) {
+                        banner.style.display = 'none';
+                        return;
+                    }
+
+                    upcoming.sort((a, b) => a.dt.getTime() - b.dt.getTime());
+                    const next = upcoming[0];
+                    const meta = next.meta || {};
+                    const year = meta.year ? String(meta.year) : '';
+                    const venue = String(meta.venue || '').trim();
+                    const title = String(meta.title || '').trim() || (year ? `Tournament ${year}` : 'Upcoming tournament');
+                    const dateText = formatDateShort(next.dt) || String(meta.date || '').trim();
+
+                    titleEl.textContent = title;
+                    metaEl.textContent = venue ? `${dateText} • ${venue}` : dateText;
+                    banner.style.display = 'block';
+                }
+
+                await renderUpcomingTournamentBanner(tournamentEngine, sheetId);
+
                 async function loadHistoryDescription(engine, sid) {
                     try {
                         const url = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sid)}/gviz/tq?tqx=out:csv&sheet=History`;
@@ -383,6 +519,28 @@
                         const norm = (v) => String(v || '').trim();
                         const normLower = (v) => norm(v).toLowerCase();
 
+                        const readHistoryTableByHeader = () => {
+                            // Expected new format: header row with "Description" and "Preview"
+                            const headerRow = Array.isArray(rows[0]) ? rows[0] : [];
+                            const headers = headerRow.map(h => normLower(h));
+                            if (!headers.length) return null;
+                            const descIdx = headers.indexOf('description');
+                            const prevIdx = headers.indexOf('preview');
+                            if (descIdx === -1 && prevIdx === -1) return null;
+
+                            // Find first non-empty data row
+                            for (let i = 1; i < rows.length; i++) {
+                                const r = rows[i];
+                                if (!Array.isArray(r) || r.length === 0) continue;
+                                const desc = descIdx >= 0 ? norm(r[descIdx]) : '';
+                                const preview = prevIdx >= 0 ? norm(r[prevIdx]) : '';
+                                if (desc || preview) {
+                                    return { description: desc, preview };
+                                }
+                            }
+                            return { description: '', preview: '' };
+                        };
+
                         const findRowIndex = (needle) => {
                             const n = normLower(needle);
                             for (let i = 0; i < rows.length; i++) {
@@ -392,6 +550,12 @@
                             }
                             return -1;
                         };
+
+                        const asTable = readHistoryTableByHeader();
+                        if (asTable) {
+                            // Prefer preview on home page; caller can still fallback to description.
+                            return asTable.preview || asTable.description || '';
+                        }
 
                         const idx = findRowIndex('Description');
                         if (idx >= 0) {
@@ -1266,7 +1430,7 @@
                 const historyEl = document.getElementById('home-history-description');
                 if (historyEl) {
                     let desc = (tournamentEngine && typeof tournamentEngine.getHistoryValue === 'function')
-                        ? String(tournamentEngine.getHistoryValue('Description') || '')
+                        ? String(tournamentEngine.getHistoryValue('Preview') || tournamentEngine.getHistoryValue('Description') || '')
                         : '';
                     if (!desc.trim()) {
                         desc = await loadHistoryDescription(tournamentEngine, sheetId);
@@ -1622,18 +1786,32 @@
         }
 
         .history-card {
-            background: rgba(255, 255, 255, 0.96);
-            border-radius: var(--border-radius-lg);
-            padding: var(--spacing-2xl);
-            border: 1px solid rgba(15, 23, 42, 0.08);
-            box-shadow: var(--shadow-card);
+            background: transparent;
+            border-radius: 0;
+            padding: 0;
+            border: 0;
+            box-shadow: none;
         }
 
         .history-text {
             color: var(--text-primary-dark);
-            font-size: 1rem;
-            line-height: 1.65;
+            font-size: 1.08rem;
+            line-height: 1.8;
             white-space: pre-line;
+            font-style: italic;
+            font-family: "Apple Chancery", "Snell Roundhand", "Brush Script MT", "Playfair Display", Georgia, serif;
+            max-width: 70ch;
+            margin: 0 auto;
+        }
+
+        .history-actions {
+            display: flex;
+            justify-content: center;
+            margin-top: var(--spacing-md);
+        }
+
+        .history-actions .btn {
+            padding: 0.75rem 1.1rem;
         }
 
         .home-feature-section {

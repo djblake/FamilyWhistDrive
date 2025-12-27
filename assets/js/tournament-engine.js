@@ -1542,6 +1542,7 @@ class TournamentEngine {
                 const title = (record.Title || '').trim();
                 const date = (record.Date || '').trim();
                 const yearValue = (record.Year || '').trim();
+                const venue = (record.Venue || '').trim();
                 const comments = (record.Comments || '').trim();
                 
                 let year = yearValue ? parseInt(yearValue, 10) : null;
@@ -1555,6 +1556,7 @@ class TournamentEngine {
                     title: title || rawId,
                     year,
                     date,
+                    venue,
                     comments
                 };
                 
@@ -2960,6 +2962,10 @@ class TournamentEngine {
     getTournamentMetadata(tournamentId) {
         if (!tournamentId) return null;
         return this.tournamentMetadata.get(tournamentId) || null;
+    }
+
+    getAllTournamentMetadata() {
+        return Array.from(this.tournamentMetadata.values());
     }
 
     extractYearFromId(identifier) {
