@@ -51,7 +51,7 @@
                             On the live site (Cloudflare), this will update caches for everyone.
                         </p>
                         <p style="margin:0;">
-                            <strong>Step A:</strong> Enter the <strong>Admin token</strong> below.<br/>
+                            <strong>Step A:</strong> Enter the <strong>Admin password</strong> below (same password used for <code>/admin/</code>).<br/>
                             <strong>Step B:</strong> Click <strong>Refresh data cache</strong>.<br/>
                             <strong>Result:</strong> Raw data is refreshed and <strong>stats are refreshed automatically</strong>.
                         </p>
@@ -68,9 +68,9 @@
                 </h2>
 
                 <div class="analytics-card" style="margin-bottom: var(--spacing-lg);">
-                    <h3 class="card-title">Admin token</h3>
-                    <p class="muted">Required to write caches to Cloudflare KV.</p>
-                    <input id="admin-token" type="password" autocomplete="current-password" placeholder="Enter admin token" style="width:100%; max-width:520px; padding: 0.65rem 0.75rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.08); color: #fff;" />
+                    <h3 class="card-title">Admin password</h3>
+                    <p class="muted">Same password as the Admin area. Required to write caches to Cloudflare KV.</p>
+                    <input id="admin-token" type="password" autocomplete="current-password" placeholder="Enter admin password" style="width:100%; max-width:520px; padding: 0.65rem 0.75rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.08); color: #fff;" />
                 </div>
 
                 <div class="analytics-card" style="margin-bottom: var(--spacing-lg);">
@@ -316,7 +316,7 @@
 
                 const token = (document.getElementById('admin-token').value || '').trim();
                 if (!token) {
-                    throw new Error('Enter the admin token first.');
+                    throw new Error('Enter the admin password first.');
                 }
 
                 setBusy('raw', true, 'Storing raw cache to Cloudflare KV…');
@@ -429,7 +429,7 @@
                 } else {
                     const token = (document.getElementById('admin-token').value || '').trim();
                     if (!token) {
-                        throw new Error('Enter the admin token first.');
+                        throw new Error('Enter the admin password first.');
                     }
                     setBusy('stats', true, 'Storing stats cache to Cloudflare KV…');
                     const storeResult = await postJson('/api/admin/cache/stats', token, statsCache);
@@ -468,10 +468,10 @@
             sheetLink.textContent = 'Open Whist Website Raw Data';
 
             const tokenInput = document.getElementById('admin-token');
-            const storedToken = localStorage.getItem('whist_admin_token') || '';
+            const storedToken = localStorage.getItem('whist_admin_password') || localStorage.getItem('whist_admin_token') || '';
             tokenInput.value = storedToken;
             tokenInput.addEventListener('change', () => {
-                localStorage.setItem('whist_admin_token', tokenInput.value || '');
+                localStorage.setItem('whist_admin_password', tokenInput.value || '');
             });
 
             const devToggle = document.getElementById('dev-mode-toggle');
@@ -493,7 +493,7 @@
                 if (!enabled) {
                     const token = (tokenInput.value || '').trim();
                     if (!token) {
-                        devNote.textContent += ' Enter the admin token and click “Refresh data cache” to refresh site-wide caches.';
+                        devNote.textContent += ' Enter the admin password and click “Refresh data cache” to refresh site-wide caches.';
                         return;
                     }
                     const confirmed = window.confirm('Developer mode turned OFF. Refresh data+stats caches now to ensure nothing is stale?');

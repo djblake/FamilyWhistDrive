@@ -87,15 +87,16 @@ function requireBearerToken(request, env, envKey) {
 }
 
 export async function requireAdmin(request, env) {
-  // Option A: Bearer admin token (good for curl / automation).
+  // Option A: Bearer admin auth (good for curl / automation).
+  // Prefer a dedicated token if configured, but also allow using the admin password
+  // so there's only one secret to manage for admin UI + cache refresh.
+  const authHeader = request.headers.get('authorization') || '';
   const token = env && env.WHIST_ADMIN_TOKEN ? String(env.WHIST_ADMIN_TOKEN) : '';
-  if (token) {
-    const auth = request.headers.get('authorization') || '';
-    if (auth === `Bearer ${token}`) return { ok: true };
-  }
+  if (token && authHeader === `Bearer ${token}`) return { ok: true };
 
   // Option B: Admin cookie (good for the website admin UI).
   const password = env && env.WHIST_ADMIN_PASSWORD ? String(env.WHIST_ADMIN_PASSWORD) : '';
+  if (password && authHeader === `Bearer ${password}`) return { ok: true };
   if (password) {
     const cookies = parseCookies(request.headers.get('Cookie'));
     const c = cookies.whist_admin || '';
