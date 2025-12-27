@@ -179,6 +179,23 @@
                         </div>
                     </div>
 
+                    <div class="insight-card">
+                        <div class="insight-icon">📏</div>
+                        <h3>Biggest winning margin</h3>
+                        <div class="insight-content">
+                            <p id="insight-margin-text">Loading biggest margin…</p>
+                            <div class="insight-stat insight-stat--stacked">
+                                <span class="stat-number" id="insight-margin-number">—</span>
+                                <div class="insight-stat-meta">
+                                    <span class="stat-label" id="insight-margin-label">Tricks ahead of 2nd</span>
+                                    <div class="insight-stat-footnotes">
+                                        <div class="hof-record-footnotes" id="insight-margin-footnotes"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Record insights (all categories together) -->
                     <!-- NOTE: This is intentionally inside the main insights grid so there is no visual break.
                          We use CSS (display: contents) to make injected children behave like direct grid items. -->
@@ -633,6 +650,93 @@
                     console.warn('Error rendering longest win streak insight:', error);
                     setText('insight-win-streak-text', 'Unable to compute win streak leader.');
                     setFootnotesHtml('insight-win-streak-footnotes', '');
+                }
+
+                // Biggest margin of victory (winner tricks - runner-up tricks)
+                try {
+                    const pool = (tournaments || []).filter(t => t && Number.isFinite(t.year) && Array.isArray(t.final_standings));
+                    const margins = [];
+
+                    for (const t of pool) {
+                        const standings = Array.isArray(t.final_standings) ? t.final_standings : [];
+                        const totals = standings
+                            .map(s => ({ player: s?.player, total: Number(s?.total_tricks) }))
+                            .filter(x => x.player && Number.isFinite(x.total));
+                        if (totals.length < 2) continue;
+
+                        totals.sort((a, b) => b.total - a.total);
+                        const topTotal = totals[0].total;
+                        const topPlayers = totals.filter(x => x.total === topTotal).map(x => x.player);
+                        if (topPlayers.length !== 1) continue; // skip ties for 1st
+
+                        const secondEntry = totals.find(x => x.total < topTotal);
+                        if (!secondEntry) continue;
+                        const secondTotal = secondEntry.total;
+                        const secondPlayers = totals.filter(x => x.total === secondTotal).map(x => x.player);
+                        const margin = topTotal - secondTotal;
+                        if (!Number.isFinite(margin) || margin <= 0) continue;
+
+                        margins.push({
+                            year: t.year,
+                            title: t.title || t.name || t.id,
+                            winner: topPlayers[0],
+                            winnerTricks: topTotal,
+                            secondPlayers,
+                            secondTricks: secondTotal,
+                            margin
+                        });
+                    }
+
+                    margins.sort((a, b) => (b.margin - a.margin) || (b.year - a.year));
+                    const best = margins[0] || null;
+                    const runnerUps = margins.slice(1, 3); // #2 and #3 biggest margins
+
+                    const renderMarginFootnotesHtml = (entries) => {
+                        const list = Array.isArray(entries) ? entries.filter(Boolean) : [];
+                        if (!list.length) return '';
+                        const labels = ['2ND', '3RD'];
+                        return list.map((e, idx) => {
+                            const label = labels[idx] || '—';
+                            const yearLink = `<a class="player-link" href="${tournamentResultsHref(e.year)}"><span class="hof-name">${escapeHtml(e.year)}</span></a>`;
+                            const winnerName = tournamentEngine.getDisplayName(e.winner);
+                            const winnerHtml = playerProfileLinkHtml(e.winner);
+                            const vs = (e.secondPlayers && e.secondPlayers.length)
+                                ? ` over ${formatNamesInlineHtml(e.secondPlayers)}`
+                                : '';
+                            return `
+                                <div class="hof-record-footnote">
+                                    <span class="hof-record-footnote-rank">${label}:</span>
+                                    <span class="hof-record-footnote-text">${yearLink} — ${winnerHtml} <span class="hof-lead-metric">+${escapeHtml(e.margin)}</span>${vs}.</span>
+                                </div>
+                            `.trim();
+                        }).join('');
+                    };
+
+                    if (best && best.winner) {
+                        const p = document.getElementById('insight-margin-text');
+                        if (p) {
+                            const title = best.title ? `“${best.title}”` : 'the tournament';
+                            const yearHtml = `<a class="player-link" href="${tournamentResultsHref(best.year)}"><strong class="hof-name">${escapeHtml(best.year)}</strong></a>`;
+                            const vs = (best.secondPlayers && best.secondPlayers.length)
+                                ? ` over ${formatNamesInlineHtml(best.secondPlayers)}`
+                                : '';
+                            p.innerHTML = `${playerProfileLinkHtml(best.winner)} won ${yearHtml} ${escapeHtml(title)} by <span class="hof-lead-metric">+${escapeHtml(best.margin)}</span>${vs}.`;
+                        }
+
+                        setText('insight-margin-number', `+${best.margin}`);
+                        setText('insight-margin-label', 'Tricks ahead of 2nd');
+                        setFootnotesHtml('insight-margin-footnotes', renderMarginFootnotesHtml(runnerUps));
+                    } else {
+                        setText('insight-margin-text', 'No margin data available yet.');
+                        setText('insight-margin-number', '—');
+                        setText('insight-margin-label', 'Tricks ahead of 2nd');
+                        setFootnotesHtml('insight-margin-footnotes', '');
+                    }
+                } catch (error) {
+                    console.warn('Error rendering biggest margin insight:', error);
+                    setText('insight-margin-text', 'Unable to compute biggest margin.');
+                    setText('insight-margin-number', '—');
+                    setFootnotesHtml('insight-margin-footnotes', '');
                 }
 
                 // --- Championship history stats (subtle, above the table)
