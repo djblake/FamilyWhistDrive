@@ -59,6 +59,7 @@
                 </div>
                 
                 <div class="table-container">
+                    <div class="table-scroll-hint" aria-hidden="true">Swipe to see more →</div>
                     <table class="players-table" id="players-table">
                         <thead>
                             <tr>
@@ -563,6 +564,17 @@
             box-shadow: var(--shadow-card);
         }
 
+        .table-scroll-hint {
+            display: none;
+            padding: 0.6rem var(--spacing-md) 0;
+            font-size: 0.85rem;
+            font-weight: 650;
+            color: rgba(15, 23, 42, 0.7);
+            text-align: center;
+            background: linear-gradient(135deg, #f8f9fa 0%, #eef2f7 100%);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+        }
+
         .players-table {
             width: 100%;
             border-collapse: collapse;
@@ -819,6 +831,20 @@
             .table-stats {
                 flex-direction: column;
                 gap: var(--spacing-sm);
+            }
+
+            .table-container {
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .table-scroll-hint {
+                display: block;
+            }
+
+            .players-table {
+                min-width: 760px;
             }
 
             .players-table {

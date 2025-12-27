@@ -211,6 +211,8 @@ a:hover {
     align-items: center;
     padding: var(--spacing-sm) 0;
     gap: var(--spacing-md);
+    width: 100%;
+    min-width: 0; /* allow title/nav to shrink within header grid */
 }
 
 @media (min-width: 768px) {
@@ -224,6 +226,8 @@ a:hover {
 
 .logo-section {
     text-align: center;
+    width: 100%;
+    min-width: 0; /* required for ellipsis/overflow to work inside flex/grid */
 }
 
 .header-parrot-btn {
@@ -314,6 +318,13 @@ a:hover {
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+@media (max-width: 420px) {
+    .site-title {
+        /* Extra squeeze for iPhones: avoid any horizontal overflow. */
+        font-size: clamp(0.98rem, 5.2vw, 1.55rem);
+    }
 }
 
 .site-subtitle {

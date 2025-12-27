@@ -468,9 +468,13 @@
                     Tournament Rank Progression
                 </h2>
                 <p class="chart-description">Track how each player's ranking changed throughout the tournament after each round.</p>
-                                  <div class="chart-container" style="width: 100%; height: 700px; position: relative;">
-                      <canvas id="tournament-rank-progression-chart"></canvas>
-                  </div>
+                <div class="chart-container chart-container--rank">
+                    <div class="chart-scroll" aria-label="Scrollable chart">
+                        <div class="chart-inner">
+                            <canvas id="tournament-rank-progression-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -2098,12 +2102,28 @@
             padding: var(--spacing-xl);
             box-shadow: var(--shadow-lg);
             position: relative;
-            height: 500px;
+            height: auto;
         }
 
         .chart-container canvas {
             width: 100% !important;
             height: 100% !important;
+        }
+
+        .chart-container--rank {
+            height: auto;
+            padding: var(--spacing-lg);
+        }
+
+        .chart-scroll {
+            width: 100%;
+            height: 640px;
+            overflow: hidden;
+        }
+
+        .chart-inner {
+            width: 100%;
+            height: 100%;
         }
         
         .data-issues-banner {
@@ -2204,6 +2224,23 @@
                 width: 80px;
                 height: 80px;
                 font-size: 1.25rem;
+            }
+
+            .chart-container--rank {
+                padding: var(--spacing-md);
+            }
+
+            .chart-scroll {
+                height: 58vh;
+                min-height: 360px;
+                max-height: 520px;
+                overflow-x: auto;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .chart-inner {
+                min-width: 1100px; /* keep the chart readable; allows horizontal scroll on mobile */
             }
 
             .avatar-placeholder.tiny {

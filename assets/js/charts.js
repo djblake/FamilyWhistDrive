@@ -647,6 +647,9 @@ class TournamentCharts {
         const playerNamesPlugin = {
             id: 'playerNames',
             afterDraw: (chart) => {
+                // On narrow screens, skip the right-side label column to avoid squashing the plot.
+                const w = Number(chart?.width) || 0;
+                if (w && w < 760) return;
                 const ctx = chart.ctx;
                 const chartArea = chart.chartArea;
                 const yScale = chart.scales.y;
@@ -799,9 +802,22 @@ class TournamentCharts {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                onResize: (chartInstance, size) => {
+                    try {
+                        const w = Number(size?.width) || Number(chartInstance?.width) || 0;
+                        const baseRight = (!highlightPlayer && rankData.players.length > 12) ? 160 : 140;
+                        const rightPad = (w && w < 760) ? 14 : baseRight;
+                        if (!chartInstance.options.layout) chartInstance.options.layout = {};
+                        if (!chartInstance.options.layout.padding) chartInstance.options.layout.padding = {};
+                        chartInstance.options.layout.padding.right = rightPad;
+                        chartInstance.update('none');
+                    } catch (_) {
+                        // no-op
+                    }
+                },
                 layout: {
                     padding: {
-                        right: !highlightPlayer && rankData.players.length > 12 ? 160 : 140 // Extra padding for tournament overview with many players
+                        right: (!highlightPlayer && rankData.players.length > 12 ? 160 : 140) // On resize we shrink this on narrow screens.
                     }
                 },
                 interaction: {

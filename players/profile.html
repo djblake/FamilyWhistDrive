@@ -2380,6 +2380,7 @@
             border-radius: 999px;
             font-size: 0.8rem;
             font-weight: 900;
+            white-space: nowrap;
         }
 
         .timeline-performance-stack {
@@ -2468,6 +2469,11 @@
 
             .timeline-item {
                 padding: 0.85rem 0.9rem;
+            }
+
+            .timeline-item--compact {
+                grid-template-columns: 52px 1fr;
+                column-gap: 10px;
             }
 
             .timeline-year {
