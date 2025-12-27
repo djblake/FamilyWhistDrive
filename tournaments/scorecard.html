@@ -1069,7 +1069,7 @@
                 // Inconsistency tooltip: Safari doesn't reliably show title tooltips on <tr>, so attach to a <span>.
                 const inconsistencyTooltip = round.inconsistency ? escapeHtmlAttribute(round.inconsistency) : '';
                 const inconsistencyIndicator = round.inconsistency
-                    ? `<span class="inconsistency-indicator" data-tooltip="${inconsistencyTooltip}" tabindex="0" aria-label="Inconsistency comment">💬</span>`
+                    ? `<span class="inconsistency-indicator" data-tooltip="${inconsistencyTooltip}" tabindex="0" aria-label="Inconsistency comment" aria-haspopup="true" aria-expanded="false">💬</span>`
                     : '';
 
                 return `
@@ -1113,36 +1113,91 @@
 
             tbody.innerHTML = html;
 
-            // Click-to-toggle tooltip (useful on touch devices / when hover tooltips are disabled).
+            // Click-to-show tooltip (useful on touch devices; avoids clipping inside overflow containers).
             if (tbody && !tbody.dataset.inconsistencyTooltipInit) {
                 tbody.dataset.inconsistencyTooltipInit = 'true';
 
-                const closeAllTooltips = () => {
-                    tbody.querySelectorAll('.inconsistency-indicator.tooltip-open')
-                        .forEach(el => el.classList.remove('tooltip-open'));
+                let floatingTipEl = null;
+                let activeIndicator = null;
+
+                const closeFloatingTooltip = () => {
+                    if (floatingTipEl) {
+                        floatingTipEl.remove();
+                        floatingTipEl = null;
+                    }
+                    if (activeIndicator) {
+                        activeIndicator.setAttribute('aria-expanded', 'false');
+                        activeIndicator = null;
+                    }
+                };
+
+                const openFloatingTooltip = (indicator) => {
+                    closeFloatingTooltip();
+                    if (!indicator) return;
+                    const text = (indicator.getAttribute('data-tooltip') || '').toString();
+                    if (!text) return;
+
+                    const el = document.createElement('div');
+                    el.className = 'floating-inconsistency-tooltip';
+                    el.setAttribute('role', 'tooltip');
+                    el.textContent = text;
+                    document.body.appendChild(el);
+
+                    const rect = indicator.getBoundingClientRect();
+                    // Force a layout read after insertion so width/height are known.
+                    const tipRect = el.getBoundingClientRect();
+
+                    const viewportPadding = 10;
+                    const gap = 10;
+
+                    let left = rect.left + (rect.width / 2) - (tipRect.width / 2);
+                    left = Math.max(viewportPadding, Math.min(left, window.innerWidth - viewportPadding - tipRect.width));
+
+                    // Prefer above the icon; if it would clip, place below.
+                    let top = rect.top - tipRect.height - gap;
+                    let placement = 'top';
+                    if (top < viewportPadding) {
+                        top = rect.bottom + gap;
+                        placement = 'bottom';
+                    }
+                    // Clamp if still out of bounds.
+                    top = Math.max(viewportPadding, Math.min(top, window.innerHeight - viewportPadding - tipRect.height));
+
+                    el.style.left = `${left}px`;
+                    el.style.top = `${top}px`;
+                    el.dataset.placement = placement;
+
+                    floatingTipEl = el;
+                    activeIndicator = indicator;
+                    activeIndicator.setAttribute('aria-expanded', 'true');
                 };
 
                 tbody.addEventListener('click', (e) => {
                     const indicator = e.target && e.target.closest ? e.target.closest('.inconsistency-indicator') : null;
                     if (!indicator) {
-                        closeAllTooltips();
+                        closeFloatingTooltip();
                         return;
                     }
                     e.preventDefault();
                     e.stopPropagation();
-                    const isOpen = indicator.classList.contains('tooltip-open');
-                    closeAllTooltips();
-                    if (!isOpen) {
-                        indicator.classList.add('tooltip-open');
+                    // Toggle behavior
+                    if (activeIndicator === indicator) {
+                        closeFloatingTooltip();
+                        return;
+                    }
+                    openFloatingTooltip(indicator);
+                });
+
+                document.addEventListener('click', () => closeFloatingTooltip());
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        closeFloatingTooltip();
                     }
                 });
 
-                document.addEventListener('click', () => closeAllTooltips());
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape') {
-                        closeAllTooltips();
-                    }
-                });
+                // If the user scrolls the page or the table horizontally, close to avoid “drifting” tooltips.
+                window.addEventListener('scroll', () => closeFloatingTooltip(), true);
+                window.addEventListener('resize', () => closeFloatingTooltip());
             }
             
             // Show summary if there are data errors
@@ -1857,6 +1912,49 @@
         .inconsistency-indicator.tooltip-open::before {
             opacity: 1;
             visibility: visible;
+        }
+
+        /* Mobile/touch: use the fixed-position tooltip (JS) to avoid clipping inside overflow containers. */
+        @media (max-width: 768px) {
+            .inconsistency-indicator::after,
+            .inconsistency-indicator::before {
+                display: none;
+            }
+        }
+
+        .floating-inconsistency-tooltip {
+            position: fixed;
+            z-index: 9999;
+            background: rgba(17, 24, 39, 0.96);
+            color: #fff;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            line-height: 1.25;
+            text-align: left;
+            white-space: pre-wrap;
+            width: max-content;
+            max-width: min(360px, calc(100vw - 20px));
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+            pointer-events: none; /* click outside closes; tooltip itself doesn't need interaction */
+        }
+
+        .floating-inconsistency-tooltip::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 7px solid transparent;
+        }
+
+        .floating-inconsistency-tooltip[data-placement="top"]::before {
+            top: 100%;
+            border-top-color: rgba(17, 24, 39, 0.96);
+        }
+
+        .floating-inconsistency-tooltip[data-placement="bottom"]::before {
+            bottom: 100%;
+            border-bottom-color: rgba(17, 24, 39, 0.96);
         }
 
         /* Player name link styles for scorecard */
