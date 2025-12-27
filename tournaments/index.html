@@ -169,15 +169,35 @@
 
                     const covers = Array.from(document.querySelectorAll('[data-cover-year]'));
                     const queue = covers.slice();
-                    const workers = Array.from({ length: 4 }).map(async () => {
+                    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+                    const fetchMetaWithRetry = async (year, attempts = 2) => {
+                        for (let i = 0; i < attempts; i++) {
+                            const meta = await window.WhistMedia.getTournamentMeta(year);
+                            if (meta) return meta;
+                            await sleep(150 * (i + 1));
+                        }
+                        return null;
+                    };
+
+                    const pickFallbackKeys = (photos) => {
+                        const list = Array.isArray(photos) ? photos.slice() : [];
+                        // Prefer newest uploads if no cover picks were set.
+                        list.sort((a, b) => String(b?.uploadedAt || '').localeCompare(String(a?.uploadedAt || '')));
+                        return list.map(p => String(p?.key || '').trim()).filter(Boolean).slice(0, 3);
+                    };
+
+                    // Keep concurrency low to avoid transient throttling and make behavior stable across devices.
+                    const workers = Array.from({ length: 2 }).map(async () => {
                         while (queue.length) {
                             const el = queue.shift();
                             const year = el ? el.getAttribute('data-cover-year') : '';
                             if (!year) continue;
                             try {
-                                const meta = await window.WhistMedia.getTournamentMeta(year);
-                                const picks = meta && Array.isArray(meta.coverPicks) ? meta.coverPicks.slice(0, 3) : [];
+                                const meta = await fetchMetaWithRetry(year, 2);
+                                if (!meta) continue;
                                 const photos = meta && Array.isArray(meta.photos) ? meta.photos : [];
+                                const picksRaw = meta && Array.isArray(meta.coverPicks) ? meta.coverPicks.slice(0, 3) : [];
+                                const picks = picksRaw.length ? picksRaw : pickFallbackKeys(photos);
 
                                 // Photo indicator: light up if any photos exist (not just cover picks).
                                 const flagsEl = document.querySelector(`[data-flags-year="${year}"]`);
@@ -200,7 +220,7 @@
                                 }
                                 if (!urls.length) continue;
 
-                                el.innerHTML = urls.map((u, idx) => `<img alt="Cover ${idx + 1}" src="${u.replaceAll('"', '&quot;')}" loading="lazy">`).join('');
+                                el.innerHTML = urls.map((u, idx) => `<img alt="Cover ${idx + 1}" src="${u.replaceAll('"', '&quot;')}" loading="eager" decoding="async">`).join('');
                                 el.style.display = 'flex';
                                 const content = el.closest && el.closest('.tournament-content');
                                 if (content && content.classList) content.classList.add('has-cover');
