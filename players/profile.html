@@ -672,6 +672,27 @@
             } catch (error) {
                 console.warn('Error computing win streak stats:', error);
             }
+
+            // Booby prizes (🎭): count last-place finishes (includes shared hands).
+            let boobyCount = 0;
+            if (engine && engine.tournaments) {
+                for (const t of engine.tournaments.values()) {
+                    if (!t || !Array.isArray(t.final_standings) || !t.final_standings.length) continue;
+                    const totalPlayers = t.final_standings.length;
+                    let idx = t.final_standings.findIndex(s => s && s.player === playerName);
+                    if (idx === -1) {
+                        idx = t.final_standings.findIndex(s =>
+                            s &&
+                            s.is_partnership &&
+                            Array.isArray(s.partnership_players) &&
+                            s.partnership_players.some(p => p === playerName)
+                        );
+                    }
+                    if (idx !== -1 && (idx + 1) === totalPlayers) {
+                        boobyCount += 1;
+                    }
+                }
+            }
             
             performanceContainer.innerHTML = `
                 <div class="meta-item">
@@ -681,6 +702,10 @@
                 <div class="meta-item">
                     <span class="meta-label">Top 3 Rate</span>
                     <span class="meta-value">${topThreeRate}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Booby prizes (🎭)</span>
+                    <span class="meta-value">${escapeHtml(String(boobyCount))}</span>
                 </div>
                 <div class="meta-item">
                     <span class="meta-label">Win rate</span>
@@ -1287,7 +1312,7 @@
             if (!el) return;
 
             const engine = window.tournamentEngine;
-            const items = { 1: [], 2: [], 3: [] };
+            const items = { 1: [], 2: [], 3: [], booby: [] };
 
             const getFinish = (tournament) => {
                 if (!tournament || !Array.isArray(tournament.final_standings)) return null;
@@ -1313,10 +1338,15 @@
                 if (!finish) return;
                 if (finish.place === 1 || finish.place === 2 || finish.place === 3) {
                     items[finish.place].push({ year: t.year });
+                    return;
+                }
+                const totalPlayers = (t && Array.isArray(t.final_standings)) ? t.final_standings.length : 0;
+                if (totalPlayers && finish.place === totalPlayers) {
+                    items.booby.push({ year: t.year });
                 }
             });
 
-            const total = items[1].length + items[2].length + items[3].length;
+            const total = items[1].length + items[2].length + items[3].length + items.booby.length;
             if (!total) {
                 el.innerHTML = `<div class="muted">Still waiting for their time to come.</div>`;
                 return;
@@ -1326,7 +1356,8 @@
             const placeOrder = [
                 { place: 1, emoji: '🏆' },
                 { place: 2, emoji: '🥈' },
-                { place: 3, emoji: '🥉' }
+                { place: 3, emoji: '🥉' },
+                { place: 'booby', emoji: '🎭' }
             ];
 
             const flat = [];
@@ -1925,8 +1956,9 @@
             gap: var(--spacing-lg);
             align-items: flex-end;
             justify-content: flex-start;
-            flex-wrap: nowrap;
-            overflow-x: auto;
+            flex-wrap: wrap;
+            overflow-x: hidden;
+            overflow-y: visible;
             padding-bottom: 18px; /* leaves room for shelf line */
             scrollbar-width: thin;
         }

@@ -733,15 +733,13 @@
                 .sort((a, b) => a[0].position - b[0].position);
 
             for (const group of sortedGroups) {
-                const hasTieBreakValue = group.some(entry => entry.tie_break !== null && entry.tie_break !== undefined);
-                if (!hasTieBreakValue) continue;
-
                 const leader = group[0];
                 // Only show tie-break messaging when it affects podium placement (1st/2nd/3rd).
                 // We do not play tie-breakers for lower placings.
                 if (!leader || !Number.isFinite(leader.position) || leader.position > 3) {
                     continue;
                 }
+                const hasTieBreakValue = group.some(entry => entry.tie_break !== null && entry.tie_break !== undefined);
                 const others = group.slice(1);
                 const leaderName = getDisplayPlayerName(tournament, leader.player, tournamentEngine);
                 const otherNames = others.map(entry => getDisplayPlayerName(tournament, entry.player, tournamentEngine));
@@ -749,7 +747,11 @@
                 const ordinalWord = getOrdinalWord(leader.position);
                 const actionVerb = leader.position === 1 ? 'wins' : `comes ${ordinalWord}`;
 
-                return `${leaderName} ${actionVerb} in a ${tieSize}-way tie break against ${formatNameList(otherNames)}.`;
+                if (!hasTieBreakValue) {
+                    return `Warning: ${leaderName} and ${formatNameList(otherNames)} are tied on tricks for ${ordinalWord} place, but Tie_Break is missing in the raw scorecards. Add Tie_Break values to record the playoff result.`;
+                }
+
+                return `${leaderName} ${actionVerb} in a ${tieSize}-way playoff against ${formatNameList(otherNames)}.`;
             }
 
             return '';
