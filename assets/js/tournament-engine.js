@@ -1335,7 +1335,14 @@ class TournamentEngine {
                 const values = rows[i];
                 if (!Array.isArray(values) || values.length === 0) continue;
                 const playerKey = values[keyIdx];
-                if (values.length < 3 || !playerKey) continue;
+                if (!playerKey) continue;
+
+                // Google Sheets CSV exports sometimes omit trailing empty columns, which can cause
+                // short rows (e.g., when only Key/DisplayName are filled). Pad so index lookups
+                // for optional columns don't accidentally drop valid players.
+                if (Array.isArray(headers) && headers.length && values.length < headers.length) {
+                    while (values.length < headers.length) values.push('');
+                }
                 
                 // Debug logging for SteveBlake specifically
                 const joinedLine = values.join(',');

@@ -896,11 +896,36 @@
                     return encodeHtml(value);
                 }
                 
+                function createSharedHandLinks(playerName, cssClass = 'player-name-link') {
+                    const raw = String(playerName || '').trim();
+                    const parts = raw.split(/[\/+&]/g).map(x => String(x || '').trim()).filter(Boolean);
+                    if (!parts.length) return `<span class="${cssClass} shared-hand">${encodeHtml(raw)}</span>`;
+
+                    const ids = parts.map(p => {
+                        return (tournamentEngine && typeof tournamentEngine.getCanonicalPlayerId === 'function')
+                            ? tournamentEngine.getCanonicalPlayerId(p)
+                            : p;
+                    }).filter(Boolean);
+
+                    if (!ids.length) return `<span class="${cssClass} shared-hand">${encodeHtml(raw)}</span>`;
+                    ids.sort((a, b) => String(a).localeCompare(String(b)));
+
+                    const links = ids.map((id, idx) => {
+                        const label = (tournamentEngine && typeof tournamentEngine.getDisplayName === 'function')
+                            ? tournamentEngine.getDisplayName(id)
+                            : String(id);
+                        const sep = idx === 0 ? '' : ` <span class="shared-hand-sep">/</span> `;
+                        return `${sep}<a href="../players/profile.html?player=${encodeURIComponent(String(id))}" class="${cssClass} shared-hand-link"><strong>${encodeHtml(label)}</strong></a>`;
+                    }).join('');
+
+                    return `<span class="${cssClass} shared-hand shared-hand-links">${links}</span>`;
+                }
+
                 // Helper function to create player link (handles shared hands)
                 function createPlayerLink(playerName, displayName, cssClass = 'player-name-link') {
                     const isSharedHand = playerName.includes('/') || playerName.includes('+') || playerName.includes('&');
                     if (isSharedHand) {
-                        return `<span class="${cssClass} shared-hand">${displayName}</span>`;
+                        return createSharedHandLinks(playerName, cssClass);
                     } else {
                         return `<a href="../players/profile.html?player=${encodeURIComponent(playerName)}" class="${cssClass}">${displayName}</a>`;
                     }
@@ -1140,7 +1165,7 @@
                                     ? `
                                         <span class="player-cell__wrap">
                                             ${sharedHandAvatarHtml(player.partnership_players, player.player, 'table')}
-                                        <strong>${getDisplayPlayerName(tournament, player.player, tournamentEngine)}</strong>
+                                            ${createSharedHandLinks(player.player, 'player-name-link')}
                                         </span>
                                     `
                                     : `

@@ -1122,7 +1122,9 @@
                     };
 
                     const statNumber = firstItem ? extractStatNumber(firstItem) : '—';
-                    const leaderVerb = tieForFirst ? 'share' : 'has';
+                    const leaderVerb = tieForFirst
+                        ? (options && typeof options.leaderVerbTie === 'string' ? options.leaderVerbTie : 'share')
+                        : (options && typeof options.leaderVerbSingular === 'string' ? options.leaderVerbSingular : 'has');
 
                     // Let each card provide a "meaning" sentence that avoids repeating the numeric value.
                     // Example: "the highest tournament score", "the most 12+ trick rounds", etc.
@@ -1189,10 +1191,103 @@
 
                     // Most consecutive tournament championships (top 3)
                     {
-                        championshipCards.push(renderRecordCard('Youngest Winner', [], { noDataText: 'Requires birth dates.' }));
-                        championshipCards.push(renderRecordCard('Oldest Winner', [], { noDataText: 'Requires birth dates.' }));
-                        championshipInsightCards.push(renderInsightFromRecordCompact('Young gun', '🧒', 'Youngest Winner', [], { noDataText: 'Requires birth dates.' }));
-                        championshipInsightCards.push(renderInsightFromRecordCompact('Late bloomer', '🧓', 'Oldest Winner', [], { noDataText: 'Requires birth dates.' }));
+                        const msPerYear = 1000 * 60 * 60 * 24 * 365.25;
+
+                        const getBirthInfo = (playerId) => {
+                            if (!playerId || !tournamentEngine) return null;
+                            const roster = (typeof tournamentEngine.getRosterPlayer === 'function')
+                                ? tournamentEngine.getRosterPlayer(playerId)
+                                : null;
+                            const raw = roster && typeof roster.dateOfBirth === 'string' ? roster.dateOfBirth.trim() : '';
+                            if (!raw) return null;
+                            if (typeof tournamentEngine.parseRosterDate === 'function') {
+                                return tournamentEngine.parseRosterDate(raw);
+                            }
+                            // Fallback: year-only parse
+                            const m = raw.match(/(\d{4})/);
+                            const y = m ? parseInt(m[1], 10) : NaN;
+                            return { raw, year: Number.isFinite(y) ? y : null, date: null, isYearOnly: true };
+                        };
+
+                        const getTournamentDate = (t) => {
+                            if (!t) return null;
+                            const year = Number.isFinite(Number(t.year)) ? Number(t.year) : null;
+                            const raw = (t.date || t.Date || t.tournament_date || '').toString().trim();
+                            if (raw) {
+                                // IMPORTANT: tournament dates in the sheet are typically DD/MM/YYYY.
+                                // `new Date("14/12/1991")` is invalid in JS, which caused us to fall back to mid-year (July 1),
+                                // producing suspicious ages like "14.1" when the tournament is actually in December.
+                                if (typeof tournamentEngine?.parseRosterDate === 'function') {
+                                    const parsed = tournamentEngine.parseRosterDate(raw);
+                                    if (parsed && parsed.date && !Number.isNaN(parsed.date.getTime())) return parsed.date;
+                                    if (parsed && parsed.year && Number.isFinite(parsed.year) && parsed.isYearOnly) {
+                                        return new Date(Date.UTC(parsed.year, 6, 1));
+                                    }
+                                }
+                                // Also support ISO-like values if present.
+                                const d = new Date(raw);
+                                if (!Number.isNaN(d.getTime())) return d;
+                            }
+                            // Fallback: mid-year, so year-only DOBs produce a sensible age.
+                            if (year) return new Date(Date.UTC(year, 6, 1));
+                            return null;
+                        };
+
+                        const winnerAgeRows = [];
+                        for (const t of tournaments) {
+                            const year = Number.isFinite(Number(t?.year)) ? Number(t.year) : null;
+                            const winnerId = t && t.winner ? String(t.winner) : '';
+                            if (!year || !winnerId) continue;
+                            if (isSharedHandEntry(winnerId)) continue;
+
+                            const birth = getBirthInfo(winnerId);
+                            if (!birth || !birth.year) continue;
+
+                            const winDate = getTournamentDate(t) || new Date(Date.UTC(year, 6, 1));
+                            let ageYears = null;
+                            if (birth.date && !Number.isNaN(birth.date.getTime())) {
+                                ageYears = (winDate.getTime() - birth.date.getTime()) / msPerYear;
+                            } else {
+                                ageYears = year - birth.year;
+                            }
+                            if (!Number.isFinite(ageYears) || ageYears < 0 || ageYears > 120) continue;
+
+                            winnerAgeRows.push({ winnerId, year, ageYears });
+                        }
+
+                        const noDataText = 'Requires DateOfBirth for tournament winners.';
+                        const toEntry = (x, sortValue) => {
+                            const ageText = x.ageYears.toFixed(1);
+                            return {
+                                key: ageText,
+                                sortValue,
+                                item: makeEntry(
+                                    fmtPlayer(x.winnerId),
+                                    ageText,
+                                    'years',
+                                    `Year ${x.year}`,
+                                    { playerId: x.winnerId, href: tournamentResultsHref(x.year) }
+                                )
+                            };
+                        };
+
+                        const youngestEntries = winnerAgeRows.map(x => toEntry(x, -x.ageYears));
+                        const oldestEntries = winnerAgeRows.map(x => toEntry(x, x.ageYears));
+
+                        championshipCards.push(renderRecordCard('Youngest Winner', youngestEntries, { noDataText }));
+                        championshipCards.push(renderRecordCard('Oldest Winner', oldestEntries, { noDataText }));
+                        championshipInsightCards.push(renderInsightFromRecordCompact('Young gun', '🧒', 'Youngest Winner', youngestEntries, {
+                            noDataText,
+                            primarySentence: 'the youngest tournament winner',
+                            leaderVerbSingular: 'is',
+                            leaderVerbTie: 'are'
+                        }));
+                        championshipInsightCards.push(renderInsightFromRecordCompact('Late bloomer', '🧓', 'Oldest Winner', oldestEntries, {
+                            noDataText,
+                            primarySentence: 'the oldest tournament winner',
+                            leaderVerbSingular: 'is',
+                            leaderVerbTie: 'are'
+                        }));
                     }
 
                     // Performance Records
@@ -1378,6 +1473,106 @@
                         participationCards.push(renderRecordCard('Most Tournaments Played', entries));
                         participationInsightCards.push(renderInsightFromRecordCompact('The ironman', '🧳', 'Most Tournaments Played', entries, {
                             primarySentence: 'the most tournaments played'
+                        }));
+                    }
+                    {
+                        const msPerYear = 1000 * 60 * 60 * 24 * 365.25;
+                        const noDataText = 'Requires DateOfBirth for entrants.';
+
+                        const getBirthInfo = (playerId) => {
+                            if (!playerId || !tournamentEngine) return null;
+                            const roster = (typeof tournamentEngine.getRosterPlayer === 'function')
+                                ? tournamentEngine.getRosterPlayer(playerId)
+                                : null;
+                            const raw = roster && typeof roster.dateOfBirth === 'string' ? roster.dateOfBirth.trim() : '';
+                            if (!raw) return null;
+                            if (typeof tournamentEngine.parseRosterDate === 'function') {
+                                return tournamentEngine.parseRosterDate(raw);
+                            }
+                            const m = raw.match(/(\d{4})/);
+                            const y = m ? parseInt(m[1], 10) : NaN;
+                            return { raw, year: Number.isFinite(y) ? y : null, date: null, isYearOnly: true };
+                        };
+
+                        const getTournamentDate = (t) => {
+                            if (!t) return null;
+                            const year = Number.isFinite(Number(t.year)) ? Number(t.year) : null;
+                            const raw = (t.date || t.Date || t.tournament_date || '').toString().trim();
+                            if (raw) {
+                                if (typeof tournamentEngine?.parseRosterDate === 'function') {
+                                    const parsed = tournamentEngine.parseRosterDate(raw);
+                                    if (parsed && parsed.date && !Number.isNaN(parsed.date.getTime())) return parsed.date;
+                                    if (parsed && parsed.year && Number.isFinite(parsed.year) && parsed.isYearOnly) {
+                                        return new Date(Date.UTC(parsed.year, 6, 1));
+                                    }
+                                }
+                                const d = new Date(raw);
+                                if (!Number.isNaN(d.getTime())) return d;
+                            }
+                            if (year) return new Date(Date.UTC(year, 6, 1));
+                            return null;
+                        };
+
+                        // First appearance per player (includes shared hands).
+                        // Uses tournament date when available, else mid-year.
+                        const firstByPlayer = new Map(); // playerId -> { year, date }
+                        for (const t of (tournaments || [])) {
+                            const year = Number.isFinite(Number(t?.year)) ? Number(t.year) : null;
+                            if (!year) continue;
+                            const date = getTournamentDate(t) || new Date(Date.UTC(year, 6, 1));
+                            const standings = Array.isArray(t?.final_standings) ? t.final_standings : [];
+                            for (const entry of standings) {
+                                if (!entry) continue;
+                                if (entry.is_partnership && Array.isArray(entry.partnership_players) && entry.partnership_players.length) {
+                                    for (const pidRaw of entry.partnership_players) {
+                                        const pid = String(pidRaw || '').trim();
+                                        if (!pid || isSharedHandEntry(pid)) continue;
+                                        if (!firstByPlayer.has(pid)) firstByPlayer.set(pid, { year, date });
+                                    }
+                                    continue;
+                                }
+                                const pid = String(entry.player || '').trim();
+                                if (!pid || isSharedHandEntry(pid)) continue;
+                                if (!firstByPlayer.has(pid)) firstByPlayer.set(pid, { year, date });
+                            }
+                        }
+
+                        const rows = [];
+                        for (const [playerId, first] of firstByPlayer.entries()) {
+                            const birth = getBirthInfo(playerId);
+                            if (!birth || !birth.year) continue;
+                            const winDate = first?.date || new Date(Date.UTC(first.year, 6, 1));
+                            let ageYears = null;
+                            if (birth.date && !Number.isNaN(birth.date.getTime())) {
+                                ageYears = (winDate.getTime() - birth.date.getTime()) / msPerYear;
+                            } else {
+                                ageYears = first.year - birth.year;
+                            }
+                            if (!Number.isFinite(ageYears) || ageYears < 0 || ageYears > 120) continue;
+                            rows.push({ playerId, year: first.year, ageYears });
+                        }
+
+                        const entries = rows.map(r => {
+                            const ageText = r.ageYears.toFixed(1);
+                            return {
+                                key: ageText,
+                                sortValue: -r.ageYears, // smaller age => larger sort value
+                                item: makeEntry(
+                                    fmtPlayer(r.playerId),
+                                    ageText,
+                                    'years',
+                                    `Year ${r.year}`,
+                                    { playerId: r.playerId, href: tournamentResultsHref(r.year) }
+                                )
+                            };
+                        });
+
+                        participationCards.push(renderRecordCard('Youngest entrant', entries, { noDataText }));
+                        participationInsightCards.push(renderInsightFromRecordCompact('Youngest entrant', '🎒', 'Youngest entrant', entries, {
+                            noDataText,
+                            primarySentence: 'the youngest ever tournament entrant',
+                            leaderVerbSingular: 'is',
+                            leaderVerbTie: 'are'
                         }));
                     }
                     {

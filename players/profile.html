@@ -793,16 +793,29 @@
                         const partnerships = table && Array.isArray(table.partnerships) ? table.partnerships : [];
                         for (const p of partnerships) {
                             if (!p || !Array.isArray(p.position1) || !Array.isArray(p.position2)) continue;
-                            const sidePlayers = Array.from(new Set([...(p.position1 || []), ...(p.position2 || [])])).filter(Boolean);
-                            if (!sidePlayers.includes(playerId)) continue;
+                            const pos1 = (p.position1 || []).filter(Boolean);
+                            const pos2 = (p.position2 || []).filter(Boolean);
+                            const in1 = pos1.includes(playerId);
+                            const in2 = pos2.includes(playerId);
+                            if (!in1 && !in2) continue;
+
                             const tricks = Number.isFinite(p.tricks) ? p.tricks : parseFloat(p.tricks);
                             if (!Number.isFinite(tricks)) continue;
-                            const isNormalPairing = (p.position1.length === 1 && p.position2.length === 1 && sidePlayers.length === 2);
                             const isWin = tricks >= 7;
-                            sidePlayers.forEach(otherId => {
-                                if (otherId === playerId) return;
-                                add(otherId, tricks, isNormalPairing, isWin, { year, round: roundNum, table: tableNum });
-                            });
+
+                            // Partner is the OTHER SEAT in this partnership record (not the shared-hand co-occupant).
+                            // This means:
+                            // - If playerId is in position1, partner comes from position2 (and vice versa).
+                            // - If the partner seat is itself shared (2+ people), we can't know which individual they played with,
+                            //   so we skip to avoid inventing a partnership.
+                            const partnerSeat = in1 ? pos2 : pos1;
+                            if (partnerSeat.length !== 1) continue;
+                            const partnerId = partnerSeat[0];
+                            if (!partnerId || partnerId === playerId) continue;
+
+                            // Non-shared pairing = both seats are single people.
+                            const isNormalPairing = (pos1.length === 1 && pos2.length === 1);
+                            add(partnerId, tricks, isNormalPairing, isWin, { year, round: roundNum, table: tableNum });
                         }
                     }
                 }
