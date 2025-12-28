@@ -514,8 +514,6 @@
                 const joinY = joinYBase + laneOffset(joinLane, 4);
                 const minParentX = Math.min(...parentCenters.map(p => p.x));
                 const maxParentX = Math.max(...parentCenters.map(p => p.x));
-                // Always join/descend from the midpoint between the parents.
-                const joinX = (minParentX + maxParentX) / 2;
 
                 // vertical down from each parent to joinY
                 parentCenters.forEach(pc => {
@@ -541,12 +539,16 @@
                 fanYLanes.set(railKey, railLane + 1);
                 const fanY = railY + laneOffset(railLane, 4);
 
+                const minChildX = Math.min(...childCentersResolved.map(c => c.x));
+                const maxChildX = Math.max(...childCentersResolved.map(c => c.x));
+                // Prefer centering the trunk over the children rail (not the parent midpoint).
+                // This fixes visual misalignment when children have asymmetric attachments.
+                const joinX = (minChildX + maxChildX) / 2;
+
                 // trunk from join point down to fan rail
                 drawLine(svg, joinX, joinY, joinX, fanY, 'ft-line');
 
                 // Draw one shared horizontal rail (prevents overlapping horizontals)
-                const minChildX = Math.min(...childCentersResolved.map(c => c.x));
-                const maxChildX = Math.max(...childCentersResolved.map(c => c.x));
                 drawLine(svg, minChildX, fanY, maxChildX, fanY, 'ft-line');
 
                 // Drop into each child at top edge
@@ -707,7 +709,7 @@
                 childrenByParents.get(key).push(child.id);
             });
 
-            // Sort children within each parent group by DOB asc, then alpha
+            // Sort children within each parent group by DOB asc (oldest → youngest), then alpha
             for (const [k, childIds] of childrenByParents.entries()) {
                 childIds.sort((a, b) => {
                     const pa = byId.get(a);
@@ -988,6 +990,9 @@
             const attachmentsByAnchor = new Map(); // anchor -> [{id,type}]
             const attachEdgeType = (anchor, node) => {
                 const k = [anchor, node].sort((a, b) => a.localeCompare(b)).join('|');
+                // Highest adjacency preference: HadChildrenWith (even if child-parent data is incomplete)
+                if (couples && couples.has && couples.has(k)) return 'couple';
+                // Next: explicit partnered-with connections
                 if (partnerPairsSet.has(k)) return 'partner';
                 return 'linked';
             };
@@ -999,10 +1004,17 @@
                 attachmentsByAnchor.get(anchor).push({ id: p.id, type: attachEdgeType(anchor, p.id) });
             }
 
+            const attachmentTypeRank = (t) => {
+                // Lower = earlier (higher priority)
+                if (t === 'couple') return 0;
+                if (t === 'partner') return 1;
+                return 2; // linked
+            };
             for (const [anchor, list] of attachmentsByAnchor.entries()) {
                 list.sort((a, b) => {
-                    // Partnered attachments first, then alpha
-                    if (a.type !== b.type) return a.type === 'partner' ? -1 : 1;
+                    const ra = attachmentTypeRank(a.type);
+                    const rb = attachmentTypeRank(b.type);
+                    if (ra !== rb) return ra - rb;
                     return alphaCompare(byId.get(a.id)?.displayName, byId.get(b.id)?.displayName);
                 });
             }
@@ -1015,6 +1027,81 @@
                     attachmentAnchorForNode.set(item.id, anchor);
                 });
             }
+
+            // --- Root branch mapping (used to keep LinkedTo attachments on the correct "branch side")
+            // If a linked attachment is anchored to someone in a left-side branch, keep it on the left;
+            // likewise for right-side branches. This prevents cross-branch "swaps" for attachments like Laura/Jemima.
+            //
+            // Prefer explicit founders' children (rootChildren). If missing (common when Gen1 doesn't have Parents filled),
+            // fall back to "top-level" bloodline roots: nodes with no parents that are not attachments.
+            const branchRootIds = (() => {
+                const explicit = Array.isArray(rootChildren) ? rootChildren.slice() : [];
+                if (explicit.length) return explicit;
+
+                const candidates = (relevant || [])
+                    .filter(p => p && p.id && !foundersSet.has(p.id) && !attachedNodeIds.has(p.id))
+                    .filter(p => {
+                        const hasParents = Array.isArray(p.parents) && p.parents.length;
+                        const isBloodline = baseSet && baseSet.has ? baseSet.has(p.id) : false;
+                        return !hasParents && isBloodline;
+                    })
+                    .map(p => p.id);
+
+                candidates.sort((a, b) => alphaCompare(byId.get(a)?.displayName, byId.get(b)?.displayName));
+                return candidates;
+            })();
+
+            const rootIndexByRootId = new Map(branchRootIds.map((id, idx) => [id, idx]));
+            const rootIdById = new Map(); // nodeId -> rootChildId (or null)
+            const rootIndexById = new Map(); // nodeId -> root index (or undefined)
+
+            const findRootChildFor = (id, stack = new Set()) => {
+                const key = String(id || '').trim();
+                if (!key) return null;
+                if (rootIdById.has(key)) return rootIdById.get(key) || null;
+                if (stack.has(key)) return null; // cycle guard
+                stack.add(key);
+
+                if (rootIndexByRootId.has(key)) {
+                    rootIdById.set(key, key);
+                    stack.delete(key);
+                    return key;
+                }
+
+                const p = byId.get(key);
+                let found = null;
+
+                // Prefer bloodline ancestry first
+                const parents = Array.isArray(p?.parents) ? p.parents : [];
+                for (const pid of parents) {
+                    if (!pid || !byId.has(pid)) continue;
+                    found = findRootChildFor(pid, stack);
+                    if (found) break;
+                }
+
+                // Then: attachments inherit the anchor's root branch.
+                if (!found) {
+                    const anchor = attachmentAnchorForNode.get(key);
+                    if (anchor) found = findRootChildFor(anchor, stack);
+                }
+
+                // Last resort: follow a linkedTo anchor (keeps outsiders close to their intended branch)
+                if (!found) {
+                    const linked = Array.isArray(p?.linkedTo) ? p.linkedTo : [];
+                    const anchor = linked.find(x => x && byId.has(x));
+                    if (anchor) found = findRootChildFor(anchor, stack);
+                }
+
+                rootIdById.set(key, found || null);
+                stack.delete(key);
+                return found || null;
+            };
+
+            relevant.forEach(p => {
+                const rid = findRootChildFor(p.id, new Set());
+                const idx = (rid && rootIndexByRootId.has(rid)) ? rootIndexByRootId.get(rid) : null;
+                if (typeof idx === 'number') rootIndexById.set(p.id, idx);
+            });
 
             // Attachments inherit their anchor's generation level so they sit on the same horizontal axis.
             // (Prevents cases like Leanne appearing "higher" than her anchor due to missing/indirect LinkedTo data.)
@@ -1058,7 +1145,7 @@
                 }
             }
 
-            return { relevant, byId, childrenByParents, linkedEdges, levelById, missingKeys, coupleWarnings, rosterCount, relevantCount, meta, founders, foundersSet, couples, partnerPairs, coupleChildrenByPair, childrenOf, getSortedChildren, rootChildren, baseSet, attachmentsByAnchor, attachedNodeIds, attachmentAnchorForNode };
+            return { relevant, byId, childrenByParents, linkedEdges, levelById, missingKeys, coupleWarnings, rosterCount, relevantCount, meta, founders, foundersSet, couples, partnerPairs, coupleChildrenByPair, childrenOf, getSortedChildren, rootChildren, baseSet, attachmentsByAnchor, attachedNodeIds, attachmentAnchorForNode, rootIndexById, branchRootIds };
         }
 
         function layoutFamilyTree(engine, model) {
@@ -1091,7 +1178,7 @@
             // Leaf spacing = "optimal" final-generation spacing
             const LEAF_GAP = 46;
             // Extra spacing between Gen 1 branches (big)
-            const BRANCH_GAP = 360;
+            const BRANCH_GAP = 440;
             // Couple spacing (space between the two boxes)
             const COUPLE_BOX_GAP = 40;
             // Linked-to spacing (space between boxes)
@@ -1119,16 +1206,50 @@
                 (list || []).forEach(item => attachedNodes.add(item.id));
             }
             const anchorForNode = model.attachmentAnchorForNode || new Map();
+            const rootsCount = Array.isArray(model.branchRootIds) ? model.branchRootIds.length : (Array.isArray(model.rootChildren) ? model.rootChildren.length : 0);
+            const rootIndexById = model.rootIndexById instanceof Map ? model.rootIndexById : new Map();
+
+            // Reverse index: anchor -> [attached nodes], derived from the stable model map.
+            // Note: we cannot rely on `attachmentsByAnchor` later because the layout placer consumes it.
+            const attachedByAnchor = (() => {
+                const m = new Map();
+                if (anchorForNode && typeof anchorForNode.entries === 'function') {
+                    for (const [nodeId, anchorId] of anchorForNode.entries()) {
+                        if (!nodeId || !anchorId) continue;
+                        if (!m.has(anchorId)) m.set(anchorId, []);
+                        m.get(anchorId).push(nodeId);
+                    }
+                }
+                // Keep deterministic order
+                for (const [k, list] of m.entries()) {
+                    list.sort((a, b) => alphaCompare(model.byId.get(a)?.displayName, model.byId.get(b)?.displayName));
+                }
+                return m;
+            })();
+
+            const outwardAttachSideFor = (id) => {
+                if (!rootsCount) return null;
+                const idx = rootIndexById.get(id);
+                if (typeof idx !== 'number') return null;
+                return idx < (rootsCount / 2) ? 'left' : 'right';
+            };
 
             const getCouplePartner = (id) => {
                 const p = model.byId.get(id);
                 if (!p) return null;
                 const candidates = Array.isArray(p.hadChildrenWith) ? p.hadChildrenWith : [];
+                // Prefer a partner where we have explicit shared children (both parents set on at least one child),
+                // but fall back to ANY HadChildrenWith partner so adjacency still reflects the family tree semantics.
                 for (const other of candidates) {
+                    if (!other || !model.byId.has(other)) continue;
                     const pairKey = [id, other].sort((a, b) => a.localeCompare(b)).join('|');
-                    if (model.coupleChildrenByPair && model.coupleChildrenByPair.has(pairKey) && model.byId.has(other)) {
+                    if (model.coupleChildrenByPair && model.coupleChildrenByPair.has(pairKey)) {
                         return other;
                     }
+                }
+                for (const other of candidates) {
+                    if (!other || !model.byId.has(other)) continue;
+                    return other;
                 }
                 return null;
             };
@@ -1142,64 +1263,189 @@
                 return idx < (count / 2) ? 'left' : 'right';
             };
 
-            const placeAttachments = (anchorId, side, baseLeft, baseRight) => {
-                const list = attachmentsByAnchor.get(anchorId);
-                if (!list || !list.length) return { left: baseLeft, right: baseRight };
-                attachmentsByAnchor.delete(anchorId);
+            const oppositeSide = (side) => side === 'left' ? 'right' : 'left';
 
-                const items = list.slice();
-                // For placement, we use alphabetical order, but allow left-side placement to preserve left->right reading order.
+            const shiftNodeOnly = (id, delta) => {
+                const x = xById.get(id);
+                if (!Number.isFinite(x)) return;
+                const nx = x + delta;
+                xById.set(id, nx);
+
+                if (spanById.has(id)) {
+                    const s = spanById.get(id);
+                    spanById.set(id, [s[0] + delta, s[1] + delta]);
+                } else {
+                    const w = nodeWidth(id);
+                    spanById.set(id, [nx - (w / 2), nx + (w / 2)]);
+                }
+
+                if (coreSpanById.has(id)) {
+                    const s = coreSpanById.get(id);
+                    coreSpanById.set(id, [s[0] + delta, s[1] + delta]);
+                }
+            };
+
+            const shiftSubtree = (id, delta, visited = new Set()) => {
+                if (!id || visited.has(id)) return;
+                visited.add(id);
+
+                // Couples are treated as a unit (keep the two boxes adjacent).
+                const partner = getCouplePartner(id);
+                if (partner && !visited.has(partner)) {
+                    visited.add(partner);
+                    shiftNodeOnly(partner, delta);
+                }
+
+                shiftNodeOnly(id, delta);
+
+                // Shift attachments (and their own attachment chains)
+                const atts = attachedByAnchor.get(id) || [];
+                atts.forEach(attId => shiftSubtree(attId, delta, visited));
+                if (partner) {
+                    const atts2 = attachedByAnchor.get(partner) || [];
+                    atts2.forEach(attId => shiftSubtree(attId, delta, visited));
+                }
+
+                // Shift descendants (keeping the whole branch aligned)
+                const kids = model.getSortedChildren ? model.getSortedChildren(id) : [];
+                kids.forEach(cid => shiftSubtree(cid, delta, visited));
+                if (partner && model.getSortedChildren) {
+                    model.getSortedChildren(partner).forEach(cid => shiftSubtree(cid, delta, visited));
+                }
+            };
+
+            // Ensure siblings don't overlap by minimally shifting later siblings (and their branches) right.
+            // This preserves the preference rules (we don't reorder anything), but creates space when
+            // "inside" attachments are forcing overlaps.
+            const packSiblings = (childIdsSorted) => {
+                const ids = Array.isArray(childIdsSorted) ? childIdsSorted.slice() : [];
+                if (ids.length <= 1) return;
+                const MIN_GAP = 24;
+                let prevRight = null;
+                ids.forEach(cid => {
+                    const span = spanById.get(cid) || coreSpanById.get(cid);
+                    if (!span) return;
+                    const left = span[0];
+                    const right = span[1];
+                    if (prevRight !== null && left < prevRight + MIN_GAP) {
+                        const delta = (prevRight + MIN_GAP) - left;
+                        shiftSubtree(cid, delta);
+                    }
+                    const span2 = spanById.get(cid) || coreSpanById.get(cid) || span;
+                    prevRight = Math.max(prevRight ?? -Infinity, span2[1]);
+                });
+
+                // Ensure future leaves don't get placed inside the newly-expanded region.
+                if (prevRight !== null) {
+                    cursorX = Math.max(cursorX, prevRight + LEAF_GAP);
+                }
+            };
+
+            const takeAnchorAttachments = (anchorId) => {
+                const list = attachmentsByAnchor.get(anchorId);
+                if (!list || !list.length) return null;
+                attachmentsByAnchor.delete(anchorId);
+                return list.slice();
+            };
+
+            // Place a list of attachments on ONE side of an anchor, chaining outward.
+            // Partner (if present in the list) is placed immediately adjacent using COUPLE_BOX_GAP.
+            // LinkedTo attachments chain outward using LINK_BOX_GAP.
+            const placeAttachmentList = (items, side, baseLeft, baseRight, opts = {}) => {
+                const list = Array.isArray(items) ? items.slice() : [];
+                if (!list.length) return { left: baseLeft, right: baseRight };
+
                 const placeOne = (id, x) => {
                     const w = nodeWidth(id);
                     xById.set(id, x);
                     spanById.set(id, [x - (w / 2), x + (w / 2)]);
                     coreSpanById.set(id, [x - (w / 2), x + (w / 2)]);
-                    // Resolve this attachment's own attachments first (recursively extend outward)
                     return { w };
                 };
 
-                if (side === 'left') {
-                    const partner = items.find(it => it.type === 'partner') || null;
-                    const rest = partner ? items.filter(it => it !== partner) : items.slice();
+                const partnerLikes = list.filter(it => it && (it.type === 'couple' || it.type === 'partner'));
+                const rest = list.filter(it => !(it && (it.type === 'couple' || it.type === 'partner')));
 
+                if (side === 'left') {
                     let curLeft = baseLeft;
                     const placeWithGap = (it, gap) => {
                         const w = nodeWidth(it.id);
                         const x = curLeft - gap - (w / 2);
                         placeOne(it.id, x);
-                        // Recurse outward from this attachment on the same side
                         const innerLeft = x - (w / 2);
                         const innerRight = x + (w / 2);
-                        const edge = placeAttachments(it.id, 'left', innerLeft, innerRight);
+                        // Recurse outward from this attachment on the SAME side (prevents "wedging" between anchor + attachment).
+                        const edge = placeAnchorAttachments(it.id, 'left', innerLeft, innerRight, { forceOutward: true });
                         curLeft = Math.min(innerLeft, edge.left);
                     };
-
-                    // Partner must be immediately adjacent
-                    if (partner) {
-                        placeWithGap(partner, COUPLE_BOX_GAP);
-                    }
-                    // Other attachments outward; reverse so left-to-right reads alphabetical closest-to-anchor last
+                    // Highest adjacency: couple/partner (place first, immediately adjacent)
+                    partnerLikes.forEach(it => placeWithGap(it, COUPLE_BOX_GAP));
+                    // Outward chain: keep alphabetical order from anchor outward.
+                    // Reverse so left-to-right reading order stays natural.
                     rest.slice().reverse().forEach(it => placeWithGap(it, LINK_BOX_GAP));
-
                     return { left: curLeft, right: baseRight };
                 }
 
                 // right
                 let curRight = baseRight;
-                const partner = items.find(it => it.type === 'partner') || null;
-                const rest = partner ? items.filter(it => it !== partner) : items.slice();
                 const placeWithGap = (it, gap) => {
                     const w = nodeWidth(it.id);
                     const x = curRight + gap + (w / 2);
                     placeOne(it.id, x);
                     const innerLeft = x - (w / 2);
                     const innerRight = x + (w / 2);
-                    const edge = placeAttachments(it.id, 'right', innerLeft, innerRight);
+                    const edge = placeAnchorAttachments(it.id, 'right', innerLeft, innerRight, { forceOutward: true });
                     curRight = Math.max(innerRight, edge.right);
                 };
-                if (partner) placeWithGap(partner, COUPLE_BOX_GAP);
+                partnerLikes.forEach(it => placeWithGap(it, COUPLE_BOX_GAP));
                 rest.forEach(it => placeWithGap(it, LINK_BOX_GAP));
                 return { left: baseLeft, right: curRight };
+            };
+
+            // Place attachments around an anchor according to adjacency preference:
+            // HadChildrenWith (couple) > Partner > LinkedTo.
+            // Core rule: never "wedge" attachments between a person and their siblings (use the "aisle side" when provided).
+            // Chain rule: when placing attachments-of-attachments, force everything outward so nothing ends up between anchor + attachment.
+            const placeAnchorAttachments = (anchorId, aisleSide, baseLeft, baseRight, opts = {}) => {
+                const list = takeAnchorAttachments(anchorId);
+                if (!list || !list.length) return { left: baseLeft, right: baseRight };
+
+                const side = (aisleSide === 'left' || aisleSide === 'right') ? aisleSide : 'right';
+                const inwardSide = oppositeSide(side);
+
+                const couples = list.filter(it => it && it.type === 'couple');
+                const partners = list.filter(it => it && it.type === 'partner');
+                const linked = list.filter(it => it && it.type !== 'couple' && it.type !== 'partner');
+
+                let leftItems = [];
+                let rightItems = [];
+
+                const nonCoupleOutward = [...partners, ...linked];
+                if (opts && opts.forceOutward) {
+                    // Chains: keep everything outward from the current node (never between it and its anchor).
+                    const outward = [...couples, ...nonCoupleOutward];
+                    if (side === 'left') leftItems = outward;
+                    else rightItems = outward;
+                } else {
+                    // Default: keep non-couple attachments outward so siblings can stay adjacent when possible.
+                    if (side === 'left') leftItems = nonCoupleOutward;
+                    else rightItems = nonCoupleOutward;
+
+                    // Put HadChildrenWith partner(s) on the inward side so they're adjacent but don't disrupt outward chains.
+                    if (couples.length) {
+                        if (inwardSide === 'left') leftItems = [...couples, ...leftItems];
+                        else rightItems = [...couples, ...rightItems];
+                    }
+                }
+
+                const baseL = baseLeft;
+                const baseR = baseRight;
+                const leftEdge = leftItems.length ? placeAttachmentList(leftItems, 'left', baseL, baseR, opts) : { left: baseL, right: baseR };
+                const rightEdge = rightItems.length ? placeAttachmentList(rightItems, 'right', baseL, baseR, opts) : { left: baseL, right: baseR };
+                return {
+                    left: Math.min(leftEdge.left, rightEdge.left),
+                    right: Math.max(leftEdge.right, rightEdge.right)
+                };
             };
 
             const layoutNode = (id, opts = {}) => {
@@ -1229,14 +1475,19 @@
                     let maxX = cursorX;
                     if (kids.length) {
                         // Layout children first, then compute a centering span that includes "inside" attachments:
-                        // - Left half children: include right-side attachments, exclude left-side (outside)
-                        // - Right half children: include left-side attachments, exclude right-side (outside)
+                        // - Left half children: include right-side attachments, exclude left-side (outside edge)
+                        // - Right half children: include left-side attachments, exclude right-side (outside edge)
                         // - Middle child (odd count): include both
                         kids.forEach((cid, idx) => {
                             const side = attachSideForChildIndex(idx, kids.length);
                             layoutNode(cid, { preferAttachSide: side });
                         });
-                        const kidsSorted = kids
+                        // If any siblings overlap (usually due to central "inside" attachments), create minimal extra spacing.
+                        let kidsSorted = kids
+                            .slice()
+                            .sort((a, b) => (xById.get(a) || 0) - (xById.get(b) || 0));
+                        packSiblings(kidsSorted);
+                        kidsSorted = kids
                             .slice()
                             .sort((a, b) => (xById.get(a) || 0) - (xById.get(b) || 0));
                         const spans = kidsSorted
@@ -1288,11 +1539,12 @@
                     coreSpanById.set(id, [coreLeft, coreRight]);
                     coreSpanById.set(partner, [coreLeft, coreRight]);
 
-                    // Attach linked-to-only nodes on OUTER sides
-                    const leftEdge = placeAttachments(leftId, 'left', left, right);
+                    // Attach linked/partner nodes around each parent.
+                    // Couple parents get their outward linked side fixed: left parent expands left, right parent expands right.
+                    const leftEdge = placeAnchorAttachments(leftId, 'left', left, right);
                     left = leftEdge.left;
                     right = leftEdge.right;
-                    const rightEdge = placeAttachments(rightId, 'right', left, right);
+                    const rightEdge = placeAnchorAttachments(rightId, 'right', left, right);
                     left = rightEdge.left;
                     right = rightEdge.right;
 
@@ -1319,8 +1571,15 @@
                     coreSpanById.set(id, [boxLeft, boxRight]);
 
                     // Attach linked-to-only nodes outward based on sibling context
-                    const side = opts.preferAttachSide === 'left' ? 'left' : 'right';
-                    const edge = placeAttachments(id, side, left, right);
+                    const defaultSide = opts.preferAttachSide === 'left' ? 'left' : 'right';
+                    const hasAttachments = attachmentsByAnchor.has(id);
+                    // Prefer: Partner/Linked placement relative to the sibling aisle side when provided; fall back to branch side.
+                    const side = hasAttachments
+                        ? ((opts.preferAttachSide === 'left' || opts.preferAttachSide === 'right')
+                            ? opts.preferAttachSide
+                            : (outwardAttachSideFor(id) || defaultSide))
+                        : defaultSide;
+                    const edge = placeAnchorAttachments(id, side, left, right);
                     left = edge.left;
                     right = edge.right;
 
@@ -1331,14 +1590,19 @@
                 }
 
                 // Layout children first, then compute a centering span that includes "inside" attachments:
-                // - Left half children: include right-side attachments, exclude left-side (outside)
-                // - Right half children: include left-side attachments, exclude right-side (outside)
+                // - Left half children: include right-side attachments, exclude left-side (outside edge)
+                // - Right half children: include left-side attachments, exclude right-side (outside edge)
                 // - Middle child (odd count): include both
                 children.forEach((cid, idx) => {
                     const side = attachSideForChildIndex(idx, children.length);
                     layoutNode(cid, { preferAttachSide: side });
                 });
-                const childrenSorted = children
+                // If any siblings overlap (usually due to central "inside" attachments), create minimal extra spacing.
+                let childrenSorted = children
+                    .slice()
+                    .sort((a, b) => (xById.get(a) || 0) - (xById.get(b) || 0));
+                packSiblings(childrenSorted);
+                childrenSorted = children
                     .slice()
                     .sort((a, b) => (xById.get(a) || 0) - (xById.get(b) || 0));
                 const spans = childrenSorted
@@ -1363,7 +1627,14 @@
                 coreSpanById.set(id, [left, right]);
 
                 // Attach linked-to-only nodes for this anchor outward (default to the aisle side when available)
-                const edge = placeAttachments(id, opts.preferAttachSide === 'left' ? 'left' : 'right', left, right);
+                const defaultSide = opts.preferAttachSide === 'left' ? 'left' : 'right';
+                const hasAttachments = attachmentsByAnchor.has(id);
+                const side = hasAttachments
+                    ? ((opts.preferAttachSide === 'left' || opts.preferAttachSide === 'right')
+                        ? opts.preferAttachSide
+                        : (outwardAttachSideFor(id) || defaultSide))
+                    : defaultSide;
+                const edge = placeAnchorAttachments(id, side, left, right);
                 left = edge.left;
                 right = edge.right;
 
@@ -1422,8 +1693,8 @@
                 const aRight = leftStart + wa;
                 const bLeft = leftStart + wa + COUPLE_BOX_GAP;
                 const bRight = leftStart + total;
-                const aEdge = placeAttachments(a, 'left', aLeft, aRight);
-                const bEdge = placeAttachments(b, 'right', bLeft, bRight);
+                const aEdge = placeAnchorAttachments(a, 'left', aLeft, aRight);
+                const bEdge = placeAnchorAttachments(b, 'right', bLeft, bRight);
                 const fullLeft = Math.min(aEdge.left, aLeft, bEdge.left, bLeft);
                 const fullRight = Math.max(aEdge.right, aRight, bEdge.right, bRight);
                 spanById.set(a, [fullLeft, fullRight]);
@@ -1471,21 +1742,27 @@
                             const x = xById.get(id);
                             if (!Number.isFinite(x)) return null;
                             const w = nodeWidth(id);
+                            const anchorId = anchorForNode && anchorForNode.get ? (anchorForNode.get(id) || null) : null;
+                            const anchorX = anchorId ? xById.get(anchorId) : null;
                             return {
                                 id,
                                 x,
                                 w,
                                 left: x - (w / 2),
                                 right: x + (w / 2),
-                                isAttached: attachedNodes.has(id)
+                                isAttached: attachedNodes.has(id),
+                                anchorId,
+                                anchorX: Number.isFinite(anchorX) ? anchorX : null
                             };
                         })
                         .filter(Boolean)
                         .sort((a, b) => a.left - b.left);
 
+                    // Pass 1: left-to-right, shift RIGHT-side attachments rightwards (avoid pushing left attachments inward).
                     let prevRight = -Infinity;
                     nodes.forEach(n => {
-                        if (n.left < prevRight + MIN_GAP && n.isAttached) {
+                        const isLeftAttachment = n.isAttached && Number.isFinite(n.anchorX) && n.x < n.anchorX;
+                        if (n.left < prevRight + MIN_GAP && n.isAttached && !isLeftAttachment) {
                             const delta = (prevRight + MIN_GAP) - n.left;
                             n.x += delta;
                             n.left += delta;
@@ -1493,6 +1770,25 @@
                         }
                         prevRight = Math.max(prevRight, n.right);
                     });
+
+                    // Pass 2: right-to-left, shift LEFT-side attachments leftwards (prevents "wedging" between siblings).
+                    const byRightDesc = nodes.slice().sort((a, b) => b.right - a.right);
+                    let nextLeft = Infinity;
+                    byRightDesc.forEach(n => {
+                        const isLeftAttachment = n.isAttached && Number.isFinite(n.anchorX) && n.x < n.anchorX;
+                        if (!isLeftAttachment) {
+                            nextLeft = Math.min(nextLeft, n.left);
+                            return;
+                        }
+                        if (n.right > nextLeft - MIN_GAP) {
+                            const delta = n.right - (nextLeft - MIN_GAP);
+                            n.x -= delta;
+                            n.left -= delta;
+                            n.right -= delta;
+                        }
+                        nextLeft = Math.min(nextLeft, n.left);
+                    });
+
                     nodes.forEach(n => {
                         if (!n.isAttached) return;
                         xById.set(n.id, n.x);
@@ -1517,6 +1813,9 @@
                     const ids = idsByLevel.get(lvl) || [];
                     const nodes = ids
                         .map(id => {
+                            // Keep attachment nodes fixed here — shifting them can move linked-to nodes
+                            // between siblings and break the intended adjacency rules.
+                            if (attachedNodes.has(id)) return null;
                             const x = xById.get(id);
                             if (!Number.isFinite(x)) return null;
                             const w = nodeWidth(id);
@@ -1535,7 +1834,6 @@
                         }
                         prevRight = Math.max(prevRight, n.right);
                     });
-
                     nodes.forEach(n => {
                         xById.set(n.id, n.x);
                         spanById.set(n.id, [n.left, n.right]);
@@ -1563,6 +1861,7 @@
             }
             // Re-run overlap resolution after fallback placements
             resolveAllOverlaps();
+            resolveAttachedOverlaps();
 
             // Apply positions
             // Resolve overlaps for LinkedTo-only nodes (don't move core bloodline nodes).
