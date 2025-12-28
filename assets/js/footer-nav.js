@@ -58,6 +58,12 @@
 
   const NAV_HTML = `
     <div class="footer-section">
+      <h4>Family</h4>
+      <p><a href="/history/">History</a></p>
+      <p><a href="/memorial/">Memorial</a></p>
+      <p><a href="/families/">Family tree</a></p>
+    </div>
+    <div class="footer-section">
       <h4>Explore</h4>
       <p><a href="/tournaments/">Tournaments</a></p>
       <p><a href="/tables/">Tables</a></p>
@@ -67,12 +73,6 @@
       <h4>Records</h4>
       <p><a href="/leaderboard/">Hall of Fame</a></p>
       <p><a href="/stats/">Statistics</a></p>
-    </div>
-    <div class="footer-section">
-      <h4>Family</h4>
-      <p><a href="/history/">History</a></p>
-      <p><a href="/memorial/">Memorial</a></p>
-      <p><a href="/families/">Family tree</a></p>
     </div>
     <div class="footer-section">
       <h4>Admin</h4>
