@@ -28,9 +28,9 @@
                     <div class="tournament-badge">🏆 TOURNAMENT ARCHIVE</div>
                     <h1 class="hero-title">40 Years of Championship History</h1>
                     <p class="hero-subtitle">Every tournament, every champion, every memorable moment preserved for posterity</p>
-                    <div style="margin-top: 1rem;">
-                        <a class="btn btn-secondary" href="/photos/?sort=latest">See latest photo uploads</a>
-                    </div>
+                    <p class="hero-subtitle" style="margin-top: var(--spacing-md);">
+                        <a class="hero-subtitle-link" href="/photos/?sort=latest">See latest photo uploads</a>
+                    </p>
                 </div>
             </div>
         </section>
@@ -511,6 +511,15 @@
             opacity: 0.9;
             max-width: 600px;
             margin: 0 auto;
+        }
+        .hero-subtitle-link {
+            color: var(--gold);
+            font-weight: 800;
+            text-decoration: none;
+        }
+        .hero-subtitle-link:hover {
+            color: var(--gold);
+            opacity: 1;
         }
 
         .tournaments-grid-section {

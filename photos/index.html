@@ -33,12 +33,76 @@
             text-align: center;
             color: rgba(255, 255, 255, 0.85);
         }
+        .stream-tabs-label {
+            margin-top: 1.1rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.78);
+            font-weight: 850;
+            font-size: 0.85rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
         .stream-actions {
-            margin-top: 1.25rem;
+            margin-top: 0.6rem;
             display: flex;
             justify-content: center;
-            gap: 0.75rem;
-            flex-wrap: wrap;
+            gap: 0;
+            flex-wrap: nowrap;
+            padding: 0.3rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+            width: fit-content;
+            max-width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        /* Make the two sort buttons feel like tabs/segments (clear active state). */
+        .stream-actions .btn {
+            border-radius: 0;
+            padding: 0.55rem 1rem;
+            font-weight: 850;
+            box-shadow: none;
+            transform: none;
+        }
+        .stream-actions .btn:first-child {
+            border-top-left-radius: 999px;
+            border-bottom-left-radius: 999px;
+        }
+        .stream-actions .btn:last-child {
+            border-top-right-radius: 999px;
+            border-bottom-right-radius: 999px;
+        }
+        .stream-actions .btn.btn-secondary {
+            background: transparent;
+            border-color: rgba(255, 255, 255, 0.12);
+            color: rgba(255, 255, 255, 0.92);
+        }
+        .stream-actions .btn.btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.14);
+            border-color: rgba(255, 255, 255, 0.18);
+            color: rgba(255, 255, 255, 1);
+            transform: none;
+            box-shadow: none;
+        }
+        .stream-actions .btn.btn-primary {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: rgba(255, 255, 255, 0.55);
+            color: var(--text-primary-dark);
+        }
+        .stream-actions .btn.btn-primary:hover {
+            background: rgba(255, 255, 255, 1);
+            border-color: rgba(255, 255, 255, 0.75);
+            color: var(--text-primary-dark);
+            transform: none;
+            box-shadow: none;
+        }
+        @media (max-width: 520px) {
+            .stream-actions { flex-wrap: wrap; width: 100%; }
+            .stream-actions .btn { flex: 1 1 auto; text-align: center; }
+            .stream-actions .btn:first-child { border-radius: 999px; }
+            .stream-actions .btn:last-child { border-radius: 999px; }
         }
 
         .photo-stream {
@@ -129,9 +193,10 @@
             <div class="container">
                 <h1 class="stream-title">Photo stream</h1>
                 <p class="stream-sub" id="stream-sub">Latest uploads from across all tournaments.</p>
-                <div class="stream-actions" aria-label="Photo stream sort options">
-                    <a class="btn btn-primary" id="sort-latest" href="?sort=latest">Latest uploads</a>
-                    <a class="btn btn-secondary" id="sort-tournament" href="?sort=tournament">By tournament</a>
+                <div class="stream-tabs-label">Please select stream type</div>
+                <div class="stream-actions" role="tablist" aria-label="Photo stream sort options">
+                    <a class="btn btn-primary" id="sort-latest" role="tab" aria-selected="true" href="?sort=latest">Latest uploads</a>
+                    <a class="btn btn-secondary" id="sort-tournament" role="tab" aria-selected="false" href="?sort=tournament">By tournament</a>
                 </div>
             </div>
         </section>

@@ -26,11 +26,15 @@
       latest.classList.add('btn-secondary');
       tournament.classList.remove('btn-secondary');
       tournament.classList.add('btn-primary');
+      latest.setAttribute('aria-selected', 'false');
+      tournament.setAttribute('aria-selected', 'true');
     } else {
       tournament.classList.remove('btn-primary');
       tournament.classList.add('btn-secondary');
       latest.classList.remove('btn-secondary');
       latest.classList.add('btn-primary');
+      tournament.setAttribute('aria-selected', 'false');
+      latest.setAttribute('aria-selected', 'true');
     }
   }
 
