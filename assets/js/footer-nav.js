@@ -73,6 +73,7 @@
       <h4>Records</h4>
       <p><a href="/leaderboard/">Hall of Fame</a></p>
       <p><a href="/stats/">Statistics</a></p>
+      <p><a href="/photos/">Photo stream</a></p>
     </div>
     <div class="footer-section">
       <h4>Admin</h4>

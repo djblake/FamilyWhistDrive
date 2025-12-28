@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo stream | Ruston Family Whist Drive</title>
+    <meta name="description" content="A site-wide stream of tournament photo uploads, grouped by year and uploader.">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <script src="/assets/js/footer-nav.js?v=4" defer></script>
+    <script src="/assets/js/media.js?v=1" defer></script>
+    <script src="/assets/js/lightbox.js?v=11" defer></script>
+    <script src="/assets/js/photo-stream.js?v=1" defer></script>
+
+    <style>
+        .stream-hero {
+            padding: var(--spacing-3xl) 0;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--primary-dark) 100%);
+            color: var(--text-primary);
+        }
+        .stream-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2rem, 6vw, 3.25rem);
+            margin: 0;
+            text-align: center;
+            text-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+        }
+        .stream-sub {
+            margin-top: 0.75rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.85);
+        }
+        .stream-actions {
+            margin-top: 1.25rem;
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .photo-stream {
+            padding: var(--spacing-3xl) 0;
+            background: #ffffff;
+        }
+        .photo-stream .section-title { color: var(--text-primary-dark); }
+
+        .year-title {
+            margin: var(--spacing-2xl) 0 var(--spacing-sm);
+            font-family: 'Playfair Display', serif;
+            font-weight: 900;
+            color: var(--text-primary-dark);
+            font-size: 1.6rem;
+        }
+
+        .photos-group {
+            margin-top: var(--spacing-xl);
+            background: #ffffff;
+            border-radius: var(--border-radius-lg);
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            box-shadow: var(--shadow-card);
+            overflow: hidden;
+        }
+        .photos-group-header {
+            padding: var(--spacing-lg) var(--spacing-xl);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: baseline;
+            flex-wrap: wrap;
+        }
+        .photos-group-title {
+            font-weight: 950;
+            color: var(--text-primary-dark);
+            font-size: 1.05rem;
+        }
+        .photos-group-meta {
+            color: var(--text-secondary-dark);
+            font-weight: 800;
+            font-size: 0.9rem;
+        }
+        .photos-grid {
+            padding: var(--spacing-lg) var(--spacing-xl);
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 0.85rem;
+        }
+        .photo-thumb {
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid rgba(15, 23, 42, 0.10);
+            background: rgba(15, 23, 42, 0.04);
+            aspect-ratio: 16 / 10;
+            display: block;
+        }
+        .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        @media (max-width: 980px) {
+            .photos-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        }
+        @media (max-width: 520px) {
+            .photos-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        .empty-state {
+            margin-top: var(--spacing-xl);
+            padding: var(--spacing-xl);
+            border-radius: var(--border-radius-lg);
+            border: 1px dashed rgba(15, 23, 42, 0.20);
+            background: rgba(15, 23, 42, 0.03);
+            text-align: center;
+            color: var(--text-secondary-dark);
+        }
+        .empty-state strong { display:block; color: var(--text-primary-dark); margin-bottom: 0.25rem; }
+        .empty-state a { font-weight: 900; }
+    </style>
+</head>
+<body>
+        <header class="header">
+        <div class="container">
+            <div data-header-nav></div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <section class="stream-hero">
+            <div class="container">
+                <h1 class="stream-title">Photo stream</h1>
+                <p class="stream-sub" id="stream-sub">Latest uploads from across all tournaments.</p>
+                <div class="stream-actions" aria-label="Photo stream sort options">
+                    <a class="btn btn-primary" id="sort-latest" href="?sort=latest">Latest uploads</a>
+                    <a class="btn btn-secondary" id="sort-tournament" href="?sort=tournament">By tournament</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="photo-stream">
+            <div class="container">
+                <h2 class="section-title"><span class="title-icon">📸</span>All photos</h2>
+                <div id="empty" class="empty-state" style="display:none;"></div>
+                <div id="stream"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div data-footer-nav></div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Ruston Family Whist Drive.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
+
+
