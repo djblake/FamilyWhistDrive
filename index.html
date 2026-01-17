@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ruston Family Whist Drive - The Most Prestigious Tournament in the World</title>
     <meta name="description" content="40 Years of Family Whist Excellence - Tournament Results, Player Statistics, and Championship Glory">
-    <link rel="icon" href="data:,">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="stylesheet" href="assets/css/main.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,10 +18,10 @@
     <script src="/assets/js/lightbox.js?v=11" defer></script>
 </head>
 <body>
-        <header class="header">
+    <header class="header">
         <div class="container">
             <div data-header-nav></div>
-        </div>
+                </div>
     </header>
 
     <section class="upcoming-banner" id="upcoming-banner" style="display:none;">
@@ -621,18 +624,18 @@
                     // Avoid double counting by only counting unique hands from scorecards.
                     // Note: TournamentEngine keeps raw sheet header names (e.g. "Tricks Won"),
                     // so prefer that over legacy "Tricks_Won".
-                    const uniqueHands = new Set();
+                const uniqueHands = new Set();
                     totalTricks = tournamentEngine.rawScorecards.reduce((sum, sc) => {
-                        const handKey = `${sc.Tournament}-${sc.Year}-${sc.Round}-${sc.Player1}-${sc.Player2}`;
-                        if (!uniqueHands.has(handKey)) {
-                            uniqueHands.add(handKey);
+                    const handKey = `${sc.Tournament}-${sc.Year}-${sc.Round}-${sc.Player1}-${sc.Player2}`;
+                    if (!uniqueHands.has(handKey)) {
+                        uniqueHands.add(handKey);
                             const rawTricks =
                                 (sc && (sc['Tricks Won'] ?? sc.Tricks_Won ?? sc['Tricks_Won'] ?? sc.TricksWon ?? sc['TricksWon'])) ?? '';
                             const tricks = parseInt(rawTricks, 10) || 0;
-                            return sum + tricks;
-                        }
-                        return sum;
-                    }, 0);
+                        return sum + tricks;
+                    }
+                    return sum;
+                }, 0);
                 }
                 
                 // Player counts:
