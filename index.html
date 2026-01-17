@@ -66,10 +66,12 @@
                     <div class="hero-latest-activity" id="home-latest-activity" aria-live="polite">
                         <div class="hero-latest-activity__head">
                             <div class="hero-latest-activity__title">Latest activity</div>
-                            <a class="hero-latest-activity__cta" href="/photos/?sort=latest">See latest photo uploads</a>
                         </div>
                         <div class="hero-latest-activity__sub" id="home-latest-activity-sub">Loading latest photo uploads…</div>
                         <div class="hero-latest-photos-grid" id="home-latest-photos-grid" style="display:none;"></div>
+                        <div class="hero-latest-activity__footer" id="home-latest-activity-footer" style="display:none;">
+                            <a class="hero-latest-activity__cta" href="/photos/?sort=latest">See latest photo uploads</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -701,6 +703,7 @@
                     const root = document.getElementById('home-latest-activity');
                     const subEl = document.getElementById('home-latest-activity-sub');
                     const grid = document.getElementById('home-latest-photos-grid');
+                    const footer = document.getElementById('home-latest-activity-footer');
                     if (!root || !subEl || !grid) return;
                     if (root.dataset.loaded === '1') return;
                     root.dataset.loaded = '1';
@@ -717,6 +720,7 @@
                         subEl.innerHTML = html;
                         grid.style.display = 'none';
                         grid.innerHTML = '';
+                        if (footer) footer.style.display = 'none';
                     };
 
                     const hasMedia = Boolean(
@@ -787,19 +791,30 @@
                         return;
                     }
 
-                    const formatTimestamp = (iso) => {
+                    const formatDate = (iso) => {
                         const raw = String(iso || '').trim();
                         if (!raw) return '—';
                         const d = new Date(raw);
                         if (!Number.isFinite(d.getTime())) return raw;
-                        return d.toLocaleString('en-US', {
+                        return d.toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'short',
-                            day: 'numeric',
-                            hour: 'numeric',
-                            minute: '2-digit'
+                            day: 'numeric'
                         });
                     };
+
+                    const latest = picks[0] || null;
+                    const latestUploader = latest ? String(latest.uploader || '').trim() : '';
+                    const latestDate = latest ? formatDate(latest.uploadedAt) : '—';
+                    if (latestUploader && latestDate && latestDate !== '—') {
+                        subEl.textContent = `Latest uploads by ${latestUploader} - ${latestDate}`;
+                    } else if (latestUploader) {
+                        subEl.textContent = `Latest uploads by ${latestUploader}`;
+                    } else if (latestDate && latestDate !== '—') {
+                        subEl.textContent = `Latest uploads - ${latestDate}`;
+                    } else {
+                        subEl.textContent = 'Latest uploads';
+                    }
 
                     const cards = [];
                     for (const p of picks) {
@@ -808,15 +823,10 @@
                         const thumbUrl = await window.WhistMedia.publicUrlForKey(p.thumbKey || p.key);
                         const imgUrl = thumbUrl || fullUrl;
                         const alt = p.originalName ? `Tournament photo (${p.originalName})` : 'Tournament photo';
-                        const timeText = formatTimestamp(p.uploadedAt);
                         cards.push(`
                             <a class="home-latest-photo" href="${fullUrl.replaceAll('"', '&quot;')}" rel="noopener" data-uploader="${escapeHtml(p.uploader)}" data-key="${escapeHtml(p.key)}">
                                 <span class="home-latest-photo__img">
                                     <img alt="${escapeHtml(alt)}" loading="lazy" src="${imgUrl.replaceAll('"', '&quot;')}">
-                                </span>
-                                <span class="home-latest-photo__meta">
-                                    <span class="home-latest-photo__uploader">${escapeHtml(p.uploader)}</span>
-                                    <span class="home-latest-photo__time">${escapeHtml(timeText)}</span>
                                 </span>
                             </a>
                         `);
@@ -827,9 +837,9 @@
                         return;
                     }
 
-                    subEl.innerHTML = `Showing the ${cards.length} most recent photo upload${cards.length === 1 ? '' : 's'}. <a href="${streamHref}">See all</a>.`;
                     grid.innerHTML = cards.join('');
                     grid.style.display = 'grid';
+                    if (footer) footer.style.display = 'block';
 
                     // Bind lightbox to these anchors (click to preview, with a "Go to stream" link).
                     if (window.WhistLightbox && typeof window.WhistLightbox.bindAnchors === 'function') {
@@ -1686,7 +1696,7 @@
         .hero-latest-activity__head {
             display: flex;
             align-items: baseline;
-            justify-content: space-between;
+            justify-content: center;
             gap: 1rem;
             flex-wrap: wrap;
         }
@@ -1697,6 +1707,7 @@
             text-transform: uppercase;
             color: rgba(255, 255, 255, 0.88);
             font-size: 0.82rem;
+            text-align: center;
         }
 
         .hero-latest-activity__cta {
@@ -1713,6 +1724,7 @@
             font-weight: 650;
             font-size: 0.92rem;
             line-height: 1.35;
+            text-align: center;
         }
 
         .hero-latest-activity__sub a {
@@ -1727,6 +1739,11 @@
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 0.75rem;
+        }
+
+        .hero-latest-activity__footer {
+            margin-top: 0.75rem;
+            text-align: center;
         }
 
         .home-latest-photo {
@@ -1757,29 +1774,6 @@
             height: 100%;
             object-fit: cover;
             display: block;
-        }
-
-        .home-latest-photo__meta {
-            display: block;
-            padding: 0.55rem 0.6rem 0.65rem;
-        }
-
-        .home-latest-photo__uploader {
-            display: block;
-            font-weight: 850;
-            font-size: 0.86rem;
-            color: rgba(255, 255, 255, 0.92);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .home-latest-photo__time {
-            display: block;
-            margin-top: 0.15rem;
-            font-weight: 650;
-            font-size: 0.78rem;
-            color: rgba(255, 255, 255, 0.75);
         }
 
         @media (max-width: 980px) {
