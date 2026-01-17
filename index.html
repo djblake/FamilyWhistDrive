@@ -62,6 +62,15 @@
                             <div class="stat-label">Family Players</div>
                         </div>
                     </div>
+
+                    <div class="hero-latest-activity" id="home-latest-activity" aria-live="polite">
+                        <div class="hero-latest-activity__head">
+                            <div class="hero-latest-activity__title">Latest activity</div>
+                            <a class="hero-latest-activity__cta" href="/photos/?sort=latest">See latest photo uploads</a>
+                        </div>
+                        <div class="hero-latest-activity__sub" id="home-latest-activity-sub">Loading latest photo uploads…</div>
+                        <div class="hero-latest-photos-grid" id="home-latest-photos-grid" style="display:none;"></div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -654,6 +663,11 @@
                 document.getElementById('tricks-count').textContent = Number(totalTricks || 0).toLocaleString();
                 // Home should match the Players page: count individuals who have competed (not shared-hand combos).
                 document.getElementById('players-count').textContent = competedCount || rosterCount || 0;
+
+                // Latest activity: site-wide photo uploads (best-effort; works when /api media functions are available).
+                renderHomeLatestPhotoActivity({ limit: 4 }).catch(() => {
+                    // ignore (leave fallback content)
+                });
                 
                 // Winner spotlight + tournament highlights
                 const uniqueDesc = (tournamentEngine.getAllTournamentsUnique && typeof tournamentEngine.getAllTournamentsUnique === 'function')
@@ -682,6 +696,149 @@
                     li.textContent = text;
                     ul.appendChild(li);
                 };
+
+                async function renderHomeLatestPhotoActivity({ limit = 6 } = {}) {
+                    const root = document.getElementById('home-latest-activity');
+                    const subEl = document.getElementById('home-latest-activity-sub');
+                    const grid = document.getElementById('home-latest-photos-grid');
+                    if (!root || !subEl || !grid) return;
+                    if (root.dataset.loaded === '1') return;
+                    root.dataset.loaded = '1';
+
+                    const streamHref = '/photos/?sort=latest';
+                    const escapeHtml = (value) => String(value ?? '')
+                        .replaceAll('&', '&amp;')
+                        .replaceAll('<', '&lt;')
+                        .replaceAll('>', '&gt;')
+                        .replaceAll('"', '&quot;')
+                        .replaceAll("'", '&#39;');
+
+                    const showMessage = (html) => {
+                        subEl.innerHTML = html;
+                        grid.style.display = 'none';
+                        grid.innerHTML = '';
+                    };
+
+                    const hasMedia = Boolean(
+                        window.WhistMedia &&
+                        typeof window.WhistMedia.listPrefix === 'function' &&
+                        typeof window.WhistMedia.getTournamentMeta === 'function' &&
+                        typeof window.WhistMedia.publicUrlForKey === 'function'
+                    );
+                    if (!hasMedia) {
+                        showMessage(`Latest photos unavailable. <a href="${streamHref}">Open photo stream</a>.`);
+                        return;
+                    }
+
+                    showMessage('Loading latest photo uploads…');
+
+                    // Discover years (folders) under tournament-photos/
+                    let listing = null;
+                    try {
+                        listing = await window.WhistMedia.listPrefix('tournament-photos/', { delimiter: '/', limit: 5000 });
+                    } catch (_) {
+                        listing = null;
+                    }
+                    const prefixes = Array.isArray(listing?.delimitedPrefixes) ? listing.delimitedPrefixes : [];
+                    const years = [];
+                    for (const p of prefixes) {
+                        const m = String(p || '').match(/^tournament-photos\/(\d{4})\/$/);
+                        if (m) years.push(m[1]);
+                    }
+                    if (!years.length) {
+                        showMessage(`No photos found yet. <a href="${streamHref}">Browse photos</a>.`);
+                        return;
+                    }
+
+                    // Load yearly meta and flatten to photo entries.
+                    const metas = await Promise.all(
+                        years.map(async (year) => {
+                            try {
+                                const meta = await window.WhistMedia.getTournamentMeta(year);
+                                return { year, meta };
+                            } catch (_) {
+                                return { year, meta: null };
+                            }
+                        })
+                    );
+
+                    const photos = [];
+                    for (const { year, meta } of metas) {
+                        const list = Array.isArray(meta?.photos) ? meta.photos : [];
+                        for (const p of list) {
+                            const key = String(p?.key || '').trim();
+                            if (!key) continue;
+                            photos.push({
+                                year: String(year),
+                                key,
+                                thumbKey: String(p?.thumbKey || '').trim(),
+                                uploader: String(p?.uploaderName || p?.uploaderSlug || 'Unknown').trim() || 'Unknown',
+                                uploadedAt: String(p?.uploadedAt || '').trim(),
+                                originalName: String(p?.originalName || '').trim()
+                            });
+                        }
+                    }
+
+                    photos.sort((a, b) => String(b?.uploadedAt || '').localeCompare(String(a?.uploadedAt || '')));
+                    const picks = photos.slice(0, Math.max(1, Number(limit) || 6));
+
+                    if (!picks.length) {
+                        showMessage(`No photos found yet. <a href="${streamHref}">Browse photos</a>.`);
+                        return;
+                    }
+
+                    const formatTimestamp = (iso) => {
+                        const raw = String(iso || '').trim();
+                        if (!raw) return '—';
+                        const d = new Date(raw);
+                        if (!Number.isFinite(d.getTime())) return raw;
+                        return d.toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit'
+                        });
+                    };
+
+                    const cards = [];
+                    for (const p of picks) {
+                        const fullUrl = await window.WhistMedia.publicUrlForKey(p.key);
+                        if (!fullUrl) continue;
+                        const thumbUrl = await window.WhistMedia.publicUrlForKey(p.thumbKey || p.key);
+                        const imgUrl = thumbUrl || fullUrl;
+                        const alt = p.originalName ? `Tournament photo (${p.originalName})` : 'Tournament photo';
+                        const timeText = formatTimestamp(p.uploadedAt);
+                        cards.push(`
+                            <a class="home-latest-photo" href="${fullUrl.replaceAll('"', '&quot;')}" rel="noopener" data-uploader="${escapeHtml(p.uploader)}" data-key="${escapeHtml(p.key)}">
+                                <span class="home-latest-photo__img">
+                                    <img alt="${escapeHtml(alt)}" loading="lazy" src="${imgUrl.replaceAll('"', '&quot;')}">
+                                </span>
+                                <span class="home-latest-photo__meta">
+                                    <span class="home-latest-photo__uploader">${escapeHtml(p.uploader)}</span>
+                                    <span class="home-latest-photo__time">${escapeHtml(timeText)}</span>
+                                </span>
+                            </a>
+                        `);
+                    }
+
+                    if (!cards.length) {
+                        showMessage(`Latest photos unavailable. <a href="${streamHref}">Open photo stream</a>.`);
+                        return;
+                    }
+
+                    subEl.innerHTML = `Showing the ${cards.length} most recent photo upload${cards.length === 1 ? '' : 's'}. <a href="${streamHref}">See all</a>.`;
+                    grid.innerHTML = cards.join('');
+                    grid.style.display = 'grid';
+
+                    // Bind lightbox to these anchors (click to preview, with a "Go to stream" link).
+                    if (window.WhistLightbox && typeof window.WhistLightbox.bindAnchors === 'function') {
+                        window.WhistLightbox.bindAnchors(grid.querySelectorAll('a.home-latest-photo'), {
+                            goToHref: streamHref,
+                            goToLabel: 'Open photo stream'
+                        });
+                    }
+                }
 
                 async function renderLatestDayNotesAndCovers({ year, metaLatest }) {
                     const card = document.getElementById('latest-day-notes-card');
@@ -1512,6 +1669,127 @@
     </script>
 
     <style>
+        /* Home: latest activity (hero) */
+        .hero-latest-activity {
+            margin-top: 1.25rem;
+            padding: 1rem 1.1rem;
+            border-radius: var(--border-radius-xl);
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 18px 44px rgba(0, 0, 0, 0.18);
+            backdrop-filter: blur(8px);
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-latest-activity__head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .hero-latest-activity__title {
+            font-weight: 900;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.88);
+            font-size: 0.82rem;
+        }
+
+        .hero-latest-activity__cta {
+            font-weight: 850;
+            color: rgba(255, 255, 255, 0.92);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            text-decoration-thickness: 2px;
+        }
+
+        .hero-latest-activity__sub {
+            margin-top: 0.45rem;
+            color: rgba(255, 255, 255, 0.78);
+            font-weight: 650;
+            font-size: 0.92rem;
+            line-height: 1.35;
+        }
+
+        .hero-latest-activity__sub a {
+            color: rgba(255, 255, 255, 0.92);
+            font-weight: 850;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .hero-latest-photos-grid {
+            margin-top: 0.85rem;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+
+        .home-latest-photo {
+            display: block;
+            border-radius: 14px;
+            overflow: hidden;
+            background: rgba(15, 23, 42, 0.28);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            text-decoration: none;
+            color: inherit;
+            transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+
+        .home-latest-photo:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.22);
+            box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+        }
+
+        .home-latest-photo__img {
+            display: block;
+            aspect-ratio: 16 / 10;
+            background: rgba(0, 0, 0, 0.18);
+        }
+
+        .home-latest-photo__img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .home-latest-photo__meta {
+            display: block;
+            padding: 0.55rem 0.6rem 0.65rem;
+        }
+
+        .home-latest-photo__uploader {
+            display: block;
+            font-weight: 850;
+            font-size: 0.86rem;
+            color: rgba(255, 255, 255, 0.92);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .home-latest-photo__time {
+            display: block;
+            margin-top: 0.15rem;
+            font-weight: 650;
+            font-size: 0.78rem;
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        @media (max-width: 980px) {
+            .hero-latest-photos-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media (max-width: 520px) {
+            .hero-latest-photos-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
         /* Home: winner spotlight + history + feature sections */
         .home-winner-section {
             padding: var(--spacing-3xl) 0;
